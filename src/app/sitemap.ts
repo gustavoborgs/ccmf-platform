@@ -2,8 +2,11 @@ import type { MetadataRoute } from "next";
 import { absoluteUrl, postUrl } from "@/modules/blog/seo";
 import { listPublishedPosts } from "@/modules/blog/service";
 
+/** Postgres não está acessível durante `next build` no Railway — gera em runtime. */
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const posts = await listPublishedPosts();
+  const posts = await listSitemapPosts();
   const now = new Date();
 
   return [
@@ -21,6 +24,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.75,
     })),
   ];
+}
+
+async function listSitemapPosts(): Promise<Awaited<ReturnType<typeof listPublishedPosts>>> {
+  try {
+    return await listPublishedPosts();
+  } catch (error) {
+    console.error("Falha ao carregar posts para o sitemap.", error);
+    return [];
+  }
 }
 
 function route(

@@ -250,7 +250,8 @@ export function PartnerForm({ initial }: { initial?: PartnerFormInitial }) {
             )}
           </div>
           <p className="mt-3 text-xs text-ink-muted">
-            O recorte gera sempre {PARTNER_LOGO_SIZE.width}x{PARTNER_LOGO_SIZE.height}px, no formato 2:1.
+            O recorte gera sempre {PARTNER_LOGO_SIZE.width}x{PARTNER_LOGO_SIZE.height}px, no formato 2:1,
+            com fundo transparente.
           </p>
           {logoKey && <p className="mt-2 break-all text-xs text-ink-muted">{logoKey}</p>}
           <div className="mt-4 flex flex-wrap gap-2">
@@ -330,21 +331,23 @@ export function PartnerForm({ initial }: { initial?: PartnerFormInitial }) {
           imageSrc={croppingLogoSrc}
           aspect={2 / 1}
           title="Ajuste o logo (800x400)"
-          frameClassName="relative mt-4 aspect-[2/1] w-full overflow-hidden rounded-2xl bg-ink"
+          frameClassName="relative mt-4 aspect-[2/1] w-full overflow-hidden rounded-2xl bg-primary-50"
+          minZoom={0.25}
+          maxZoom={3}
+          restrictPosition={false}
           confirmLabel="Usar este logo"
           output={{
             targetWidth: PARTNER_LOGO_SIZE.width,
             targetHeight: PARTNER_LOGO_SIZE.height,
-            mimeType: "image/jpeg",
-            quality: 0.92,
+            mimeType: "image/png",
           }}
           onCancel={() => setCroppingLogoSrc(null)}
           onConfirm={(result) => {
             setCroppingLogoSrc(null);
             setLogoUpload({
               blob: result.blob,
-              fileName: "logo.jpg",
-              contentType: "image/jpeg",
+              fileName: "logo.png",
+              contentType: "image/png",
               width: result.width,
               height: result.height,
             });

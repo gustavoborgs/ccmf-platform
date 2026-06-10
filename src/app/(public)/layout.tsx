@@ -22,17 +22,13 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         <Container className="flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/brand/isotipo.png"
+              src="/brand/logo-full-menu.png"
               alt="CCMF — Concurso Criança Mais Fotogênica"
-              width={40}
-              height={44}
+              width={88}
+              height={80}
               priority
+              className="h-12 w-auto"
             />
-            <span className="hidden font-display text-lg font-extrabold leading-tight text-primary-700 sm:block">
-              Criança Mais
-              <br className="leading-none" />
-              Fotogênica
-            </span>
           </Link>
 
           <nav className="hidden items-center gap-6 font-semibold text-ink-muted lg:flex">

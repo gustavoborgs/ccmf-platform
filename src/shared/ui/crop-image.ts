@@ -40,7 +40,33 @@ export async function cropImageToBlob(
   canvas.height = height;
 
   const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(image, area.x, area.y, area.width, area.height, 0, 0, width, height);
+  ctx.clearRect(0, 0, width, height);
+
+  const sourceX = Math.max(0, area.x);
+  const sourceY = Math.max(0, area.y);
+  const sourceRight = Math.min(image.naturalWidth, area.x + area.width);
+  const sourceBottom = Math.min(image.naturalHeight, area.y + area.height);
+  const sourceWidth = sourceRight - sourceX;
+  const sourceHeight = sourceBottom - sourceY;
+
+  if (sourceWidth > 0 && sourceHeight > 0) {
+    const destinationX = ((sourceX - area.x) / area.width) * width;
+    const destinationY = ((sourceY - area.y) / area.height) * height;
+    const destinationWidth = (sourceWidth / area.width) * width;
+    const destinationHeight = (sourceHeight / area.height) * height;
+
+    ctx.drawImage(
+      image,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      destinationX,
+      destinationY,
+      destinationWidth,
+      destinationHeight,
+    );
+  }
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(

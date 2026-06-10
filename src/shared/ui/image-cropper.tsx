@@ -10,6 +10,9 @@ type ImageCropperProps = {
   aspect: number;
   title: string;
   frameClassName: string;
+  minZoom?: number;
+  maxZoom?: number;
+  restrictPosition?: boolean;
   confirmLabel?: string;
   onConfirm: (result: { blob: Blob; width: number; height: number }) => void;
   onCancel: () => void;
@@ -28,13 +31,16 @@ export function ImageCropper({
   aspect,
   title,
   frameClassName,
+  minZoom = 1,
+  maxZoom = 3,
+  restrictPosition = true,
   confirmLabel = "Usar imagem",
   onConfirm,
   onCancel,
   output,
 }: ImageCropperProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(Math.max(1, minZoom));
   const [areaPixels, setAreaPixels] = useState<Area | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -59,6 +65,9 @@ export function ImageCropper({
             crop={crop}
             zoom={zoom}
             aspect={aspect}
+            minZoom={minZoom}
+            maxZoom={maxZoom}
+            restrictPosition={restrictPosition}
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={(_, pixels) => setAreaPixels(pixels)}
@@ -69,8 +78,8 @@ export function ImageCropper({
           <span className="text-sm font-bold text-ink">Zoom</span>
           <input
             type="range"
-            min={1}
-            max={3}
+            min={minZoom}
+            max={maxZoom}
             step={0.05}
             value={zoom}
             onChange={(event) => setZoom(Number(event.target.value))}

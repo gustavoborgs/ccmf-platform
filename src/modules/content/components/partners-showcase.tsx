@@ -38,21 +38,18 @@ export function PartnersShowcase({ partners }: { partners: Partner[] }) {
   if (groups.length === 0) return null;
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-12">
       {groups.map((group) => (
-        <section
-          key={group.type}
-          className="rounded-bubble border border-primary-100/80 bg-white/85 p-5 sm:p-6"
-        >
-          <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-primary-100/70 pb-4">
+        <section key={group.type} className="border-t border-primary-100/70 pt-8 first:border-t-0 first:pt-0">
+          <div className="mx-auto max-w-xl text-center">
             <h3 className="font-display text-xl font-extrabold text-primary-700">{group.title}</h3>
-            <p className="text-sm text-ink-muted">{group.description}</p>
+            <p className="mt-1 text-sm text-ink-muted">{group.description}</p>
           </div>
 
-          <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <ul className="mx-auto mt-8 grid max-w-5xl grid-cols-2 place-items-center gap-x-6 gap-y-9 sm:grid-cols-3 sm:gap-x-10 lg:grid-cols-5">
             {group.items.map((partner) => (
-              <li key={partner.id}>
-                <PartnerBadge partner={partner} />
+              <li key={partner.id} className="flex w-full justify-center">
+                <PartnerLogo partner={partner} />
               </li>
             ))}
           </ul>
@@ -62,25 +59,35 @@ export function PartnersShowcase({ partners }: { partners: Partner[] }) {
   );
 }
 
-function PartnerBadge({ partner }: { partner: Partner }) {
-  const content = partner.logoKey ? (
-    <Image
-      src={getPublicUrl(partner.logoKey)}
-      alt={partner.name}
-      width={160}
-      height={80}
-      className="h-11 w-auto max-w-32 object-contain opacity-60 grayscale transition duration-300 group-hover:opacity-100 group-hover:grayscale-0"
-    />
+function PartnerLogo({ partner }: { partner: Partner }) {
+  const logo = partner.logoKey ? (
+    <span className="flex h-14 w-full items-center justify-center sm:h-16">
+      <Image
+        src={getPublicUrl(partner.logoKey)}
+        alt=""
+        width={176}
+        height={88}
+        className="max-h-12 w-auto max-w-32 object-contain opacity-55 grayscale transition duration-300 group-hover:opacity-100 group-hover:grayscale-0 sm:max-h-14 sm:max-w-36"
+      />
+    </span>
   ) : (
-    <span className="text-center font-display text-base font-extrabold text-ink-muted transition duration-300 group-hover:text-primary-700">
-      {partner.name}
+    <span className="flex h-14 w-full items-center justify-center rounded-3xl bg-surface-muted px-4 text-center font-display text-base font-extrabold text-primary-700 sm:h-16">
+      {getInitials(partner.name)}
     </span>
   );
 
-  const badgeClasses =
-    "group flex h-20 w-full items-center justify-center rounded-3xl border border-primary-100 " +
-    "bg-white px-5 transition duration-300 hover:border-primary-200 hover:bg-surface " +
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-200";
+  const partnerClasses =
+    "group flex w-full max-w-40 flex-col items-center gap-2 px-2 py-1 text-center transition duration-300 " +
+    "focus-visible:rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-200";
+
+  const content = (
+    <>
+      {logo}
+      <span className="line-clamp-2 min-h-9 text-xs font-bold leading-snug text-ink-muted transition duration-300 group-hover:text-primary-700 sm:text-sm">
+        {partner.name}
+      </span>
+    </>
+  );
 
   if (partner.url) {
     return (
@@ -89,7 +96,7 @@ function PartnerBadge({ partner }: { partner: Partner }) {
         target="_blank"
         rel="noopener noreferrer"
         title={partner.name}
-        className={badgeClasses}
+        className={partnerClasses}
       >
         {content}
       </a>
@@ -97,8 +104,18 @@ function PartnerBadge({ partner }: { partner: Partner }) {
   }
 
   return (
-    <div title={partner.name} className={badgeClasses}>
+    <div title={partner.name} className={partnerClasses}>
       {content}
     </div>
   );
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }

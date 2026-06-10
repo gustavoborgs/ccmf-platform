@@ -40,9 +40,10 @@ const judgingCriteria = [
 ];
 
 const benefits = [
-  "Experiência organizada para responsáveis e participantes.",
-  "Categorias por faixa etária para uma avaliação mais justa.",
+  "A faixa oficial e o título de Criança Mais Fotogênica — uma conquista para guardar na história da família.",
   "Destaque nacional em uma vitrine dedicada à fotografia infantil.",
+  "Categorias por faixa etária para uma disputa mais justa em cada fase da infância.",
+  "Experiência organizada, acompanhada e segura para responsáveis e participantes.",
 ];
 
 const categories = [
@@ -163,25 +164,30 @@ export default function AboutContestPage() {
         <Container className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="relative mx-auto w-full max-w-sm">
             <Image
-              src="/people/child-camera.png"
-              alt="Criança sorrindo segurando uma câmera fotográfica de brinquedo"
+              src="/people/child-winner-sash.png"
+              alt="Criança sorrindo com coroa e a faixa de vencedora do Concurso Criança Mais Fotogênica"
               width={560}
               height={373}
               className="rounded-bubble object-cover shadow-brand-lg"
             />
             <div className="absolute -bottom-6 left-1/2 w-[85%] -translate-x-1/2 rounded-3xl bg-brand-gradient px-5 py-4 text-white shadow-brand-lg">
               <p className="font-display text-sm font-bold uppercase tracking-widest text-white/75">
-                Para famílias
+                O grande prêmio
               </p>
               <p className="mt-1 text-sm font-semibold text-white/95">
-                Participação simples, acompanhada e segura. Apenas participantes
-                aprovados aparecem publicamente.
+                Quem vence recebe a faixa oficial e carrega o título de Criança
+                Mais Fotogênica da edição.
               </p>
             </div>
           </div>
 
           <div>
-            <SectionHeading align="left" kicker="Diferenciais" title="Por que participar" />
+            <SectionHeading
+              align="left"
+              kicker="Diferenciais"
+              title="Por que participar"
+              description="Mais do que um concurso: é a chance de conquistar a faixa, levar o título de Criança Mais Fotogênica e celebrar esse momento da infância."
+            />
             <div className="mt-8 grid gap-4">
               {benefits.map((benefit) => (
                 <div key={benefit} className="rounded-bubble border border-primary-100 bg-white p-5 shadow-brand">
