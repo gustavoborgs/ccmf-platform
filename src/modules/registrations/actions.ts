@@ -1,17 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/modules/auth/config";
 import { requireRole } from "@/modules/auth/guards";
 import { captureLead } from "@/modules/leads/service";
 import { requestPhotoUpload } from "@/modules/media/service";
 import { getActiveContest } from "@/modules/contests/service";
+import { resolveEnrollmentGuardianId } from "./context";
 import {
   approveRegistration,
   checkCpfExists,
   createRegistration,
   ensureGuardian,
-  getGuardianByUserId,
   linkGuardianByCpf,
   rejectRegistration,
 } from "./service";
@@ -23,7 +22,7 @@ import {
   registrationRejectionSchema,
   registrationReviewSchema,
 } from "./validators";
-import { getWizardSession, setWizardSession } from "./wizard-session";
+import { clearWizardSession, getWizardSession, setWizardSession } from "./wizard-session";
 
 /**
  * Server Actions do wizard de inscrição (público).
@@ -36,20 +35,22 @@ type ActionResult<T = undefined> =
   | { ok: false; error: string };
 
 function fail(error: unknown): { ok: false; error: string } {
+  if (isStaleGuardianError(error)) {
+    return {
+      ok: false,
+      error: "Sessão expirada ou inválida. Volte ao passo 1 e informe seu CPF novamente.",
+    };
+  }
   return { ok: false, error: error instanceof Error ? error.message : "Erro inesperado." };
 }
 
-/** guardianId do fluxo atual: cookie do wizard, senão responsável logado. */
-async function resolveGuardianId(): Promise<string | null> {
-  const wizard = await getWizardSession();
-  if (wizard?.guardianId) return wizard.guardianId;
-
-  const session = await auth();
-  if (session?.user?.role === "GUARDIAN") {
-    const guardian = await getGuardianByUserId(session.user.id);
-    return guardian?.id ?? null;
-  }
-  return null;
+function isStaleGuardianError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2003"
+  );
 }
 
 // ── Step 1 — Responsável ─────────────────────────────────────────────
@@ -119,7 +120,7 @@ export async function createParticipantAction(input: unknown): Promise<
     participantName: string;
   }>
 > {
-  const guardianId = await resolveGuardianId();
+  const guardianId = await resolveEnrollmentGuardianId();
   if (!guardianId) return { ok: false, error: "Sessão expirada. Volte ao passo 1." };
 
   const parsed = participantSchema.safeParse(input);
@@ -149,6 +150,7 @@ export async function createParticipantAction(input: unknown): Promise<
       },
     };
   } catch (error) {
+    if (isStaleGuardianError(error)) await clearWizardSession();
     return fail(error);
   }
 }

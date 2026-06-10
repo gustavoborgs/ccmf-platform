@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/modules/auth/actions";
 import { requireRole } from "@/modules/auth/guards";
+import { FramedPhotoDownload } from "@/modules/media/components/framed-photo-download";
 import {
   getGuardianByUserId,
   listGuardianRegistrations,
@@ -60,6 +61,10 @@ export default async function AccountPage() {
             const latestPayment = registration.payments[0];
             const status = getAccountStatus(registration.status, registration._count.photos);
             const resumeHref = `/inscricao/retomar/${registration.protocol}`;
+            const frameUrl = registration.contest.frameImageKey
+              ? getPublicUrl(registration.contest.frameImageKey)
+              : null;
+            const canDownloadFramedPhotos = isPaymentConfirmed(registration.status);
             const photos: ReviewPhoto[] = registration.photos.map((photo) => ({
               id: photo.id,
               url: getPublicUrl(photo.storageKey),
@@ -161,6 +166,23 @@ export default async function AccountPage() {
                       emptyTitle="Nenhuma foto anexada"
                       emptyDescription="Continue a inscrição para enviar as 2 fotos obrigatórias."
                     />
+
+                    {canDownloadFramedPhotos && photos.length > 0 && (
+                      <div className="mt-5">
+                        {frameUrl ? (
+                          <FramedPhotoDownload
+                            photos={photos}
+                            frameUrl={frameUrl}
+                            participantName={registration.participant.name}
+                          />
+                        ) : (
+                          <p className="rounded-2xl border border-primary-100 bg-primary-50/60 px-4 py-3 text-sm text-ink-muted">
+                            Assim que a moldura desta edição for configurada, o download das fotos
+                            oficiais ficará disponível aqui.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -243,6 +265,10 @@ function getAccountStatus(status: string, photosCount: number): AccountStatus {
     description: "Acompanhe as próximas etapas por aqui.",
     cta: null,
   };
+}
+
+function isPaymentConfirmed(status: string): boolean {
+  return ["PAID", "UNDER_REVIEW", "APPROVED", "SEMIFINALIST", "WINNER"].includes(status);
 }
 
 const statusLabel: Record<string, string> = {

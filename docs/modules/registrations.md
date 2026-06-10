@@ -123,7 +123,9 @@ Regras de segurança do link:
 ## Área do responsável (`/conta`)
 
 - Lista inscrições com status e pagamento.
-- `APPROVED+`: baixar foto com moldura (módulo `media`) e link público.
+- `PAID+`: baixar fotos com moldura (módulo `media`) quando a edição tem
+  `frameImageKey`.
+- `APPROVED+`: link público do participante.
 - `PENDING_PAYMENT`: retomar checkout.
 
 ## Permissões

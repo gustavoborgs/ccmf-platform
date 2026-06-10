@@ -76,7 +76,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         href: "/admin/conteudo",
         label: "Conteúdo",
         description: "Blog, vídeos, parceiros e mensagens de contato.",
-        status: "planned",
+        status: "available",
       },
       {
         href: "/admin/configuracoes",

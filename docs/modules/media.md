@@ -27,7 +27,10 @@ browser → PUT direto no S3 (a imagem não passa pelo servidor Next)
 ## Foto com moldura
 
 - A moldura é um PNG transparente por edição (`Contest.frameImageKey`).
-- v1: composição **no client** via `<canvas>` (download direto pelo responsável).
+- Perfil público do participante exibe a moldura como camada visual sobre a foto
+  quando a edição tem `frameImageKey`.
+- v1: composição **no client** via `<canvas>` (download direto pelo responsável
+  em `/conta` após confirmação do pagamento).
 - Evolução: endpoint server-side com `sharp` para gerar e cachear a imagem
   composta no S3 (necessário para usar como OG image).
 

@@ -1,7 +1,6 @@
-import { auth } from "@/modules/auth/config";
 import { getActiveContest } from "@/modules/contests/service";
+import { resolveEnrollmentGuardianId } from "@/modules/registrations/context";
 import {
-  getGuardianByUserId,
   getWizardRegistration,
   resolveResumeLink,
 } from "@/modules/registrations/service";
@@ -60,16 +59,9 @@ export default async function RegistrationPage({
     }
   }
 
-  // Retomada: cookie do wizard ou responsável logado.
+  // Retomada: responsável logado ou cookie do wizard (validado no banco).
   const wizard = await getWizardSession();
-  let guardianId = wizard?.guardianId ?? null;
-
-  if (!guardianId) {
-    const session = await auth();
-    if (session?.user?.role === "GUARDIAN") {
-      guardianId = (await getGuardianByUserId(session.user.id))?.id ?? null;
-    }
-  }
+  const guardianId = await resolveEnrollmentGuardianId();
 
   if (guardianId) {
     initial.step = "participant";

@@ -1,11 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { auth } from "@/modules/auth/config";
-import {
-  getGuardianByUserId,
-  getWizardSession,
-} from "@/modules/registrations/service";
+import { resolveEnrollmentGuardianId } from "@/modules/registrations/context";
 import {
   createCheckout,
   getActivePayment,
@@ -59,19 +55,6 @@ function toCheckoutData(result: CheckoutResult): CheckoutData {
   };
 }
 
-/** guardianId do fluxo atual: cookie do wizard, senão responsável logado. */
-async function resolveGuardianId(): Promise<string | null> {
-  const wizard = await getWizardSession();
-  if (wizard?.guardianId) return wizard.guardianId;
-
-  const session = await auth();
-  if (session?.user?.role === "GUARDIAN") {
-    const guardian = await getGuardianByUserId(session.user.id);
-    return guardian?.id ?? null;
-  }
-  return null;
-}
-
 /** Cria (ou reutiliza) a cobrança no Asaas para o método escolhido. */
 export async function createCheckoutAction(input: unknown): Promise<ActionResult<CheckoutData>> {
   const parsed = checkoutInputSchema.safeParse(input);
@@ -79,7 +62,7 @@ export async function createCheckoutAction(input: unknown): Promise<ActionResult
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  const guardianId = await resolveGuardianId();
+  const guardianId = await resolveEnrollmentGuardianId();
   if (!guardianId) return { ok: false, error: "Sessão expirada. Use seu link de retomada." };
 
   const headerList = await headers();
@@ -106,7 +89,7 @@ export async function createCheckoutAction(input: unknown): Promise<ActionResult
 export async function getActiveCheckoutAction(
   registrationId: string,
 ): Promise<ActionResult<CheckoutData | null>> {
-  const guardianId = await resolveGuardianId();
+  const guardianId = await resolveEnrollmentGuardianId();
   if (!guardianId) return { ok: false, error: "Sessão expirada. Use seu link de retomada." };
 
   try {
@@ -124,7 +107,7 @@ export async function getActiveCheckoutAction(
 export async function pollPaymentStatusAction(
   paymentId: string,
 ): Promise<ActionResult<{ status: string; paid: boolean }>> {
-  const guardianId = await resolveGuardianId();
+  const guardianId = await resolveEnrollmentGuardianId();
   if (!guardianId) return { ok: false, error: "Sessão expirada." };
 
   try {

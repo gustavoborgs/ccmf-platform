@@ -8,9 +8,22 @@ import {
 } from "@/shared/list-params";
 
 /**
- * Filtros administrativos de participantes inscritos.
+ * Filtros administrativos e públicos de participantes.
  * Specs: docs/modules/guardians.md e docs/modules/participants.md
  */
+
+/** Filtros da galeria pública (`/participantes/[ano]`). */
+export const publicGalleryFiltersSchema = z.object({
+  q: textParam,
+  categorySlug: textParam,
+});
+
+export type PublicGalleryFilters = z.infer<typeof publicGalleryFiltersSchema>;
+
+/** Like anônimo na página do participante. */
+export const likeInputSchema = z.object({
+  registrationId: z.string().min(1, "Inscrição inválida."),
+});
 
 export const ADMIN_REGISTRATION_STATUSES = [
   "DRAFT",
