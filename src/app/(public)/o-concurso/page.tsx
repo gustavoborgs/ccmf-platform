@@ -40,7 +40,7 @@ const judgingCriteria = [
 ];
 
 const benefits = [
-  "A faixa oficial e o título de Criança Mais Fotogênica — uma conquista para guardar na história da família.",
+  "A faixa oficial e o título de Criança Mais Fotogênica, uma conquista nacional para guardar na história da família.",
   "Destaque nacional em uma vitrine dedicada à fotografia infantil.",
   "Categorias por faixa etária para uma disputa mais justa em cada fase da infância.",
   "Experiência organizada, acompanhada e segura para responsáveis e participantes.",

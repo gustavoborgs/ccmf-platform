@@ -6,7 +6,7 @@ import { env } from "@/shared/env";
  * Camada de storage (S3 ou compatível). Spec: docs/integrations/s3.md
  * Regras:
  * - O banco guarda apenas a `storageKey`, nunca URLs completas.
- * - Upload do browser sempre via presigned URL (a foto não passa pelo servidor Next).
+ * - Uploads da UI usam presigned URL; scripts administrativos podem enviar direto.
  */
 let client: S3Client | null = null;
 
@@ -57,6 +57,18 @@ export async function createPresignedUploadUrl(key: string, contentType: string)
   });
   const uploadUrl = await getSignedUrl(s3(), command, { expiresIn: PRESIGN_EXPIRES_SECONDS });
   return { uploadUrl, key };
+}
+
+export async function uploadObject(key: string, body: Uint8Array, contentType: string) {
+  const command = new PutObjectCommand({
+    Bucket: env.S3_BUCKET,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+  });
+
+  await s3().send(command);
+  return { key };
 }
 
 export async function createPresignedReadUrl(key: string) {
