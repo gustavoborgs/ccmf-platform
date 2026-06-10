@@ -65,7 +65,7 @@ async function resolveGuardianId(): Promise<string | null> {
   if (wizard?.guardianId) return wizard.guardianId;
 
   const session = await auth();
-  if (session?.user.role === "GUARDIAN") {
+  if (session?.user?.role === "GUARDIAN") {
     const guardian = await getGuardianByUserId(session.user.id);
     return guardian?.id ?? null;
   }

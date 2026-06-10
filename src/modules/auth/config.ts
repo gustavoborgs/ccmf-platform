@@ -8,6 +8,8 @@ import { db } from "@/shared/db";
  * Spec: docs/modules/auth.md
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Railway/proxy: sem trustHost o Auth.js rejeita o host público (UntrustedHost).
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: { signIn: "/entrar" },
   providers: [

@@ -66,7 +66,7 @@ export default async function RegistrationPage({
 
   if (!guardianId) {
     const session = await auth();
-    if (session?.user.role === "GUARDIAN") {
+    if (session?.user?.role === "GUARDIAN") {
       guardianId = (await getGuardianByUserId(session.user.id))?.id ?? null;
     }
   }

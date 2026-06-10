@@ -47,9 +47,9 @@ export function LoginForm({ callbackUrl = "/conta" }: { callbackUrl?: string }) 
 
       const session = await getSession();
       const defaultDestination =
-        session?.user.role === "ADMIN"
+        session?.user?.role === "ADMIN"
           ? "/admin"
-          : session?.user.role === "JUDGE"
+          : session?.user?.role === "JUDGE"
             ? "/jurados"
             : "/conta";
       const destination =

@@ -16,8 +16,8 @@ export default async function LoginPage({
   const safeCallbackUrl =
     callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/conta";
 
-  if (session?.user.role === "GUARDIAN") redirect(safeCallbackUrl);
-  if (session?.user.role === "ADMIN") redirect("/admin");
+  if (session?.user?.role === "GUARDIAN") redirect(safeCallbackUrl);
+  if (session?.user?.role === "ADMIN") redirect("/admin");
 
   return (
     <Container className="flex min-h-[calc(100vh-8rem)] items-center justify-center py-16">
