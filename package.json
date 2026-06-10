@@ -17,6 +17,9 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "blog:import": "tsx scripts/import-blog-posts.ts",
+    "legacy:analyze": "tsx scripts/import-legacy-participants.ts analyze",
+    "legacy:import": "tsx scripts/import-legacy-participants.ts import",
+    "legacy:photos": "tsx scripts/import-legacy-participants.ts photos",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio"
   },

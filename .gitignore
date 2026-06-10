@@ -43,3 +43,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# dump SQL legado (temporário — remover após migração)
+/data/legacy/*.sql

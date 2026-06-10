@@ -31,6 +31,7 @@ Specs da plataforma do **Concurso Criança Mais Fotogênica do Brasil**.
 | Content | [modules/content.md](./modules/content.md) | `src/modules/content` |
 | Media | [modules/media.md](./modules/media.md) | `src/modules/media` |
 | Guardians (admin) | [modules/guardians.md](./modules/guardians.md) | consultas via `registrations` |
+| Legacy Import | [modules/legacy-import.md](./modules/legacy-import.md) | `scripts/import-legacy-participants.ts` |
 
 ### Integrações
 
