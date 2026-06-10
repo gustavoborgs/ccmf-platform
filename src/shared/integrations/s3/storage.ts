@@ -1,4 +1,4 @@
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@/shared/env";
 
@@ -24,6 +24,7 @@ function s3(): S3Client {
 }
 
 const PRESIGN_EXPIRES_SECONDS = 60 * 5;
+const PRESIGN_READ_EXPIRES_SECONDS = 60;
 
 export function buildPhotoKey(params: {
   contestYear: number;
@@ -48,8 +49,18 @@ export async function createPresignedUploadUrl(key: string, contentType: string)
   return { uploadUrl, key };
 }
 
+export async function createPresignedReadUrl(key: string) {
+  const command = new GetObjectCommand({
+    Bucket: env.S3_BUCKET,
+    Key: key,
+  });
+  const url = await getSignedUrl(s3(), command, { expiresIn: PRESIGN_READ_EXPIRES_SECONDS });
+  return { url, key };
+}
+
 export function getPublicUrl(key: string): string {
-  return `${env.S3_PUBLIC_URL}/${key}`;
+  const encodedKey = key.split("/").map(encodeURIComponent).join("/");
+  return `/api/media/${encodedKey}`;
 }
 
 export async function deleteObject(key: string) {

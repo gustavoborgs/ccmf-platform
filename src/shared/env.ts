@@ -15,7 +15,7 @@ const envSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().min(1),
   S3_SECRET_ACCESS_KEY: z.string().min(1),
   S3_ENDPOINT: z.string().optional(),
-  S3_PUBLIC_URL: z.string().url(),
+  S3_PUBLIC_URL: z.string().url().optional(),
 
   ASAAS_BASE_URL: z.string().url(),
   ASAAS_API_KEY: z.string().min(1),
