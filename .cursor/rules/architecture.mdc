@@ -1,0 +1,31 @@
+---
+description: Arquitetura modular e convenções da plataforma CCMF
+alwaysApply: true
+---
+
+# Arquitetura CCMF
+
+Specs em `docs/` são a fonte de verdade. Antes de implementar qualquer feature,
+leia `docs/02-arquitetura.md` e a spec do módulo em `docs/modules/<modulo>.md`.
+Feature nova sem spec → criar a spec primeiro usando `docs/04-template-de-modulo.md`.
+
+## Regras de dependência
+
+- `src/app/` só roteia e compõe UI. **Nunca** importa Prisma direto — sempre
+  via `src/modules/<modulo>/service.ts` ou `actions.ts`.
+- Módulos se comunicam apenas pelo `service.ts` público de outro módulo.
+- `src/shared/` não importa nada de `src/modules/` (integrações Asaas/S3 são
+  clientes sem regra de negócio).
+- `src/generated/prisma/` é gerado — nunca editar.
+
+## Convenções
+
+- Dinheiro em **centavos** (`Int`); idade em **meses**; código em inglês, UI em pt-BR.
+- Imagens: banco guarda só `storageKey`; upload via presigned URL (`docs/integrations/s3.md`).
+- Pagamento confirma **somente via webhook** Asaas, idempotente por `WebhookEvent.externalId`.
+- Mudanças de status seguem as máquinas de estado de `docs/03-modelo-de-dados.md` —
+  não criar status/etapas novas sem atualizar schema + spec.
+- Toda borda (form, action, route handler) valida com Zod (`validators.ts` do módulo).
+- Server Actions: autenticar com `requireUser()`/`requireRole()` de `@/modules/auth/guards`.
+- Nunca expor publicamente participantes não aprovados nem dados sensíveis
+  (data de nascimento completa, dados do responsável).

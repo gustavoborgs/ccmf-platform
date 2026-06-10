@@ -1,26 +1,96 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Design system CCMF — tokens extraídos da marca (logo bubble com gradiente
+ * roxo → magenta → pink + ciano de apoio). Spec: docs/05-design-system.md
+ */
+
+@theme {
+  /* ── Cores da marca ─────────────────────────────── */
+  --color-brand-purple: #8e18b4; /* início do gradiente do logo */
+  --color-brand-magenta: #c414a0; /* meio do gradiente */
+  --color-brand-pink: #ec1380; /* fim do gradiente / CTA */
+  --color-brand-cyan: #2bc4f2; /* apoio (selo verificado) */
+
+  /* escala do roxo (primária) */
+  --color-primary-50: #fbf2ff;
+  --color-primary-100: #f5e0ff;
+  --color-primary-200: #ecc4ff;
+  --color-primary-300: #de98fc;
+  --color-primary-400: #c95df3;
+  --color-primary-500: #ad2cd9;
+  --color-primary-600: #8e18b4; /* brand-purple */
+  --color-primary-700: #741293;
+  --color-primary-800: #5d1175;
+  --color-primary-900: #4a0f5d;
+
+  /* escala do pink (ação/CTA) */
+  --color-accent-50: #fef1f8;
+  --color-accent-100: #fee5f2;
+  --color-accent-200: #ffcae6;
+  --color-accent-300: #ff9ccf;
+  --color-accent-400: #fb5cab;
+  --color-accent-500: #f22a8c;
+  --color-accent-600: #ec1380; /* brand-pink */
+  --color-accent-700: #c2055f;
+  --color-accent-800: #a0084f;
+  --color-accent-900: #850b44;
+
+  /* apoio ciano */
+  --color-info-400: #51d4fb;
+  --color-info-500: #2bc4f2;
+  --color-info-600: #119fd4;
+
+  /* neutros levemente aquecidos (combinam com o rosa) */
+  --color-surface: #fffafd;
+  --color-surface-muted: #faf0f7;
+  --color-ink: #2d1230;
+  --color-ink-muted: #7a5e7d;
+
+  /* ── Tipografia ─────────────────────────────────── */
+  --font-display: var(--font-baloo), "Baloo 2", cursive;
+  --font-sans: var(--font-nunito), "Nunito", ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Raio (linguagem "bubble" do logo) ──────────── */
+  --radius-bubble: 1.75rem;
+
+  /* ── Sombras coloridas da marca ─────────────────── */
+  --shadow-brand: 0 10px 30px -8px rgb(196 20 160 / 0.35);
+  --shadow-brand-lg: 0 20px 50px -12px rgb(142 24 180 / 0.4);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Gradiente oficial da marca (135°, roxo → magenta → pink) */
+@utility bg-brand-gradient {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-brand-purple) 0%,
+    var(--color-brand-magenta) 52%,
+    var(--color-brand-pink) 100%
+  );
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Texto com o gradiente da marca (títulos de seção) */
+@utility text-brand-gradient {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-brand-purple) 0%,
+    var(--color-brand-magenta) 52%,
+    var(--color-brand-pink) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
 }

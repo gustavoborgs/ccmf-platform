@@ -1,0 +1,400 @@
+// Schema CCMF - Concurso Criança Mais Fotogênica
+// Modelo de dados completo: docs/03-modelo-de-dados.md
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// Auth / Usuários
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  GUARDIAN
+  JUDGE
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(GUARDIAN)
+  phone        String?
+  emailVerifiedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  guardianProfile GuardianProfile?
+  votes           Vote[]
+  blogPosts       BlogPost[]
+
+  @@map("users")
+}
+
+/// Perfil do responsável (dados extras além do login)
+model GuardianProfile {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  cpf             String? @unique
+  whatsapp        String?
+  zipCode         String?
+  street          String?
+  number          String?
+  complement      String?
+  neighborhood    String?
+  city            String?
+  state           String? @db.VarChar(2)
+  /// id do customer no Asaas (criado no primeiro checkout)
+  asaasCustomerId String? @unique
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  participants Participant[]
+
+  @@map("guardian_profiles")
+}
+
+// ─────────────────────────────────────────────
+// Concurso / Categorias
+// ─────────────────────────────────────────────
+
+enum ContestStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  JUDGING
+  RESULTS_PUBLISHED
+  ARCHIVED
+}
+
+model Contest {
+  id                   String        @id @default(cuid())
+  year                 Int           @unique
+  name                 String
+  status               ContestStatus @default(DRAFT)
+  /// taxa de inscrição em centavos
+  registrationFeeCents Int
+  /// chave S3 da moldura aplicada nas fotos dos aprovados
+  frameImageKey        String?
+  /// regulamento em markdown (renderizado na página pública)
+  regulationMd         String?
+  /// data da live de revelação dos resultados
+  revealAt             DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  categories    Category[]
+  registrations Registration[]
+
+  @@map("contests")
+}
+
+model Category {
+  id           String @id @default(cuid())
+  contestId    String
+  name         String
+  slug         String
+  /// faixa etária em meses (ex.: Bebê = 0..10)
+  minAgeMonths Int
+  maxAgeMonths Int
+  order        Int    @default(0)
+
+  contest       Contest        @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  registrations Registration[]
+
+  @@unique([contestId, slug])
+  @@map("categories")
+}
+
+// ─────────────────────────────────────────────
+// Participantes / Inscrições
+// ─────────────────────────────────────────────
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+model Participant {
+  id         String   @id @default(cuid())
+  guardianId String
+  name       String
+  slug       String   @unique
+  birthDate  DateTime
+  gender     Gender?
+  city       String
+  state      String   @db.VarChar(2)
+  /// consentimento de uso de imagem aceito pelo responsável
+  imageConsentAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  guardian      GuardianProfile @relation(fields: [guardianId], references: [id])
+  registrations Registration[]
+
+  @@map("participants")
+}
+
+enum RegistrationStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PAID
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SEMIFINALIST
+  WINNER
+}
+
+model Registration {
+  id              String             @id @default(cuid())
+  participantId   String
+  contestId       String
+  categoryId      String
+  status          RegistrationStatus @default(DRAFT)
+  /// protocolo legível p/ suporte (ex.: CCMF-2026-000123)
+  protocol        String             @unique
+  /// contador desnormalizado de likes (fonte: tabela likes)
+  likesCount      Int                @default(0)
+  approvedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  participant Participant @relation(fields: [participantId], references: [id])
+  contest     Contest     @relation(fields: [contestId], references: [id])
+  category    Category    @relation(fields: [categoryId], references: [id])
+  photos      Photo[]
+  payments    Payment[]
+  votes       Vote[]
+  likes       Like[]
+
+  @@unique([participantId, contestId])
+  @@index([contestId, status])
+  @@map("registrations")
+}
+
+model Photo {
+  id             String   @id @default(cuid())
+  registrationId String
+  /// chave do objeto no S3 (nunca URL completa)
+  storageKey     String
+  order          Int      @default(0)
+  isCover        Boolean  @default(false)
+  width          Int?
+  height         Int?
+  createdAt      DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@map("photos")
+}
+
+// ─────────────────────────────────────────────
+// Pagamentos (Asaas)
+// ─────────────────────────────────────────────
+
+enum PaymentMethod {
+  PIX
+  BOLETO
+  CREDIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  RECEIVED
+  OVERDUE
+  REFUNDED
+  CANCELED
+  FAILED
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  registrationId String
+  /// id da cobrança no Asaas
+  asaasPaymentId String?       @unique
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  amountCents    Int
+  dueDate        DateTime?
+  paidAt         DateTime?
+  /// dados de exibição do checkout
+  invoiceUrl     String?
+  pixPayload     String?
+  boletoUrl      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  registration Registration @relation(fields: [registrationId], references: [id])
+
+  @@index([registrationId])
+  @@map("payments")
+}
+
+/// Eventos brutos de webhook (idempotência + auditoria)
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  provider    String    @default("asaas")
+  /// id do evento no provedor (garante processamento único)
+  externalId  String    @unique
+  eventType   String
+  payload     Json
+  processedAt DateTime?
+  error       String?
+  createdAt   DateTime  @default(now())
+
+  @@map("webhook_events")
+}
+
+// ─────────────────────────────────────────────
+// Engajamento público (likes) e Votação (jurados)
+// ─────────────────────────────────────────────
+
+model Like {
+  id             String   @id @default(cuid())
+  registrationId String
+  /// fingerprint anônimo (hash de ip + user-agent) p/ evitar duplicados
+  fingerprint    String
+  createdAt      DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@unique([registrationId, fingerprint])
+  @@map("likes")
+}
+
+model Vote {
+  id             String   @id @default(cuid())
+  judgeId        String
+  registrationId String
+  /// nota técnica de 1 a 10
+  score          Int
+  /// rodada: 1 = seleção dos 80 semifinalistas, 2 = final (10 vencedores)
+  round          Int      @default(1)
+  comment        String?
+  createdAt      DateTime @default(now())
+
+  judge        User         @relation(fields: [judgeId], references: [id])
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@unique([judgeId, registrationId, round])
+  @@map("votes")
+}
+
+// ─────────────────────────────────────────────
+// Leads (CRM de funil de inscrição)
+// ─────────────────────────────────────────────
+
+/// Lead cobre SOMENTE o pré-conta (abandono antes de criar usuário).
+/// Após a conta existir, o funil de vendas é derivado de Registration
+/// (fotos enviadas, checkout, pagamento) — ver docs/modules/leads.md.
+enum LeadStage {
+  NEW
+  CONVERTED
+  LOST
+}
+
+model Lead {
+  id    String  @id @default(cuid())
+  /// captura progressiva no step 1 do wizard — pelo menos email ou cpf
+  name  String?
+  email String? @unique
+  cpf   String? @unique
+  phone String?
+  stage  LeadStage @default(NEW)
+  source String?
+  /// vínculo com o usuário quando a conta é criada (lead vira CONVERTED)
+  guardianUserId String?
+  convertedAt    DateTime?
+  lostAt         DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  events LeadEvent[]
+
+  @@index([stage])
+  @@map("leads")
+}
+
+model LeadEvent {
+  id        String   @id @default(cuid())
+  leadId    String
+  /// ex.: stage_changed, note_added, payment_confirmed
+  type      String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("lead_events")
+}
+
+// ─────────────────────────────────────────────
+// Conteúdo do site
+// ─────────────────────────────────────────────
+
+enum PartnerType {
+  MASTER
+  MEDIA
+  SPONSOR
+}
+
+model Partner {
+  id      String      @id @default(cuid())
+  name    String
+  type    PartnerType
+  logoKey String?
+  url     String?
+  order   Int         @default(0)
+  active  Boolean     @default(true)
+
+  @@map("partners")
+}
+
+model BlogPost {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  excerpt     String
+  content     String
+  coverKey    String?
+  authorId    String?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  author User? @relation(fields: [authorId], references: [id])
+
+  @@map("blog_posts")
+}
+
+model Video {
+  id         String  @id @default(cuid())
+  title      String
+  youtubeUrl String
+  order      Int     @default(0)
+  published  Boolean @default(true)
+
+  @@map("videos")
+}
+
+model ContactMessage {
+  id        String    @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("contact_messages")
+}
