@@ -5,6 +5,7 @@ import { ContestForm } from "@/modules/contests/components/contest-form";
 import { ContestStatusControl } from "@/modules/contests/components/contest-status-control";
 import { contestStatusLabel, contestStatusTone } from "@/modules/contests/labels";
 import { getAdminContestById } from "@/modules/contests/service";
+import { getPublicUrl } from "@/shared/integrations/s3/storage";
 import { Card } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/utils";
 import { StatusBadge } from "../../_components/admin-ui";
@@ -73,6 +74,7 @@ export default async function AdminContestDetailPage({
               registrationFeeCents: contest.registrationFeeCents,
               revealAt: contest.revealAt,
               frameImageKey: contest.frameImageKey,
+              frameImageUrl: contest.frameImageKey ? getPublicUrl(contest.frameImageKey) : null,
               regulationMd: contest.regulationMd,
             }}
           />

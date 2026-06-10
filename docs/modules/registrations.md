@@ -12,7 +12,7 @@
 | Ref do wizard (token HMAC na URL `?ref=`) | `wizard-ref.ts` |
 | Componentes (steps, crop 3:4) | `components/` |
 | Página do wizard | `src/app/(public)/inscricao/page.tsx` |
-| Link de retomada (route handler — seta o cookie) | `src/app/(public)/inscricao/retomar/[id]/route.ts` |
+| Link de retomada (route handler — seta URL + cookie) | `src/app/(public)/inscricao/retomar/[id]/route.ts` |
 | Pós-pagamento | `src/app/(public)/inscricao/confirmada/page.tsx` |
 | Teste E2E do fluxo (backend) | `scripts/test-enrollment-flow.ts` |
 
@@ -57,7 +57,8 @@ Aceita qualquer um destes identificadores:
 | número curto (edição ativa) | `/inscricao/retomar/000001` |
 
 O route handler redireciona para `/inscricao?ref=<token>` com o ref assinado
-na URL (sem cookie).
+na URL e salva o mesmo token em cookie local para que `/inscricao` retome o
+wizard mesmo quando o usuário volta sem query string.
 
 | Estado do id | Link leva para |
 | --- | --- |
@@ -82,12 +83,14 @@ Regras de segurança do link:
   outras inscrições): o wizard só escreve (nova inscrição), não lê.
 - Dados digitados no wizard **não sobrescrevem** o cadastro existente.
 - Acesso à `/conta` exige login normal (senha ou recuperação).
-- O andamento do wizard pós-step-1 vive em um **token HMAC assinado na URL**
-  (`/inscricao?ref=...`) com `guardianId` + `registrationId` — sem cookie.
-  Quem tem o link continua aquela inscrição (mesmo modelo do link de
-  retomada); o token não autentica nem dá acesso à `/conta`.
-- Sem `?ref=` na URL, o wizard **sempre começa do início**. O botão
-  "Começar uma nova inscrição do início" limpa o ref e volta ao step 1.
+- O andamento do wizard pós-step-1 vive em um **token HMAC assinado**
+  (`/inscricao?ref=...`) com `guardianId` + `registrationId`. O mesmo token
+  pode ser salvo em cookie local de retomada. Quem tem o token continua aquela
+  inscrição (mesmo modelo do link de retomada); ele não autentica nem dá acesso
+  à `/conta`.
+- Sem `?ref=` na URL, `/inscricao` tenta retomar pelo cookie local. Sem cookie
+  válido, começa do início. O botão "Começar uma nova inscrição do início"
+  limpa o ref/cookie e volta ao step 1.
 
 ## Máquina de estados (`Registration.status`)
 

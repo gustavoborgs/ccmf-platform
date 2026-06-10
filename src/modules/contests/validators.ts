@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { enumParam, pageParam, pageSizeParam, textParam } from "@/shared/list-params";
+import { isValidPhotoAspect } from "@/shared/utils";
 
 /**
  * Schemas Zod do módulo Contests (edições e categorias).
@@ -63,6 +64,25 @@ export const contestFormSchema = z.object({
 });
 
 export type ContestFormInput = z.infer<typeof contestFormSchema>;
+
+export const contestFrameUploadSchema = z
+  .object({
+    contestYear: z
+      .number({ message: "Informe o ano da edição antes de enviar a moldura." })
+      .int("Ano inválido.")
+      .min(2000, "Ano inválido.")
+      .max(2100, "Ano inválido."),
+    fileName: z.string().trim().min(1, "Arquivo inválido.").max(255, "Nome do arquivo muito longo."),
+    contentType: z.literal("image/png", {
+      message: "A moldura deve ser um arquivo PNG transparente.",
+    }),
+    width: z.number().int("Largura inválida.").min(600, "A moldura deve ter pelo menos 600px de largura."),
+    height: z.number().int("Altura inválida.").min(1, "Altura inválida."),
+  })
+  .refine((data) => isValidPhotoAspect(data.width, data.height), {
+    message: "A moldura deve estar no formato retrato 3:4.",
+    path: ["width"],
+  });
 
 export const contestStatusUpdateSchema = z.object({
   contestId: z.string().min(1),

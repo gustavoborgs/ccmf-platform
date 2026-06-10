@@ -13,6 +13,7 @@ import {
   ensureGuardian,
   linkGuardianByCpf,
   rejectRegistration,
+  updateRegistrationParticipant,
 } from "./service";
 import {
   cpfSchema,
@@ -145,6 +146,51 @@ export async function createParticipantAction(
       ok: true,
       data: {
         ref: serializeWizardRef({ guardianId, registrationId: registration.id }),
+        registrationId: registration.id,
+        protocol: registration.protocol,
+        categoryName: registration.category.name,
+        participantName: registration.participant.name,
+      },
+    };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function updateParticipantAction(
+  rawRef: string | null,
+  registrationId: string,
+  input: unknown,
+): Promise<
+  ActionResult<{
+    ref: string;
+    registrationId: string;
+    protocol: string;
+    categoryName: string;
+    participantName: string;
+  }>
+> {
+  const ref = parseWizardRef(rawRef);
+  if (!ref?.registrationId || ref.registrationId !== registrationId) {
+    return { ok: false, error: "Referência inválida. Use seu link de retomada." };
+  }
+
+  const parsed = participantSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  try {
+    const registration = await updateRegistrationParticipant({
+      guardianId: ref.guardianId,
+      registrationId,
+      participant: parsed.data,
+    });
+
+    return {
+      ok: true,
+      data: {
+        ref: serializeWizardRef({ guardianId: ref.guardianId, registrationId: registration.id }),
         registrationId: registration.id,
         protocol: registration.protocol,
         categoryName: registration.category.name,

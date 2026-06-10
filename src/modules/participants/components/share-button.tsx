@@ -34,7 +34,7 @@ export function ShareButton({ title, text }: { title: string; text: string }) {
       type="button"
       onClick={handleShare}
       className={cn(
-        "inline-flex h-14 flex-1 items-center justify-center gap-2.5 rounded-full border-2 border-accent-600 font-display text-lg font-bold text-accent-600 transition hover:bg-accent-50 active:scale-[0.97]",
+        "inline-flex min-h-14 w-full items-center justify-center gap-2.5 rounded-full border-2 border-accent-600 px-6 py-3.5 font-display text-lg font-bold leading-none text-accent-600 transition hover:bg-accent-50 active:scale-[0.97] sm:flex-1",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600",
       )}
     >

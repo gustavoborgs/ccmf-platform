@@ -1,19 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/shared/ui/cn";
+import { WIZARD_REF_COOKIE, WIZARD_REF_MAX_AGE_SECONDS } from "../wizard-cookie";
 import { GuardianStep } from "./guardian-step";
 import { ParticipantStep } from "./participant-step";
 import { PhotosStep } from "./photos-step";
 import { SummaryStep } from "./summary-step";
-import type { WizardInitialState, WizardUiStep } from "./wizard-types";
+import type { WizardInitialState, WizardParticipantState, WizardUiStep } from "./wizard-types";
 
 export type { WizardInitialState, WizardUiStep } from "./wizard-types";
 
 /**
  * Wizard de inscrição (3 steps). O andamento vive no ref assinado da URL
- * (?ref=) — recarregar ou compartilhar o link retoma do ponto certo.
- * Sem ref, começa do início. Spec: docs/modules/registrations.md
+ * (?ref=) e no cookie local de retomada. Spec: docs/modules/registrations.md
  */
 
 const STEPS: { id: WizardUiStep | "payment"; label: string }[] = [
@@ -34,25 +34,74 @@ function syncRefToUrl(ref: string | null) {
   window.history.replaceState(null, "", url);
 }
 
+function rememberRef(ref: string) {
+  document.cookie = `${WIZARD_REF_COOKIE}=${encodeURIComponent(ref)}; Max-Age=${WIZARD_REF_MAX_AGE_SECONDS}; Path=/; SameSite=Lax`;
+}
+
+function forgetRef() {
+  document.cookie = `${WIZARD_REF_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
+}
+
 export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
   const [step, setStep] = useState<WizardUiStep>(initial.step);
   const [ref, setRef] = useState(initial.ref);
   const [registrationId, setRegistrationId] = useState(initial.registrationId);
+  const [photosCount, setPhotosCount] = useState(initial.photosCount);
+  const [participant, setParticipant] = useState<WizardParticipantState | undefined>(
+    initial.participant,
+  );
   const [summary, setSummary] = useState(initial.summary);
 
   const currentIndex = stepIndex(step);
+  const canEditDraft = !initial.paymentPending || initial.registrationId !== registrationId;
+
+  useEffect(() => {
+    if (!ref) return;
+    syncRefToUrl(ref);
+    rememberRef(ref);
+  }, [ref]);
 
   function advanceRef(nextRef: string) {
     setRef(nextRef);
     syncRefToUrl(nextRef);
+    rememberRef(nextRef);
   }
 
   function restart() {
     setStep("guardian");
     setRef(null);
     setRegistrationId(null);
+    setPhotosCount(0);
+    setParticipant(undefined);
     setSummary(null);
+    forgetRef();
     syncRefToUrl(null);
+  }
+
+  function goToStep(target: WizardUiStep) {
+    if (target === "guardian") {
+      restart();
+      return;
+    }
+    if (target === "participant" && ref && canEditDraft) {
+      setStep("participant");
+      return;
+    }
+    if (target === "photos" && registrationId && canEditDraft) {
+      setStep("photos");
+      return;
+    }
+    if (target === "summary" && summary && registrationId && photosCount >= 2) {
+      setStep("summary");
+    }
+  }
+
+  function canGoToStep(target: WizardUiStep | "payment") {
+    if (target === "payment") return false;
+    if (target === "guardian") return step !== "guardian";
+    if (target === "participant") return Boolean(ref) && canEditDraft;
+    if (target === "photos") return Boolean(registrationId) && canEditDraft;
+    return Boolean(summary && registrationId && photosCount >= 2);
   }
 
   return (
@@ -61,16 +110,21 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
       <ol className="mb-8 flex items-center justify-between gap-2">
         {STEPS.map((item, index) => (
           <li key={item.id} className="flex flex-1 flex-col items-center gap-1.5">
-            <span
+            <button
+              type="button"
+              disabled={!canGoToStep(item.id)}
+              onClick={() => item.id !== "payment" && goToStep(item.id)}
               className={cn(
-                "flex size-9 items-center justify-center rounded-full font-display text-sm font-extrabold",
-                index < currentIndex && "bg-primary-600 text-white",
+                "flex size-9 items-center justify-center rounded-full font-display text-sm font-extrabold transition",
+                index < currentIndex && "bg-primary-600 text-white hover:bg-primary-700",
                 index === currentIndex && "bg-brand-gradient text-white shadow-brand",
                 index > currentIndex && "bg-primary-100 text-primary-600",
+                !canGoToStep(item.id) && index !== currentIndex && "cursor-not-allowed opacity-60",
               )}
             >
-              {index + 1}
-            </span>
+              <span className="sr-only">Ir para {item.label}</span>
+              <span aria-hidden>{index + 1}</span>
+            </button>
             <span
               className={cn(
                 "text-xs font-bold",
@@ -97,9 +151,12 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
         {step === "participant" && (
           <ParticipantStep
             wizardRef={ref}
+            registrationId={registrationId}
+            initialParticipant={participant}
             onDone={(data) => {
               advanceRef(data.ref);
               setRegistrationId(data.registrationId);
+              setParticipant(data.participant);
               setSummary({
                 protocol: data.protocol,
                 participantName: data.participantName,
@@ -115,8 +172,11 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
           <PhotosStep
             wizardRef={ref}
             registrationId={registrationId}
-            initialCount={initial.registrationId === registrationId ? initial.photosCount : 0}
-            onDone={() => setStep("summary")}
+            initialCount={initial.registrationId === registrationId ? photosCount : 0}
+            onDone={() => {
+              setPhotosCount(2);
+              setStep("summary");
+            }}
           />
         )}
 

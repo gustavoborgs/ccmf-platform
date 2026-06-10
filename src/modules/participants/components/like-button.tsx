@@ -71,7 +71,7 @@ export function LikeButton({
       aria-pressed={liked}
       aria-label={liked ? `Você já curtiu ${participantName}` : `Curtir ${participantName}`}
       className={cn(
-        "inline-flex h-14 flex-1 items-center justify-center gap-2.5 rounded-full font-display text-lg font-bold transition active:scale-[0.97]",
+        "inline-flex min-h-14 w-full items-center justify-center gap-2.5 rounded-full px-6 py-3.5 font-display text-lg font-bold leading-none transition active:scale-[0.97] sm:flex-1",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600",
         liked
           ? "border-2 border-accent-200 bg-accent-50 text-accent-700"

@@ -140,7 +140,7 @@ export async function createRegistration(params: {
         name: participant.name,
         slug: await uniqueSlug(participant.name),
         birthDate: participant.birthDate,
-        gender: participant.gender,
+        gender: participant.gender ?? null,
         city: participant.city,
         state: participant.state,
         imageConsentAt: new Date(),
@@ -157,6 +157,60 @@ export async function createRegistration(params: {
         status: "DRAFT",
         protocol: buildProtocol(contest.year, sequence),
       },
+      include: { participant: true, category: true },
+    });
+  });
+}
+
+export async function updateRegistrationParticipant(params: {
+  guardianId: string;
+  registrationId: string;
+  participant: ParticipantInput;
+}) {
+  const { guardianId, registrationId, participant } = params;
+
+  const registration = await db.registration.findUnique({
+    where: { id: registrationId },
+    select: {
+      id: true,
+      status: true,
+      contestId: true,
+      participantId: true,
+      participant: { select: { guardianId: true, slug: true } },
+    },
+  });
+  if (!registration || registration.participant.guardianId !== guardianId) {
+    throw new Error("Inscrição não encontrada.");
+  }
+  if (registration.status !== "DRAFT") {
+    throw new Error("Não é possível alterar os dados depois de iniciar o pagamento.");
+  }
+
+  const category = await findCategoryForBirthDate(registration.contestId, participant.birthDate);
+  if (!category) {
+    throw new Error("Nenhuma categoria disponível para a idade informada.");
+  }
+
+  return db.$transaction(async (tx) => {
+    await tx.participant.update({
+      where: { id: registration.participantId },
+      data: {
+        name: participant.name,
+        slug:
+          registration.participant.slug === slugify(participant.name)
+            ? registration.participant.slug
+            : await uniqueSlug(participant.name),
+        birthDate: participant.birthDate,
+        gender: participant.gender,
+        city: participant.city,
+        state: participant.state,
+        imageConsentAt: new Date(),
+      },
+    });
+
+    return tx.registration.update({
+      where: { id: registration.id },
+      data: { categoryId: category.id },
       include: { participant: true, category: true },
     });
   });
@@ -350,7 +404,16 @@ export function getWizardRegistration(registrationId: string) {
       id: true,
       status: true,
       protocol: true,
-      participant: { select: { name: true, guardianId: true } },
+      participant: {
+        select: {
+          name: true,
+          birthDate: true,
+          gender: true,
+          city: true,
+          state: true,
+          guardianId: true,
+        },
+      },
       category: { select: { name: true } },
       _count: { select: { photos: true } },
     },

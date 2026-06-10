@@ -1,8 +1,10 @@
+import { cookies } from "next/headers";
 import { getActiveContest } from "@/modules/contests/service";
 import {
   getWizardStateFromRef,
   resolveResumeLink,
 } from "@/modules/registrations/service";
+import { WIZARD_REF_COOKIE } from "@/modules/registrations/wizard-cookie";
 import { EnrollmentWizard } from "@/modules/registrations/components/enrollment-wizard";
 import type {
   WizardInitialState,
@@ -13,8 +15,8 @@ import { formatCentsBRL, maskEmail, maskPhone } from "@/shared/utils";
 
 /**
  * Wizard de inscrição (3 steps). A fonte de verdade do andamento é o ref
- * assinado na URL (?ref=) — sem cookie. Sem ref, o wizard SEMPRE começa
- * do início. Spec: docs/modules/registrations.md
+ * assinado, vindo da URL (?ref=) ou do cookie local de retomada.
+ * Spec: docs/modules/registrations.md
  */
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,12 @@ export default async function RegistrationPage({
 }: {
   searchParams: Promise<{ lead?: string; ref?: string }>;
 }) {
-  const { lead: leadId, ref: rawRef } = await searchParams;
+  const [{ lead: leadId, ref: queryRef }, cookieStore] = await Promise.all([
+    searchParams,
+    cookies(),
+  ]);
+  const cookieRef = cookieStore.get(WIZARD_REF_COOKIE)?.value;
+  const rawRef = queryRef ?? cookieRef;
 
   const contest = await getActiveContest();
   if (!contest) {
@@ -60,7 +67,7 @@ export default async function RegistrationPage({
     }
   }
 
-  // Retomada SOMENTE via ref assinado da URL — sem ref, começa do início.
+  // Retomada via ref assinado da URL ou cookie local; ref inválido é ignorado.
   const refState = await getWizardStateFromRef(rawRef);
 
   if (refState) {
@@ -77,6 +84,13 @@ export default async function RegistrationPage({
         participantName: registration.participant.name,
         categoryName: registration.category.name,
         feeFormatted,
+      };
+      initial.participant = {
+        name: registration.participant.name,
+        birthDate: registration.participant.birthDate.toISOString().slice(0, 10),
+        gender: registration.participant.gender ?? "",
+        city: registration.participant.city,
+        state: registration.participant.state,
       };
 
       const step: WizardUiStep =

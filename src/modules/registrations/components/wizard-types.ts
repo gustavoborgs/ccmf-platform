@@ -2,6 +2,14 @@
 
 export type WizardUiStep = "guardian" | "participant" | "photos" | "summary";
 
+export type WizardParticipantState = {
+  name: string;
+  birthDate: string;
+  gender: string;
+  city: string;
+  state: string;
+};
+
 export type WizardInitialState = {
   step: WizardUiStep;
   /** ref assinado da URL (?ref=) — fonte de verdade do andamento */
@@ -10,6 +18,7 @@ export type WizardInitialState = {
   photosCount: number;
   paymentPending: boolean;
   prefill?: { name?: string; emailMasked?: string; phoneMasked?: string };
+  participant?: WizardParticipantState;
   summary: {
     protocol: string;
     participantName: string;

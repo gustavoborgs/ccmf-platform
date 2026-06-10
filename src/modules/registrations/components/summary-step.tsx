@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Checkout } from "@/modules/payments/components/checkout";
+import { Button } from "@/shared/ui/button";
 
 /**
  * Step 3 — resumo da inscrição + checkout (PIX/Boleto/Cartão via Asaas).
@@ -17,6 +19,8 @@ export function SummaryStep({
   summary: { protocol: string; participantName: string; categoryName: string; feeFormatted: string };
   paymentPending: boolean;
 }) {
+  const [confirmed, setConfirmed] = useState(paymentPending);
+
   return (
     <div className="space-y-5">
       <div className="rounded-bubble bg-primary-50 p-5">
@@ -40,13 +44,25 @@ export function SummaryStep({
         </dl>
       </div>
 
-      <Checkout
-        wizardRef={wizardRef}
-        registrationId={registrationId}
-        protocol={summary.protocol}
-        feeFormatted={summary.feeFormatted}
-        hasPendingPayment={paymentPending}
-      />
+      {!confirmed ? (
+        <div className="space-y-3">
+          <p className="text-sm text-ink-muted">
+            Confira os dados antes de gerar a cobrança. Se precisar alterar algo, use os botões das
+            etapas acima.
+          </p>
+          <Button className="w-full" onClick={() => setConfirmed(true)}>
+            Confirmar dados e ir para pagamento
+          </Button>
+        </div>
+      ) : (
+        <Checkout
+          wizardRef={wizardRef}
+          registrationId={registrationId}
+          protocol={summary.protocol}
+          feeFormatted={summary.feeFormatted}
+          hasPendingPayment={paymentPending}
+        />
+      )}
     </div>
   );
 }

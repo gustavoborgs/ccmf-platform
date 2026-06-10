@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveResumeLink } from "@/modules/registrations/service";
+import { WIZARD_REF_COOKIE, WIZARD_REF_MAX_AGE_SECONDS } from "@/modules/registrations/wizard-cookie";
 import { serializeWizardRef } from "@/modules/registrations/wizard-ref";
 
 /**
  * Link permanente de retomada (WhatsApp/e-mail). Resolve o identificador
- * público e redireciona para o wizard com o ref assinado na URL (?ref=) —
- * sem cookie. Spec: docs/modules/registrations.md
+ * público e redireciona para o wizard com o ref assinado na URL (?ref=),
+ * também salvo em cookie local para retomada em /inscricao.
+ * Spec: docs/modules/registrations.md
  */
 export async function GET(
   request: NextRequest,
@@ -16,7 +18,9 @@ export async function GET(
   const origin = request.nextUrl.origin;
 
   if (!result) {
-    return NextResponse.redirect(new URL("/inscricao", origin));
+    const response = NextResponse.redirect(new URL("/inscricao", origin));
+    response.cookies.delete(WIZARD_REF_COOKIE);
+    return response;
   }
 
   if (result.kind === "PRE_ACCOUNT") {
@@ -28,12 +32,20 @@ export async function GET(
       guardianId: result.guardianId,
       registrationId: result.registrationId,
     });
-    return NextResponse.redirect(
+    const response = NextResponse.redirect(
       new URL(`/inscricao?ref=${encodeURIComponent(ref)}`, origin),
     );
+    response.cookies.set(WIZARD_REF_COOKIE, ref, {
+      maxAge: WIZARD_REF_MAX_AGE_SECONDS,
+      path: "/",
+      sameSite: "lax",
+    });
+    return response;
   }
 
-  return NextResponse.redirect(
+  const response = NextResponse.redirect(
     new URL(`/inscricao/confirmada?protocolo=${encodeURIComponent(result.protocol)}`, origin),
   );
+  response.cookies.delete(WIZARD_REF_COOKIE);
+  return response;
 }

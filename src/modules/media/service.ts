@@ -1,6 +1,7 @@
 import { db } from "@/shared/db";
 import { isValidPhotoAspect } from "@/shared/utils";
 import {
+  buildContestFrameKey,
   buildPhotoKey,
   createPresignedUploadUrl,
   getPublicUrl,
@@ -15,6 +16,7 @@ import {
  */
 
 const MAX_PHOTOS_PER_REGISTRATION = 2;
+const MIN_FRAME_WIDTH = 600;
 
 /** Gera URL de upload direto para o S3 e registra a foto na inscrição. */
 export async function requestPhotoUpload(params: {
@@ -58,6 +60,29 @@ export async function requestPhotoUpload(params: {
   });
 
   return { photo, uploadUrl };
+}
+
+/** Gera URL de upload direto para a moldura PNG transparente da edição. */
+export async function requestContestFrameUpload(params: {
+  contestYear: number;
+  contentType: string;
+  width: number;
+  height: number;
+}) {
+  if (params.contentType !== "image/png") {
+    throw new Error("A moldura deve ser um PNG transparente.");
+  }
+  if (params.width < MIN_FRAME_WIDTH) {
+    throw new Error(`A moldura deve ter pelo menos ${MIN_FRAME_WIDTH}px de largura.`);
+  }
+  if (!isValidPhotoAspect(params.width, params.height)) {
+    throw new Error("A moldura deve estar no formato retrato 3:4.");
+  }
+
+  const key = buildContestFrameKey(params.contestYear);
+  const { uploadUrl } = await createPresignedUploadUrl(key, params.contentType);
+
+  return { key, uploadUrl };
 }
 
 /**

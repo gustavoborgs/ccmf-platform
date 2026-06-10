@@ -1,9 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useRef, useState, useTransition, type FormEvent } from "react";
 import { Button, Field, TextInput } from "@/shared/ui";
-import { createContestAction, updateContestAction } from "../actions";
+import {
+  createContestAction,
+  requestContestFrameUploadAction,
+  updateContestAction,
+} from "../actions";
 
 export type ContestFormInitial = {
   id: string;
@@ -12,6 +16,7 @@ export type ContestFormInitial = {
   registrationFeeCents: number;
   revealAt: Date | null;
   frameImageKey: string | null;
+  frameImageUrl?: string | null;
   regulationMd: string | null;
 };
 
@@ -24,13 +29,16 @@ export function ContestForm({ initial }: { initial?: ContestFormInitial }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isUploadingFrame, setIsUploadingFrame] = useState(false);
 
   const [year, setYear] = useState(initial ? String(initial.year) : String(new Date().getFullYear()));
   const [name, setName] = useState(initial?.name ?? "");
   const [fee, setFee] = useState(initial ? centsToInput(initial.registrationFeeCents) : "");
   const [revealAt, setRevealAt] = useState(toLocalInputValue(initial?.revealAt ?? null));
   const [frameImageKey, setFrameImageKey] = useState(initial?.frameImageKey ?? "");
+  const [framePreviewUrl, setFramePreviewUrl] = useState(initial?.frameImageUrl ?? "");
   const [regulationMd, setRegulationMd] = useState(initial?.regulationMd ?? "");
+  const frameInputRef = useRef<HTMLInputElement>(null);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -70,6 +78,49 @@ export function ContestForm({ initial }: { initial?: ContestFormInitial }) {
       setSuccess(true);
       router.refresh();
     });
+  }
+
+  async function handleFrameFileSelected(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    setSuccess(false);
+
+    const contestYear = Number(year);
+    if (!Number.isInteger(contestYear) || contestYear < 2000 || contestYear > 2100) {
+      setError("Informe um ano válido antes de enviar a moldura.");
+      return;
+    }
+    if (file.type !== "image/png") {
+      setError("A moldura deve ser um arquivo PNG transparente.");
+      return;
+    }
+
+    setIsUploadingFrame(true);
+    try {
+      const dimensions = await readImageDimensions(file);
+      const action = await requestContestFrameUploadAction({
+        contestYear,
+        fileName: file.name,
+        contentType: file.type,
+        width: dimensions.width,
+        height: dimensions.height,
+      });
+      if (!action.ok) throw new Error(action.error);
+
+      const put = await fetch(action.data.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!put.ok) throw new Error("Falha no envio da moldura. Tente novamente.");
+
+      setFrameImageKey(action.data.key);
+      setFramePreviewUrl(URL.createObjectURL(file));
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Erro no envio da moldura.");
+    } finally {
+      setIsUploadingFrame(false);
+    }
   }
 
   return (
@@ -118,17 +169,67 @@ export function ContestForm({ initial }: { initial?: ContestFormInitial }) {
         </Field>
       </div>
 
-      <Field
-        label="Moldura dos aprovados (chave S3)"
-        hint="Opcional. Chave do arquivo da moldura aplicada nas fotos, ex.: frames/2026.png"
-      >
-        <TextInput
-          value={frameImageKey}
-          onChange={(event) => setFrameImageKey(event.target.value)}
-          disabled={isPending}
-          placeholder="frames/2026.png"
-        />
-      </Field>
+      <div className="block">
+        <span className="mb-1.5 block text-sm font-bold text-ink">Moldura dos aprovados</span>
+        <div className="space-y-3 rounded-2xl border border-primary-200 bg-primary-50/60 p-4">
+          {framePreviewUrl ? (
+            <div className="flex flex-wrap items-start gap-4">
+              <div className="relative aspect-[3/4] w-28 overflow-hidden rounded-2xl border border-primary-200 bg-white">
+                {/* preview local/CDN da moldura; next/image não se aplica para object URLs */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={framePreviewUrl} alt="Prévia da moldura" className="size-full object-contain" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <p className="text-sm font-semibold text-primary-700">Moldura anexada</p>
+                <p className="break-all text-xs text-ink-muted">{frameImageKey}</p>
+              </div>
+            </div>
+          ) : frameImageKey ? (
+            <p className="break-all text-sm text-ink-muted">Moldura anexada: {frameImageKey}</p>
+          ) : (
+            <p className="text-sm text-ink-muted">Nenhuma moldura anexada.</p>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => frameInputRef.current?.click()}
+              disabled={isPending || isUploadingFrame}
+            >
+              {isUploadingFrame ? "Enviando..." : frameImageKey ? "Trocar moldura" : "Enviar moldura"}
+            </Button>
+            {frameImageKey && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setFrameImageKey("");
+                  setFramePreviewUrl("");
+                }}
+                disabled={isPending || isUploadingFrame}
+              >
+                Remover anexo
+              </Button>
+            )}
+          </div>
+
+          <input
+            ref={frameInputRef}
+            type="file"
+            accept="image/png"
+            hidden
+            onChange={(event) => {
+              void handleFrameFileSelected(event.target.files?.[0]);
+              event.target.value = "";
+            }}
+          />
+        </div>
+        <span className="mt-1 block text-xs text-ink-muted">
+          PNG transparente em retrato 3:4, com pelo menos 600px de largura. O arquivo é enviado direto
+          ao S3.
+        </span>
+      </div>
 
       <Field
         label="Regulamento (Markdown)"
@@ -185,4 +286,21 @@ function toLocalInputValue(date: Date | null): string {
     `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
     `T${pad(date.getHours())}:${pad(date.getMinutes())}`
   );
+}
+
+function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Não foi possível ler as dimensões da moldura."));
+    };
+    image.src = objectUrl;
+  });
 }

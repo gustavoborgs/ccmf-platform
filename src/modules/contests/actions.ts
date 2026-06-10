@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/modules/auth/guards";
+import { requestContestFrameUpload } from "@/modules/media/service";
 import {
   createCategory,
   createContest,
@@ -12,6 +13,7 @@ import {
   updateContestStatus,
 } from "./service";
 import {
+  contestFrameUploadSchema,
   contestFormSchema,
   contestStatusUpdateSchema,
   createCategorySchema,
@@ -73,6 +75,24 @@ export async function updateContestAction(
     await updateContest(contestId, parsed.data);
     revalidateContests(contestId);
     return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function requestContestFrameUploadAction(
+  input: unknown,
+): Promise<ActionResult<{ key: string; uploadUrl: string }>> {
+  await requireRole("ADMIN");
+
+  const parsed = contestFrameUploadSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Arquivo inválido." };
+  }
+
+  try {
+    const upload = await requestContestFrameUpload(parsed.data);
+    return { ok: true, data: upload };
   } catch (error) {
     return fail(error);
   }

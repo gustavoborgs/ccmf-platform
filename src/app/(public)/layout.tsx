@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { buildWhatsAppUrl, CONTACT } from "@/shared/contact";
 import { Button, Container } from "@/shared/ui";
+import { MobileNav } from "./_components/mobile-nav";
 
 const NAV_LINKS = [
   { href: "/", label: "Inicial" },
@@ -42,13 +43,14 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
-            <Button href="/entrar" variant="ghost" size="sm" className="hidden sm:inline-flex">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button href="/entrar" variant="ghost" size="sm" className="hidden lg:inline-flex">
               Entrar
             </Button>
             <Button href="/inscricao" size="sm">
               Inscrição
             </Button>
+            <MobileNav links={NAV_LINKS} />
           </div>
         </Container>
       </header>

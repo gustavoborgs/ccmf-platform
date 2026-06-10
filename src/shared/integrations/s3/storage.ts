@@ -34,6 +34,10 @@ export function buildPhotoKey(params: {
   return `contests/${params.contestYear}/registrations/${params.registrationId}/${crypto.randomUUID()}.${ext}`;
 }
 
+export function buildContestFrameKey(contestYear: number): string {
+  return `contests/${contestYear}/frame.png`;
+}
+
 export async function createPresignedUploadUrl(key: string, contentType: string) {
   const command = new PutObjectCommand({
     Bucket: env.S3_BUCKET,

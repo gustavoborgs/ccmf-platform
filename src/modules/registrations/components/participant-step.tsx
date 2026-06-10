@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/shared/ui/button";
 import { Field, SelectInput, TextInput } from "@/shared/ui/field";
-import { createParticipantAction } from "../actions";
+import { createParticipantAction, updateParticipantAction } from "../actions";
+import type { WizardParticipantState } from "./wizard-types";
 
 /** Step 2a — dados da criança; categoria resolvida pela idade no backend. */
 
@@ -15,41 +16,61 @@ const UFS = [
 
 export function ParticipantStep({
   wizardRef,
+  registrationId,
+  initialParticipant,
   onDone,
 }: {
   wizardRef: string | null;
+  registrationId: string | null;
+  initialParticipant?: WizardParticipantState;
   onDone: (data: {
     ref: string;
     registrationId: string;
     protocol: string;
     categoryName: string;
     participantName: string;
+    participant: WizardParticipantState;
   }) => void;
 }) {
   const [form, setForm] = useState({
-    name: "",
-    birthDate: "",
-    gender: "",
-    city: "",
-    state: "",
+    name: initialParticipant?.name ?? "",
+    birthDate: initialParticipant?.birthDate ?? "",
+    gender: initialParticipant?.gender ?? "",
+    city: initialParticipant?.city ?? "",
+    state: initialParticipant?.state ?? "",
   });
-  const [consent, setConsent] = useState(false);
+  const [consent, setConsent] = useState(Boolean(initialParticipant));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function submit() {
     setError(null);
     startTransition(async () => {
-      const result = await createParticipantAction(wizardRef, {
+      const input = {
         name: form.name,
         birthDate: form.birthDate,
         gender: form.gender || undefined,
         city: form.city,
         state: form.state,
         imageConsent: consent,
-      });
-      if (result.ok) onDone(result.data);
-      else setError(result.error);
+      };
+      const result = registrationId
+        ? await updateParticipantAction(wizardRef, registrationId, input)
+        : await createParticipantAction(wizardRef, input);
+      if (result.ok) {
+        onDone({
+          ...result.data,
+          participant: {
+            name: form.name,
+            birthDate: form.birthDate,
+            gender: form.gender,
+            city: form.city,
+            state: form.state,
+          },
+        });
+      } else {
+        setError(result.error);
+      }
     });
   }
 
@@ -121,7 +142,7 @@ export function ParticipantStep({
       </label>
 
       <Button onClick={submit} disabled={pending}>
-        {pending ? "Salvando..." : "Salvar e enviar fotos"}
+        {pending ? "Salvando..." : registrationId ? "Salvar alterações" : "Salvar e enviar fotos"}
       </Button>
 
       {error && <p className="text-sm font-semibold text-accent-700">{error}</p>}
