@@ -4,6 +4,8 @@ export type WizardUiStep = "guardian" | "participant" | "photos" | "summary";
 
 export type WizardInitialState = {
   step: WizardUiStep;
+  /** ref assinado da URL (?ref=) — fonte de verdade do andamento */
+  ref: string | null;
   registrationId: string | null;
   photosCount: number;
   paymentPending: boolean;

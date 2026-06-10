@@ -21,10 +21,12 @@ const TOTAL_PHOTOS = 2;
 type Slot = { previewUrl: string } | null;
 
 export function PhotosStep({
+  wizardRef,
   registrationId,
   initialCount,
   onDone,
 }: {
+  wizardRef: string | null;
   registrationId: string;
   initialCount: number;
   onDone: () => void;
@@ -64,7 +66,7 @@ export function PhotosStep({
     setError(null);
 
     try {
-      const action = await requestPhotoUploadAction({
+      const action = await requestPhotoUploadAction(wizardRef, {
         registrationId,
         fileName: `foto-${slotIndex + 1}.jpg`,
         contentType: "image/jpeg",

@@ -219,7 +219,7 @@ function LeadDetailsDialog({ row }: { row: CrmRow }) {
           <DialogClose className="rounded-full px-5 py-2 text-sm font-bold text-primary-700 transition hover:bg-primary-50">
             Fechar
           </DialogClose>
-          <Button href={row.href} size="sm">
+          <Button href={row.href} target="_blank" rel="noopener noreferrer" size="sm">
             Abrir contexto
           </Button>
         </div>

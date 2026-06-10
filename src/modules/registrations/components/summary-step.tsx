@@ -7,10 +7,12 @@ import { Checkout } from "@/modules/payments/components/checkout";
  * Spec: docs/modules/payments.md
  */
 export function SummaryStep({
+  wizardRef,
   registrationId,
   summary,
   paymentPending,
 }: {
+  wizardRef: string | null;
   registrationId: string;
   summary: { protocol: string; participantName: string; categoryName: string; feeFormatted: string };
   paymentPending: boolean;
@@ -39,6 +41,7 @@ export function SummaryStep({
       </div>
 
       <Checkout
+        wizardRef={wizardRef}
         registrationId={registrationId}
         protocol={summary.protocol}
         feeFormatted={summary.feeFormatted}

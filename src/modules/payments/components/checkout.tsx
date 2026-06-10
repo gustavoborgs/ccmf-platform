@@ -35,12 +35,15 @@ const POLL_INTERVAL_MS: Record<Method, number> = {
 };
 
 export function Checkout({
+  wizardRef,
   registrationId,
   protocol,
   feeFormatted,
   hasPendingPayment,
   onPaid,
 }: {
+  /** ref assinado do wizard (?ref=) — autoriza as actions sem login */
+  wizardRef: string | null;
   registrationId: string;
   protocol: string;
   feeFormatted: string;
@@ -67,7 +70,7 @@ export function Checkout({
     if (!hasPendingPayment) return;
     let cancelled = false;
 
-    getActiveCheckoutAction(registrationId).then((result) => {
+    getActiveCheckoutAction(wizardRef, registrationId).then((result) => {
       if (cancelled) return;
       setRestoring(false);
       if (result.ok && result.data) {
@@ -80,14 +83,14 @@ export function Checkout({
     return () => {
       cancelled = true;
     };
-  }, [hasPendingPayment, registrationId, markPaid]);
+  }, [hasPendingPayment, registrationId, wizardRef, markPaid]);
 
   // Polling: concilia o status com o Asaas enquanto a cobrança está pendente.
   useEffect(() => {
     if (!checkout || paid || checkout.status !== "PENDING") return;
 
     const interval = setInterval(async () => {
-      const result = await pollPaymentStatusAction(checkout.paymentId);
+      const result = await pollPaymentStatusAction(wizardRef, checkout.paymentId);
       if (!result.ok) return;
 
       if (result.data.paid) {
@@ -102,13 +105,13 @@ export function Checkout({
     }, POLL_INTERVAL_MS[checkout.method]);
 
     return () => clearInterval(interval);
-  }, [checkout, paid, markPaid]);
+  }, [checkout, paid, wizardRef, markPaid]);
 
   async function startCheckout(input: { method: Method; creditCard?: CreditCardInput }) {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await createCheckoutAction({ registrationId, ...input });
+      const result = await createCheckoutAction(wizardRef, { registrationId, ...input });
       if (!result.ok) {
         setError(result.error);
         return;

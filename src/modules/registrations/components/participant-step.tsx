@@ -14,9 +14,12 @@ const UFS = [
 ];
 
 export function ParticipantStep({
+  wizardRef,
   onDone,
 }: {
+  wizardRef: string | null;
   onDone: (data: {
+    ref: string;
     registrationId: string;
     protocol: string;
     categoryName: string;
@@ -37,7 +40,7 @@ export function ParticipantStep({
   function submit() {
     setError(null);
     startTransition(async () => {
-      const result = await createParticipantAction({
+      const result = await createParticipantAction(wizardRef, {
         name: form.name,
         birthDate: form.birthDate,
         gender: form.gender || undefined,

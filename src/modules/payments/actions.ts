@@ -13,7 +13,7 @@ import { formatCentsBRL } from "@/shared/utils";
 
 /**
  * Server Actions do checkout (wizard de inscrição).
- * Autorização: cookie assinado do wizard OU sessão de GUARDIAN logado —
+ * Autorização: ref assinado da URL (?ref=) OU sessão de GUARDIAN logado —
  * o service ainda valida que a inscrição pertence ao responsável.
  * Spec: docs/modules/payments.md
  */
@@ -56,14 +56,17 @@ function toCheckoutData(result: CheckoutResult): CheckoutData {
 }
 
 /** Cria (ou reutiliza) a cobrança no Asaas para o método escolhido. */
-export async function createCheckoutAction(input: unknown): Promise<ActionResult<CheckoutData>> {
+export async function createCheckoutAction(
+  rawRef: string | null,
+  input: unknown,
+): Promise<ActionResult<CheckoutData>> {
   const parsed = checkoutInputSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  const guardianId = await resolveEnrollmentGuardianId();
-  if (!guardianId) return { ok: false, error: "Sessão expirada. Use seu link de retomada." };
+  const guardianId = await resolveEnrollmentGuardianId(rawRef);
+  if (!guardianId) return { ok: false, error: "Referência inválida. Use seu link de retomada." };
 
   const headerList = await headers();
   const remoteIp =
@@ -87,10 +90,11 @@ export async function createCheckoutAction(input: unknown): Promise<ActionResult
 
 /** Cobrança ativa da inscrição (retomada da tela de pagamento). */
 export async function getActiveCheckoutAction(
+  rawRef: string | null,
   registrationId: string,
 ): Promise<ActionResult<CheckoutData | null>> {
-  const guardianId = await resolveEnrollmentGuardianId();
-  if (!guardianId) return { ok: false, error: "Sessão expirada. Use seu link de retomada." };
+  const guardianId = await resolveEnrollmentGuardianId(rawRef);
+  if (!guardianId) return { ok: false, error: "Referência inválida. Use seu link de retomada." };
 
   try {
     const result = await getActivePayment(registrationId, guardianId);
@@ -105,10 +109,11 @@ export async function getActiveCheckoutAction(
  * O webhook continua sendo a fonte de verdade — isto é conciliação ativa.
  */
 export async function pollPaymentStatusAction(
+  rawRef: string | null,
   paymentId: string,
 ): Promise<ActionResult<{ status: string; paid: boolean }>> {
-  const guardianId = await resolveEnrollmentGuardianId();
-  if (!guardianId) return { ok: false, error: "Sessão expirada." };
+  const guardianId = await resolveEnrollmentGuardianId(rawRef);
+  if (!guardianId) return { ok: false, error: "Referência inválida." };
 
   try {
     const result = await syncPaymentStatus(paymentId, guardianId);

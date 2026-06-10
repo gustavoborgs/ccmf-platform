@@ -1,10 +1,8 @@
 import { getActiveContest } from "@/modules/contests/service";
-import { resolveEnrollmentGuardianId } from "@/modules/registrations/context";
 import {
-  getWizardRegistration,
+  getWizardStateFromRef,
   resolveResumeLink,
 } from "@/modules/registrations/service";
-import { getWizardSession } from "@/modules/registrations/wizard-session";
 import { EnrollmentWizard } from "@/modules/registrations/components/enrollment-wizard";
 import type {
   WizardInitialState,
@@ -14,18 +12,18 @@ import { Container } from "@/shared/ui/container";
 import { formatCentsBRL, maskEmail, maskPhone } from "@/shared/utils";
 
 /**
- * Wizard de inscrição (3 steps). O estado inicial é derivado no servidor:
- * cookie do wizard → inscrição em andamento → step recalculado.
- * Spec: docs/modules/registrations.md
+ * Wizard de inscrição (3 steps). A fonte de verdade do andamento é o ref
+ * assinado na URL (?ref=) — sem cookie. Sem ref, o wizard SEMPRE começa
+ * do início. Spec: docs/modules/registrations.md
  */
 export const dynamic = "force-dynamic";
 
 export default async function RegistrationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ lead?: string }>;
+  searchParams: Promise<{ lead?: string; ref?: string }>;
 }) {
-  const { lead: leadId } = await searchParams;
+  const { lead: leadId, ref: rawRef } = await searchParams;
 
   const contest = await getActiveContest();
   if (!contest) {
@@ -42,6 +40,7 @@ export default async function RegistrationPage({
   const feeFormatted = formatCentsBRL(contest.registrationFeeCents);
   const initial: WizardInitialState = {
     step: "guardian",
+    ref: null,
     registrationId: null,
     photosCount: 0,
     paymentPending: false,
@@ -61,16 +60,14 @@ export default async function RegistrationPage({
     }
   }
 
-  // Retomada: responsável logado ou cookie do wizard (validado no banco).
-  const wizard = await getWizardSession();
-  const guardianId = await resolveEnrollmentGuardianId();
+  // Retomada SOMENTE via ref assinado da URL — sem ref, começa do início.
+  const refState = await getWizardStateFromRef(rawRef);
 
-  if (guardianId) {
+  if (refState) {
+    initial.ref = rawRef ?? null;
     initial.step = "participant";
-  }
 
-  if (wizard?.registrationId) {
-    const registration = await getWizardRegistration(wizard.registrationId);
+    const registration = refState.registration;
     if (registration && ["DRAFT", "PENDING_PAYMENT"].includes(registration.status)) {
       initial.registrationId = registration.id;
       initial.photosCount = registration._count.photos;

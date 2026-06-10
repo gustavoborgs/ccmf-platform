@@ -12,9 +12,7 @@ import type {
 } from "./validators";
 import { convertLead } from "@/modules/leads/service";
 
-// Parte da API pública do módulo: outros módulos (ex.: payments) autorizam
-// ações do wizard pela mesma sessão assinada.
-export { getWizardSession } from "./wizard-session";
+import { parseWizardRef } from "./wizard-ref";
 
 /**
  * Módulo Registrations: wizard de inscrição + ciclo de vida da inscrição.
@@ -352,11 +350,43 @@ export function getWizardRegistration(registrationId: string) {
       id: true,
       status: true,
       protocol: true,
-      participant: { select: { name: true } },
+      participant: { select: { name: true, guardianId: true } },
       category: { select: { name: true } },
       _count: { select: { photos: true } },
     },
   });
+}
+
+export type WizardRefState = {
+  guardianId: string;
+  registration: NonNullable<Awaited<ReturnType<typeof getWizardRegistration>>> | null;
+};
+
+/**
+ * Deriva o estado do wizard a partir do ref assinado da URL.
+ * Valida assinatura, existência do guardian e posse da inscrição.
+ * Ref ausente/inválido → null (o wizard começa do início).
+ */
+export async function getWizardStateFromRef(
+  rawRef: string | null | undefined,
+): Promise<WizardRefState | null> {
+  const ref = parseWizardRef(rawRef);
+  if (!ref) return null;
+
+  const guardian = await db.guardianProfile.findUnique({
+    where: { id: ref.guardianId },
+    select: { id: true },
+  });
+  if (!guardian) return null;
+
+  if (!ref.registrationId) return { guardianId: guardian.id, registration: null };
+
+  const registration = await getWizardRegistration(ref.registrationId);
+  if (!registration || registration.participant.guardianId !== guardian.id) {
+    return { guardianId: guardian.id, registration: null };
+  }
+
+  return { guardianId: guardian.id, registration };
 }
 
 export function listGuardianRegistrations(guardianId: string) {

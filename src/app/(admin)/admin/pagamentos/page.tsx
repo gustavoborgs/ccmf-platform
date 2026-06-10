@@ -190,12 +190,24 @@ function PaymentDetailsDialog({ payment }: { payment: AdminPaymentRow }) {
             {(payment.invoiceUrl || payment.boletoUrl) && (
               <div className="mt-4 flex flex-wrap gap-2">
                 {payment.invoiceUrl && (
-                  <Button href={payment.invoiceUrl} target="_blank" variant="outline" size="sm">
+                  <Button
+                    href={payment.invoiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="outline"
+                    size="sm"
+                  >
                     Abrir invoice
                   </Button>
                 )}
                 {payment.boletoUrl && (
-                  <Button href={payment.boletoUrl} target="_blank" variant="outline" size="sm">
+                  <Button
+                    href={payment.boletoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="outline"
+                    size="sm"
+                  >
                     Abrir boleto
                   </Button>
                 )}

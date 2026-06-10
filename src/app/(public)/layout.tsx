@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { buildWhatsAppUrl, CONTACT } from "@/shared/contact";
 import { Button, Container } from "@/shared/ui";
 
 const NAV_LINKS = [
@@ -86,9 +87,26 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
           <div>
             <h3 className="font-display text-base font-bold">Fale conosco</h3>
             <ul className="mt-4 space-y-2 text-sm text-white/85">
-              <li>WhatsApp: (43) 98436-9429</li>
-              <li>Telefone: (43) 99634-4762</li>
-              <li>byclaudiacavalcante@yahoo.com.br</li>
+              <li>
+                <a
+                  href={buildWhatsAppUrl("Olá! Vim pelo site do CCMF e gostaria de falar com a equipe.")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold transition hover:text-white"
+                >
+                  WhatsApp: {CONTACT.whatsapp.display}
+                </a>
+              </li>
+              <li>
+                <a href={`tel:+${CONTACT.phone.e164}`} className="transition hover:text-white">
+                  Telefone: {CONTACT.phone.display}
+                </a>
+              </li>
+              <li>
+                <a href={`mailto:${CONTACT.email}`} className="transition hover:text-white">
+                  {CONTACT.email}
+                </a>
+              </li>
             </ul>
           </div>
 

@@ -42,7 +42,7 @@ export function GuardianStep({
   onDone,
 }: {
   prefill?: { name?: string; emailMasked?: string; phoneMasked?: string };
-  onDone: () => void;
+  onDone: (ref: string) => void;
 }) {
   const [cpf, setCpf] = useState("");
   const [cpfStatus, setCpfStatus] = useState<CpfStatus>("idle");
@@ -98,7 +98,7 @@ export function GuardianStep({
     setError(null);
     startTransition(async () => {
       const result = await linkGuardianAction(cpf);
-      if (result.ok) onDone();
+      if (result.ok) onDone(result.data.ref);
       else setError(result.error);
     });
   }
@@ -107,7 +107,7 @@ export function GuardianStep({
     setError(null);
     startTransition(async () => {
       const result = await createGuardianAction({ cpf, ...form });
-      if (result.ok) onDone();
+      if (result.ok) onDone(result.data.ref);
       else setError(result.error);
     });
   }
