@@ -2,10 +2,10 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/shared/db";
 import { resolvePagination } from "@/shared/list-params";
 import { extractYoutubeVideoId } from "./youtube";
-import type { AdminVideoFilters, VideoFormInput } from "./validators";
+import type { AdminPartnerFilters, AdminVideoFilters, PartnerFormInput, VideoFormInput } from "./validators";
 
 /**
- * Módulo Content: blog, vídeos, parceiros/patrocinadores e contato.
+ * Módulo Content: vídeos, parceiros/patrocinadores e contato.
  * Spec: docs/modules/content.md
  */
 
@@ -17,17 +17,15 @@ const videoSelect = {
   published: true,
 } satisfies Prisma.VideoSelect;
 
-export function listPublishedPosts(limit?: number) {
-  return db.blogPost.findMany({
-    where: { publishedAt: { not: null, lte: new Date() } },
-    orderBy: { publishedAt: "desc" },
-    take: limit,
-  });
-}
-
-export function getPostBySlug(slug: string) {
-  return db.blogPost.findUnique({ where: { slug } });
-}
+const partnerSelect = {
+  id: true,
+  name: true,
+  type: true,
+  logoKey: true,
+  url: true,
+  order: true,
+  active: true,
+} satisfies Prisma.PartnerSelect;
 
 export function listVideos() {
   return db.video.findMany({
@@ -90,8 +88,67 @@ export async function deleteVideo(videoId: string) {
 export function listPartnersByType() {
   return db.partner.findMany({
     where: { active: true },
+    select: partnerSelect,
     orderBy: [{ type: "asc" }, { order: "asc" }],
   });
+}
+
+export async function listAdminPartners(filters: AdminPartnerFilters) {
+  const where: Prisma.PartnerWhereInput = {};
+
+  if (filters.type) where.type = filters.type;
+  if (filters.visibility === "active") where.active = true;
+  if (filters.visibility === "inactive") where.active = false;
+  if (filters.q) {
+    where.OR = [
+      { name: { contains: filters.q, mode: "insensitive" } },
+      { url: { contains: filters.q, mode: "insensitive" } },
+    ];
+  }
+
+  const total = await db.partner.count({ where });
+  const { skip, ...pagination } = resolvePagination(total, filters.page, filters.pageSize);
+
+  const items = await db.partner.findMany({
+    where,
+    select: partnerSelect,
+    orderBy: [{ type: "asc" }, { order: "asc" }, { name: "asc" }],
+    skip,
+    take: pagination.pageSize,
+  });
+
+  return { items, pagination };
+}
+
+export function getAdminPartnerById(partnerId: string) {
+  return db.partner.findUnique({ where: { id: partnerId }, select: partnerSelect });
+}
+
+export function createPartner(input: PartnerFormInput) {
+  return db.partner.create({ data: normalizePartnerInput(input), select: partnerSelect });
+}
+
+export async function updatePartner(partnerId: string, input: PartnerFormInput) {
+  await assertPartnerExists(partnerId);
+  return db.partner.update({
+    where: { id: partnerId },
+    data: normalizePartnerInput(input),
+    select: partnerSelect,
+  });
+}
+
+export async function updatePartnerLogo(partnerId: string, logoKey: string | null) {
+  await assertPartnerExists(partnerId);
+  return db.partner.update({
+    where: { id: partnerId },
+    data: { logoKey },
+    select: partnerSelect,
+  });
+}
+
+export async function deletePartner(partnerId: string) {
+  await assertPartnerExists(partnerId);
+  return db.partner.delete({ where: { id: partnerId }, select: partnerSelect });
 }
 
 export function createContactMessage(data: {
@@ -111,6 +168,15 @@ function normalizeVideoInput(input: VideoFormInput): VideoFormInput {
   };
 }
 
+function normalizePartnerInput(input: PartnerFormInput): PartnerFormInput {
+  return {
+    ...input,
+    name: input.name.trim(),
+    url: input.url?.trim() || null,
+    logoKey: input.logoKey?.trim() || null,
+  };
+}
+
 function assertYoutubeUrl(youtubeUrl: string) {
   if (!extractYoutubeVideoId(youtubeUrl)) {
     throw new Error("Informe uma URL válida do YouTube.");
@@ -120,4 +186,9 @@ function assertYoutubeUrl(youtubeUrl: string) {
 async function assertVideoExists(videoId: string) {
   const video = await db.video.findUnique({ where: { id: videoId }, select: { id: true } });
   if (!video) throw new Error("Vídeo não encontrado.");
+}
+
+async function assertPartnerExists(partnerId: string) {
+  const partner = await db.partner.findUnique({ where: { id: partnerId }, select: { id: true } });
+  if (!partner) throw new Error("Parceiro não encontrado.");
 }

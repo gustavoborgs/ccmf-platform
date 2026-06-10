@@ -47,7 +47,20 @@ async function main() {
     });
   }
 
-  console.log("Seed concluído: admin + concurso 2026 + categorias.");
+  const partnersCount = await prisma.partner.count();
+  if (partnersCount === 0) {
+    await prisma.partner.createMany({
+      data: [
+        { name: "Studio Kids Fotografia", type: "MASTER", order: 1 },
+        { name: "Portal Família BR", type: "MEDIA", order: 1 },
+        { name: "Rádio Cidade FM", type: "MEDIA", order: 2 },
+        { name: "Brinquedos Alegria", type: "SPONSOR", order: 1 },
+        { name: "Moda Baby Brasil", type: "SPONSOR", order: 2 },
+      ],
+    });
+  }
+
+  console.log("Seed concluído: admin + concurso 2026 + categorias + parceiros.");
 }
 
 main()

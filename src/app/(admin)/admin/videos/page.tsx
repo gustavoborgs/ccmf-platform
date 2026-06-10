@@ -71,14 +71,14 @@ const columns: DataTableColumn<AdminVideoRow>[] = [
     headClassName: "w-32",
     cellClassName: "text-right",
     cell: (video) => (
-      <Button href={`/admin/conteudo/videos/${video.id}`} variant="outline" size="sm">
+      <Button href={`/admin/videos/${video.id}`} variant="outline" size="sm">
         Editar
       </Button>
     ),
   },
 ];
 
-export default async function AdminContentPage({
+export default async function AdminVideosPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
@@ -102,7 +102,7 @@ export default async function AdminContentPage({
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="font-display text-sm font-extrabold uppercase tracking-widest text-accent-700">
-            Conteúdo
+            Site
           </p>
           <h1 className="mt-2 text-3xl font-extrabold text-primary-700">Vídeos</h1>
           <p className="mt-3 max-w-3xl text-ink-muted">
@@ -110,7 +110,7 @@ export default async function AdminContentPage({
             monta automaticamente a imagem de capa e o embed.
           </p>
         </div>
-        <Button href="/admin/conteudo/videos/novo">Novo vídeo</Button>
+        <Button href="/admin/videos/novo">Novo vídeo</Button>
       </section>
 
       <Card className="overflow-hidden p-0">

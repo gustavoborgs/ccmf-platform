@@ -71,7 +71,8 @@ permitindo mudanças de faixa entre anos.
 | `/admin/leads` | CRM kanban do funil de inscrição |
 | `/admin/responsaveis` | Listagem e detalhe dos responsáveis |
 | `/admin/participantes` | Listagem (filtro por ano) e detalhe + aprovação |
-| `/admin/conteudo` | Blog, vídeos, parceiros, patrocinadores |
+| `/admin/blog` | Posts, SEO, capas, rascunhos e agendamentos |
+| `/admin/videos` | Vídeos públicos do YouTube |
 
 ### Jurados
 

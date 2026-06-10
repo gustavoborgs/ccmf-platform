@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import { Camera, Heart, ShieldCheck } from "lucide-react";
 import { Button, Card, Container, SectionHeading } from "@/shared/ui";
 
 export const metadata: Metadata = {
@@ -159,19 +161,24 @@ export default function AboutContestPage() {
 
       <section className="py-20">
         <Container className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-          <Card className="bg-brand-gradient text-white">
-            <p className="font-display text-sm font-bold uppercase tracking-widest text-white/75">
-              Para famílias
-            </p>
-            <h2 className="mt-3 text-3xl font-extrabold">
-              Uma participação simples, acompanhada e segura
-            </h2>
-            <p className="mt-4 text-white/85">
-              Dados de responsáveis e participantes são usados apenas para a
-              condução do concurso, e somente participantes aprovados aparecem
-              publicamente.
-            </p>
-          </Card>
+          <div className="relative mx-auto w-full max-w-sm">
+            <Image
+              src="/people/child-camera.png"
+              alt="Criança sorrindo segurando uma câmera fotográfica de brinquedo"
+              width={560}
+              height={373}
+              className="rounded-bubble object-cover shadow-brand-lg"
+            />
+            <div className="absolute -bottom-6 left-1/2 w-[85%] -translate-x-1/2 rounded-3xl bg-brand-gradient px-5 py-4 text-white shadow-brand-lg">
+              <p className="font-display text-sm font-bold uppercase tracking-widest text-white/75">
+                Para famílias
+              </p>
+              <p className="mt-1 text-sm font-semibold text-white/95">
+                Participação simples, acompanhada e segura. Apenas participantes
+                aprovados aparecem publicamente.
+              </p>
+            </div>
+          </div>
 
           <div>
             <SectionHeading align="left" kicker="Diferenciais" title="Por que participar" />
@@ -186,7 +193,86 @@ export default function AboutContestPage() {
         </Container>
       </section>
 
-      <section className="pb-20">
+      <section className="bg-surface-muted py-20">
+        <Container className="grid items-center gap-12 lg:grid-cols-[0.8fr_1.2fr]">
+          <div className="relative mx-auto w-full max-w-sm">
+            <Image
+              src="/people/organizadora.png"
+              alt="Organizadora do Concurso Criança Mais Fotogênica"
+              width={520}
+              height={693}
+              className="rounded-bubble object-cover shadow-brand-lg"
+            />
+            <div className="absolute -bottom-5 -right-4 rounded-3xl bg-white px-5 py-3 shadow-brand-lg">
+              <p className="font-display text-lg font-extrabold text-brand-gradient">
+                Comissão organizadora
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <SectionHeading
+              align="left"
+              kicker="Quem organiza"
+              title="Gente de verdade cuidando de cada edição"
+              description="O concurso é conduzido por uma equipe dedicada, que acompanha as famílias da inscrição até a divulgação dos resultados."
+            />
+
+            <div className="mt-8 grid gap-4">
+              <div className="flex gap-4 rounded-bubble bg-white p-5 shadow-brand">
+                <span className="mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent-700">
+                  <Heart aria-hidden="true" className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="font-display text-lg font-extrabold text-primary-700">
+                    Atendimento próximo
+                  </h3>
+                  <p className="mt-1 text-sm/6 text-ink-muted">
+                    A organizadora e sua equipe respondem responsáveis diretamente
+                    pelos canais oficiais, do primeiro contato à premiação.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 rounded-bubble bg-white p-5 shadow-brand">
+                <span className="mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent-700">
+                  <Camera aria-hidden="true" className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="font-display text-lg font-extrabold text-primary-700">
+                    Olhar especializado
+                  </h3>
+                  <p className="mt-1 text-sm/6 text-ink-muted">
+                    Experiência em fotografia infantil e avaliação técnica para
+                    garantir uma seleção justa entre as categorias.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 rounded-bubble bg-white p-5 shadow-brand">
+                <span className="mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent-700">
+                  <ShieldCheck aria-hidden="true" className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="font-display text-lg font-extrabold text-primary-700">
+                    Transparência e segurança
+                  </h3>
+                  <p className="mt-1 text-sm/6 text-ink-muted">
+                    Regulamento público, pagamento confirmado pela plataforma e
+                    proteção dos dados de crianças e responsáveis.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Button href="/contato" size="lg" className="mt-8">
+              Falar com a organização
+            </Button>
+          </div>
+        </Container>
+      </section>
+
+      <section className="py-20">
         <Container>
           <div className="rounded-bubble bg-brand-gradient px-6 py-12 text-center text-white shadow-brand-lg sm:px-10">
             <p className="font-display text-sm font-bold uppercase tracking-widest text-white/75">

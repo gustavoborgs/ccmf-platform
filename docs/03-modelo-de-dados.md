@@ -7,6 +7,7 @@ Fonte de verdade: `prisma/schema.prisma`. Este documento explica as decisões.
 ```mermaid
 erDiagram
     User ||--o| GuardianProfile : "perfil"
+    User ||--o{ BlogPost : "autor"
     GuardianProfile ||--o{ Participant : "filhos"
     Participant ||--o{ Registration : "inscrições"
     Contest ||--o{ Registration : ""
@@ -34,6 +35,7 @@ erDiagram
 | `Lead` cobre só o pré-conta | O funil pós-conta é **derivado** de `Registration` (fotos/checkout/pagamento) — evita duplicar estado. Lead captura abandono antes do cadastro, identificado por CPF ou e-mail. |
 | `Vote` com `round` | Rodada 1 elege os 80 semifinalistas, rodada 2 os 10 vencedores. |
 | `Partner.type` (`MASTER`/`MEDIA`/`SPONSOR`) | Uma tabela para parceiros master, veículos de comunicação e patrocinadores. |
+| `BlogPost.publishedAt` opcional | Permite rascunho/agendamento; leitura pública só considera posts com data no passado. |
 
 ## Máquinas de estado
 

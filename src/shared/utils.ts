@@ -5,11 +5,23 @@
  * Vale para fotos de participantes (crop no frontend) e para a moldura.
  */
 export const PHOTO_ASPECT = { width: 3, height: 4 } as const;
+export const BLOG_COVER_ASPECT = { width: 16, height: 10 } as const;
+export const PARTNER_LOGO_SIZE = { width: 800, height: 400 } as const;
+export const PARTNER_LOGO_ASPECT = { width: 2, height: 1 } as const;
 
 /** Tolerância de 2% para arredondamentos do crop no client. */
 export function isValidPhotoAspect(width: number, height: number): boolean {
   const expected = PHOTO_ASPECT.width / PHOTO_ASPECT.height;
   return Math.abs(width / height - expected) <= expected * 0.02;
+}
+
+export function isValidBlogCoverAspect(width: number, height: number): boolean {
+  const expected = BLOG_COVER_ASPECT.width / BLOG_COVER_ASPECT.height;
+  return Math.abs(width / height - expected) <= expected * 0.02;
+}
+
+export function isValidPartnerLogoDimensions(width: number, height: number): boolean {
+  return width === PARTNER_LOGO_SIZE.width && height === PARTNER_LOGO_SIZE.height;
 }
 
 export function slugify(input: string): string {

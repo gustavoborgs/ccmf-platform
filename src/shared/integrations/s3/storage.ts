@@ -39,6 +39,16 @@ export function buildContestFrameKey(contestYear: number): string {
   return `contests/${contestYear}/frame.png`;
 }
 
+export function buildBlogCoverKey(postId: string, fileName: string): string {
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "jpg";
+  return `blog/${postId}/cover.${ext}`;
+}
+
+export function buildPartnerLogoKey(partnerId: string, fileName: string): string {
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "jpg";
+  return `partners/${partnerId}/logo.${ext}`;
+}
+
 export async function createPresignedUploadUrl(key: string, contentType: string) {
   const command = new PutObjectCommand({
     Bucket: env.S3_BUCKET,

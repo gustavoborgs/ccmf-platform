@@ -1,17 +1,41 @@
 import Image from "next/image";
+import { Camera, Heart, Trophy } from "lucide-react";
+import { PartnersShowcase } from "@/modules/content/components/partners-showcase";
+import { listPartnersByType } from "@/modules/content/service";
 import { Button, Card, Container, SectionHeading } from "@/shared/ui";
+
+export const dynamic = "force-dynamic";
+
+const highlights = [
+  {
+    icon: Camera,
+    title: "Avaliação técnica",
+    description: "Fotos avaliadas por critérios claros de fotogenia, expressão e enquadramento.",
+  },
+  {
+    icon: Trophy,
+    title: "Prêmios e destaque",
+    description: "Os destaques de cada categoria ganham prêmios e uma vitrine nacional.",
+  },
+  {
+    icon: Heart,
+    title: "Pensado para famílias",
+    description: "Inscrição simples, comunicação direta e cuidado com os dados das crianças.",
+  },
+];
 
 /**
  * Home pública. Hero aplicando o design system (docs/05-design-system.md);
- * demais seções (prêmios, vencedores, blog, parceiros) virão de
- * docs/modules/content.md quando os módulos forem ligados.
+ * vitrines de parceiros vêm do módulo content (docs/modules/content.md).
  */
-export default function HomePage() {
+export default async function HomePage() {
+  const partners = await listPartnersByType();
+
   return (
     <>
       {/* Hero — gradiente oficial da marca */}
       <section className="bg-brand-gradient text-white">
-        <Container className="grid items-center gap-12 py-20 lg:grid-cols-2 lg:py-28">
+        <Container className="grid items-center gap-12 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
           <div>
             <p className="mb-3 inline-block rounded-full bg-white/15 px-4 py-1 font-display text-sm font-bold uppercase tracking-widest">
               Inscrições abertas — edição 2026
@@ -33,21 +57,55 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="mx-auto hidden lg:block">
+          <div className="relative mx-auto hidden w-full max-w-md lg:block">
             <Image
-              src="/brand/logo-full.png"
-              alt="Concurso Criança Mais Fotogênica"
-              width={420}
-              height={380}
+              src="/people/children-hero.png"
+              alt="Crianças sorrindo em ensaio fotográfico do concurso"
+              width={640}
+              height={427}
               priority
-              className="drop-shadow-2xl"
+              className="rounded-bubble border-4 border-white/30 object-cover shadow-brand-lg"
             />
+            <div className="absolute -bottom-6 -left-6 rounded-3xl bg-white px-5 py-4 shadow-brand-lg">
+              <p className="font-display text-2xl font-extrabold text-brand-gradient">
+                5 categorias
+              </p>
+              <p className="text-sm font-semibold text-ink-muted">do bebê ao teen</p>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* Diferenciais */}
+      <section className="py-20">
+        <Container>
+          <SectionHeading
+            kicker="Por que o CCMF"
+            title="Uma experiência profissional do início ao fim"
+            description="Tudo acontece pela plataforma: inscrição, envio das fotos, pagamento e acompanhamento das etapas."
+          />
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {highlights.map((highlight) => {
+              const Icon = highlight.icon;
+
+              return (
+                <Card key={highlight.title} className="text-center">
+                  <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent-50 text-accent-700">
+                    <Icon aria-hidden="true" className="h-7 w-7" />
+                  </span>
+                  <h3 className="mt-5 font-display text-xl font-extrabold text-primary-700">
+                    {highlight.title}
+                  </h3>
+                  <p className="mt-2 text-sm/6 text-ink-muted">{highlight.description}</p>
+                </Card>
+              );
+            })}
           </div>
         </Container>
       </section>
 
       {/* Categorias — amostra da linguagem de cards bubble */}
-      <section className="py-20">
+      <section className="bg-surface-muted py-20">
         <Container>
           <SectionHeading
             kicker="Categorias"
@@ -78,8 +136,21 @@ export default function HomePage() {
         </Container>
       </section>
 
-      {/* TODO: prêmios, vencedores da edição anterior, blog e parceiros
-          (dados via módulo content — docs/modules/content.md) */}
+      {/* Parceiros — três vitrines (docs/modules/content.md) */}
+      {partners.length > 0 && (
+        <section className="py-20">
+          <Container>
+            <SectionHeading
+              kicker="Quem apoia"
+              title="Parceiros que acreditam na infância"
+              description="Marcas, veículos de comunicação e patrocinadores que constroem cada edição com a gente."
+            />
+            <div className="mt-12">
+              <PartnersShowcase partners={partners} />
+            </div>
+          </Container>
+        </section>
+      )}
     </>
   );
 }

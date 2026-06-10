@@ -84,16 +84,6 @@ const SECTION_CONTENT: Record<
       "Moldura, regulamento e data de revelação vinculados à edição.",
     ],
   },
-  conteudo: {
-    title: "Conteúdo",
-    description: "Área planejada para conteúdo institucional, blog, vídeos e parceiros.",
-    spec: "docs/modules/content.md",
-    items: [
-      "CRUD de posts em markdown, vídeos do YouTube e parceiros.",
-      "Inbox de mensagens enviadas pelo formulário de contato.",
-      "Publicação controlada por publishedAt e flags de ativo.",
-    ],
-  },
   configuracoes: {
     title: "Configurações",
     description: "Espaço reservado para ajustes operacionais e futuras automações.",

@@ -53,7 +53,7 @@ export function VideoForm({ initial }: { initial?: VideoFormInitial }) {
       }
 
       if (!initial && result.data) {
-        router.push(`/admin/conteudo/videos/${result.data.videoId}`);
+        router.push(`/admin/videos/${result.data.videoId}`);
         return;
       }
 
@@ -74,7 +74,7 @@ export function VideoForm({ initial }: { initial?: VideoFormInitial }) {
         return;
       }
 
-      router.push("/admin/conteudo");
+      router.push("/admin/videos");
     });
   }
 

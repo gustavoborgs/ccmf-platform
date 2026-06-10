@@ -1,11 +1,13 @@
-/**
- * Recorta a imagem no client (canvas) para o padrão retrato 3:4 da
- * plataforma. Saída JPEG limitada a 1600px de altura.
- */
-
 export type CropArea = { x: number; y: number; width: number; height: number };
 
-const MAX_HEIGHT = 1600;
+type CropOptions = {
+  maxWidth?: number;
+  maxHeight?: number;
+  targetWidth?: number;
+  targetHeight?: number;
+  mimeType?: string;
+  quality?: number;
+};
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -19,12 +21,19 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 export async function cropImageToBlob(
   imageSrc: string,
   area: CropArea,
+  options: CropOptions = {},
 ): Promise<{ blob: Blob; width: number; height: number }> {
   const image = await loadImage(imageSrc);
-
-  const scale = Math.min(1, MAX_HEIGHT / area.height);
-  const width = Math.round(area.width * scale);
-  const height = Math.round(area.height * scale);
+  const hasTargetSize = Boolean(options.targetWidth && options.targetHeight);
+  const scale = hasTargetSize
+    ? 1
+    : Math.min(
+        1,
+        options.maxWidth ? options.maxWidth / area.width : 1,
+        options.maxHeight ? options.maxHeight / area.height : 1,
+      );
+  const width = options.targetWidth ?? Math.round(area.width * scale);
+  const height = options.targetHeight ?? Math.round(area.height * scale);
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -36,8 +45,8 @@ export async function cropImageToBlob(
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (result) => (result ? resolve(result) : reject(new Error("Falha ao recortar a imagem."))),
-      "image/jpeg",
-      0.9,
+      options.mimeType ?? "image/jpeg",
+      options.quality ?? 0.9,
     );
   });
 

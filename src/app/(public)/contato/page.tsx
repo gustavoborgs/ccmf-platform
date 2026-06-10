@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { HelpCircle, Mail, MessageCircle, Phone } from "lucide-react";
+import { HelpCircle, Mail, MessageCircle, Phone, Send } from "lucide-react";
+import { ContactForm } from "@/modules/content/components/contact-form";
 import { buildWhatsAppUrl, CONTACT } from "@/shared/contact";
 import { Button, Card, Container, SectionHeading } from "@/shared/ui";
 
@@ -143,6 +144,49 @@ export default function ContactPage() {
       </section>
 
       <section className="bg-surface-muted py-20">
+        <Container>
+          <SectionHeading
+            kicker="Envie uma mensagem"
+            title="Prefere escrever? Fale com a gente por aqui"
+            description="Sua mensagem chega direto para a organização do concurso e a resposta vai para o e-mail informado."
+          />
+
+          <div className="mt-12 grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
+            <Card className="flex h-full flex-col bg-brand-gradient text-white">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
+                <Send aria-hidden="true" className="h-6 w-6" />
+              </span>
+              <h2 className="mt-5 font-display text-2xl font-extrabold">
+                Atendimento com cuidado de gente
+              </h2>
+              <p className="mt-3 text-white/85">
+                Cada mensagem é lida pela equipe organizadora. Use este formulário
+                para dúvidas detalhadas, sugestões ou assuntos formais.
+              </p>
+              <ul className="mt-6 space-y-3 text-sm text-white/85">
+                <li className="rounded-2xl bg-white/10 px-4 py-3">
+                  <strong className="font-bold text-white">Inscrições e fotos</strong> — orientação
+                  completa sobre o envio.
+                </li>
+                <li className="rounded-2xl bg-white/10 px-4 py-3">
+                  <strong className="font-bold text-white">Pagamentos</strong> — status e confirmação
+                  da participação.
+                </li>
+                <li className="rounded-2xl bg-white/10 px-4 py-3">
+                  <strong className="font-bold text-white">Parcerias</strong> — proposta para apoiar a
+                  próxima edição.
+                </li>
+              </ul>
+            </Card>
+
+            <Card className="bg-white">
+              <ContactForm />
+            </Card>
+          </div>
+        </Container>
+      </section>
+
+      <section className="py-20">
         <Container>
           <SectionHeading
             kicker="Dúvidas frequentes"

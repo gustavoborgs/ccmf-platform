@@ -1,7 +1,9 @@
 import { db } from "@/shared/db";
-import { isValidPhotoAspect } from "@/shared/utils";
+import { isValidBlogCoverAspect, isValidPartnerLogoDimensions, isValidPhotoAspect } from "@/shared/utils";
 import {
+  buildBlogCoverKey,
   buildContestFrameKey,
+  buildPartnerLogoKey,
   buildPhotoKey,
   createPresignedUploadUrl,
   getPublicUrl,
@@ -17,6 +19,10 @@ import {
 
 const MAX_PHOTOS_PER_REGISTRATION = 2;
 const MIN_FRAME_WIDTH = 600;
+const BLOG_COVER_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+const MIN_BLOG_COVER_WIDTH = 900;
+const MIN_BLOG_COVER_HEIGHT = 500;
+const PARTNER_LOGO_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 /** Gera URL de upload direto para o S3 e registra a foto na inscrição. */
 export async function requestPhotoUpload(params: {
@@ -80,6 +86,65 @@ export async function requestContestFrameUpload(params: {
   }
 
   const key = buildContestFrameKey(params.contestYear);
+  const { uploadUrl } = await createPresignedUploadUrl(key, params.contentType);
+
+  return { key, uploadUrl };
+}
+
+/** Gera URL de upload direto para a capa de um post do blog. */
+export async function requestBlogCoverUpload(params: {
+  postId: string;
+  fileName: string;
+  contentType: string;
+  width: number;
+  height: number;
+}) {
+  const post = await db.blogPost.findUnique({
+    where: { id: params.postId },
+    select: { id: true },
+  });
+  if (!post) throw new Error("Post não encontrado.");
+
+  if (!BLOG_COVER_CONTENT_TYPES.includes(params.contentType as (typeof BLOG_COVER_CONTENT_TYPES)[number])) {
+    throw new Error("A capa deve ser JPG, PNG ou WebP.");
+  }
+  if (params.width < MIN_BLOG_COVER_WIDTH || params.height < MIN_BLOG_COVER_HEIGHT) {
+    throw new Error(
+      `A capa deve ter pelo menos ${MIN_BLOG_COVER_WIDTH}x${MIN_BLOG_COVER_HEIGHT}px.`,
+    );
+  }
+  if (!isValidBlogCoverAspect(params.width, params.height)) {
+    throw new Error("A capa deve estar no formato paisagem 16:10.");
+  }
+
+  const key = buildBlogCoverKey(params.postId, params.fileName);
+  const { uploadUrl } = await createPresignedUploadUrl(key, params.contentType);
+
+  return { key, uploadUrl };
+}
+
+/** Gera URL de upload direto para o logo padronizado de parceiro (800x400). */
+export async function requestPartnerLogoUpload(params: {
+  partnerId: string;
+  fileName: string;
+  contentType: string;
+  width: number;
+  height: number;
+}) {
+  const partner = await db.partner.findUnique({
+    where: { id: params.partnerId },
+    select: { id: true },
+  });
+  if (!partner) throw new Error("Parceiro não encontrado.");
+
+  if (!PARTNER_LOGO_CONTENT_TYPES.includes(params.contentType as (typeof PARTNER_LOGO_CONTENT_TYPES)[number])) {
+    throw new Error("O logo deve ser JPG, PNG ou WebP.");
+  }
+  if (!isValidPartnerLogoDimensions(params.width, params.height)) {
+    throw new Error("O logo deve estar no padrão 800x400px.");
+  }
+
+  const key = buildPartnerLogoKey(params.partnerId, params.fileName);
   const { uploadUrl } = await createPresignedUploadUrl(key, params.contentType);
 
   return { key, uploadUrl };

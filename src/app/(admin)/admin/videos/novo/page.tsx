@@ -7,7 +7,7 @@ export default function NewVideoPage() {
     <div className="space-y-6">
       <section>
         <Link
-          href="/admin/conteudo"
+          href="/admin/videos"
           className="text-sm font-bold text-accent-700 transition hover:text-accent-800"
         >
           ← Voltar para vídeos

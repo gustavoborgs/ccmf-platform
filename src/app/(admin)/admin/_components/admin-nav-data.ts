@@ -73,9 +73,21 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         status: "available",
       },
       {
-        href: "/admin/conteudo",
-        label: "Conteúdo",
-        description: "Blog, vídeos, parceiros e mensagens de contato.",
+        href: "/admin/blog",
+        label: "Blog",
+        description: "Posts, SEO, capas, rascunhos e agendamentos.",
+        status: "available",
+      },
+      {
+        href: "/admin/videos",
+        label: "Vídeos",
+        description: "Vitrine pública de vídeos do YouTube.",
+        status: "available",
+      },
+      {
+        href: "/admin/parceiros",
+        label: "Parceiros",
+        description: "Parceiros master, mídia e patrocinadores da home.",
         status: "available",
       },
       {
