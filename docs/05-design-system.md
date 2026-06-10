@@ -19,6 +19,12 @@ hero, sombras coloridas suaves e tom lúdico-premium.
 | `public/brand/logo-full.png` | Hero, materiais | **Fundo preto embutido** — só sobre fundos escuros/gradiente; pedir versão transparente ao design |
 | `public/brand/banner-social.png` | Referência de identidade social | — |
 
+Favicons derivados do isotipo ficam na raiz de `public/`: `favicon.ico`,
+`favicon.svg`, `favicon-16x16.png`, `favicon-32x32.png`,
+`apple-touch-icon.png`, `android-chrome-192x192.png`,
+`android-chrome-512x512.png`, `mstile-150x150.png`,
+`site.webmanifest` e `browserconfig.xml`.
+
 ## Cores
 
 ### Marca (extraídas do logo)
