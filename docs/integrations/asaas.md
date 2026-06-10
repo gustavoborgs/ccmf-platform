@@ -26,10 +26,12 @@ API REST v3 do Asaas para cobranças PIX, Boleto e Cartão de Crédito.
 - Validação: header `asaas-access-token` deve bater com `ASAAS_WEBHOOK_TOKEN`
   (token configurado no painel do Asaas).
 - Idempotência: `WebhookEvent.externalId` único; evento já processado é ignorado.
+  Se um payload de teste vier sem `id` do evento, usamos
+  `<event>:<payment.id>` como chave estável.
 - Eventos tratados: `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`,
   `PAYMENT_REFUNDED`, `PAYMENT_DELETED`. Demais eventos são registrados e ignorados.
-- Em falha de processamento respondemos 500 → o Asaas reenvia; o erro fica em
-  `WebhookEvent.error` para reprocessamento manual.
+- Payloads inválidos ou falhas de processamento são logados e a rota responde
+  `200` para não pausar a fila do Asaas.
 
 ## Cuidados
 

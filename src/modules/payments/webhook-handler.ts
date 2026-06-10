@@ -16,15 +16,18 @@ const PAYMENT_STATUS_BY_EVENT: Record<string, "CONFIRMED" | "RECEIVED" | "OVERDU
 };
 
 export async function processAsaasWebhook(event: AsaasWebhookEvent) {
+  const externalId = getWebhookExternalId(event);
+  if (!externalId) return;
+
   // Idempotência: cada evento do Asaas é processado uma única vez.
-  const existing = await db.webhookEvent.findUnique({ where: { externalId: event.id } });
+  const existing = await db.webhookEvent.findUnique({ where: { externalId } });
   if (existing?.processedAt) return;
 
   await db.webhookEvent.upsert({
-    where: { externalId: event.id },
+    where: { externalId },
     update: {},
     create: {
-      externalId: event.id,
+      externalId,
       eventType: event.event,
       payload: JSON.parse(JSON.stringify(event)),
     },
@@ -33,16 +36,22 @@ export async function processAsaasWebhook(event: AsaasWebhookEvent) {
   try {
     await applyEvent(event);
     await db.webhookEvent.update({
-      where: { externalId: event.id },
+      where: { externalId },
       data: { processedAt: new Date(), error: null },
     });
   } catch (error) {
     await db.webhookEvent.update({
-      where: { externalId: event.id },
+      where: { externalId },
       data: { error: error instanceof Error ? error.message : String(error) },
     });
     throw error;
   }
+}
+
+function getWebhookExternalId(event: AsaasWebhookEvent): string | null {
+  if (event.id) return event.id;
+  if (event.payment?.id) return `${event.event}:${event.payment.id}`;
+  return null;
 }
 
 async function applyEvent(event: AsaasWebhookEvent) {

@@ -73,8 +73,10 @@ export type AsaasWebhookEventType =
   | "PAYMENT_REFUNDED"
   | "PAYMENT_DELETED";
 
+export type AsaasWebhookPayment = Partial<AsaasPayment> & { id: string };
+
 export interface AsaasWebhookEvent {
-  id: string;
+  id?: string;
   event: AsaasWebhookEventType | (string & {});
-  payment?: AsaasPayment;
+  payment?: AsaasWebhookPayment;
 }
