@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plataforma CCMF
 
-## Getting Started
+Sistema de gestão do **Concurso Criança Mais Fotogênica do Brasil**: inscrições,
+pagamentos (Asaas), galeria pública com likes, votação de jurados e CRM de leads.
 
-First, run the development server:
+## Stack
+
+Next.js 15 (App Router) · Prisma 7 + PostgreSQL · Auth.js v5 · Tailwind 4 ·
+S3 (imagens) · Asaas (PIX, Boleto, Cartão)
+
+## Documentação
+
+Toda a arquitetura e os specs dos módulos estão em [`docs/`](./docs/README.md).
+Comece por `docs/01-visao-geral.md` e `docs/02-arquitetura.md`.
+
+## Setup
 
 ```bash
+# Node 20 (ver .nvmrc)
+nvm use
+
+npm install
+cp .env.example .env   # preencher DATABASE_URL, AUTH_SECRET, S3_*, ASAAS_*
+
+npm run db:up       # sobe o PostgreSQL local (Docker)
+npm run db:migrate  # cria o schema e gera o client
+npm run db:seed     # admin + concurso 2026 + categorias
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Admin seed: `admin@ccmf.com.br` / `admin123` (trocar em produção).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts úteis
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Comando | Descrição |
+| --- | --- |
+| `npm run dev` | Servidor de desenvolvimento |
+| `npm run db:up` | Sobe o PostgreSQL local via Docker Compose |
+| `npm run db:down` | Para o PostgreSQL local |
+| `npm run db:logs` | Logs do PostgreSQL |
+| `npm run db:migrate` | `prisma migrate dev` |
+| `npm run db:seed` | Popula dados iniciais |
+| `npm run db:reset` | Reseta o banco local e reaplica migrations |
+| `npm run db:studio` | Prisma Studio |
+| `npm run typecheck` | Checagem de tipos |
 
-## Learn More
+## Estrutura
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+docs/           specs (fonte de verdade)
+prisma/         schema + migrations + seed
+src/app/        rotas (public / account / admin / api)
+src/modules/    domínios: auth, contests, registrations, participants,
+                payments, leads, judging, content, media
+src/shared/     db, env, utils e integrações (asaas, s3)
+```
