@@ -9,6 +9,8 @@ export const metadata: Metadata = {
     "Assista aos vídeos do Concurso Criança Mais Fotogênica e acompanhe chamadas, bastidores e conteúdos oficiais.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function VideosPage() {
   const videos = await listVideos();
 

@@ -5,6 +5,9 @@ import { requireRole } from "@/modules/auth/guards";
 import { Button } from "@/shared/ui";
 import { AdminNav } from "./_components/admin-nav";
 
+/** Área autenticada — renderização só em runtime (sessão + banco). */
+export const dynamic = "force-dynamic";
+
 /**
  * Shell administrativo. O layout centraliza o guard para todas as rotas /admin.
  * Specs: docs/modules/auth.md e specs dos módulos administrativos.

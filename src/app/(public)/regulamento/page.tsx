@@ -9,6 +9,8 @@ export const metadata: Metadata = {
     "Leia o regulamento completo do Concurso Criança Mais Fotogênica Brasil, com regras de participação, inscrição, seleção, premiação e programação.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function RegulationPage() {
   const contest = await getActiveContest();
   const regulationMarkdown = contest?.regulationMd?.trim();

@@ -18,6 +18,8 @@ import { formatCentsBRL, maskEmail, maskPhone } from "@/shared/utils";
  * cookie do wizard → inscrição em andamento → step recalculado.
  * Spec: docs/modules/registrations.md
  */
+export const dynamic = "force-dynamic";
+
 export default async function RegistrationPage({
   searchParams,
 }: {
