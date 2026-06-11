@@ -2084,9 +2084,7 @@ async function uploadLegacyImagesFromFolder() {
   const grouped = groupImageFilesByChildId(files);
   const childIds = Array.from(grouped.keys());
   const registrationResolver = await buildRegistrationResolver(syncResult, importData, childIds);
-  const coveredFromResult = childIds.filter((childId) =>
-    Boolean(chooseRegistrationForChild(syncResult, childId)),
-  ).length;
+  const coverage = countRegistrationCoverage(syncResult, importData, registrationResolver, childIds);
 
   const report = {
     imagesDir,
@@ -2109,7 +2107,9 @@ async function uploadLegacyImagesFromFolder() {
     [
       `Imagens encontradas: ${files.length}`,
       `Crianças com imagens: ${grouped.size}`,
-      `Inscrições resolvidas: ${registrationResolver.size}/${grouped.size} (${coveredFromResult} via import-result, ${registrationResolver.size - coveredFromResult} via banco/import-data)`,
+      `Inscrições resolvidas: ${registrationResolver.size}/${grouped.size} (${coverage.fromResult} via import-result, ${coverage.fromImportData} via import-data+banco, ${coverage.fromDbSlug} via slug no banco)`,
+      existsSync(resultPath) ? `import-result: ${resultPath}` : "import-result: ausente",
+      importData ? `import-data: ${importDataPath}` : "import-data: ausente",
       execute ? "Modo: EXECUTE" : "Modo: DRY-RUN",
       force ? "Force: sim (apaga fotos antigas da inscrição e reenvia tudo)" : "Force: não",
     ].join("\n"),
@@ -2121,8 +2121,11 @@ async function uploadLegacyImagesFromFolder() {
       console.log(
         registration
           ? `[ok] child_id=${childId}: ${childFiles.length} arquivo(s) -> ${registration.id}`
-          : `[missing] child_id=${childId}: sem inscrição importada`,
+          : `[missing] child_id=${childId}: sem inscrição importada (${path.basename(childFiles[0] ?? "")})`,
       );
+    }
+    if (registrationResolver.size === 0) {
+      await logRegistrationResolutionHints(childIds.slice(0, 5), files.slice(0, 5));
     }
     await writeJson(LEGACY_IMAGE_UPLOAD_REPORT_FILE, report);
     console.log(`Relatório dry-run gravado em ${LEGACY_IMAGE_UPLOAD_REPORT_FILE}. Use --execute para aplicar.`);
@@ -2135,6 +2138,13 @@ async function uploadLegacyImagesFromFolder() {
   const uploadBucket = requireEnv("S3_BUCKET");
   const s3Client = createS3Client();
   const db = getPrisma();
+
+  if (registrationResolver.size === 0) {
+    await logRegistrationResolutionHints(childIds.slice(0, 5), files.slice(0, 5));
+    throw new Error(
+      "Nenhuma inscrição foi resolvida para os child_id do zip. Confira se legacy:sync-data rodou no mesmo banco e se os nomes dos arquivos começam com o id legado da criança.",
+    );
+  }
 
   for (const [childId, childFiles] of grouped) {
     const registration = registrationResolver.get(childId);
@@ -2393,52 +2403,156 @@ async function buildRegistrationResolver(
   childIds: number[],
 ) {
   const resolver = new Map<number, ResolvedRegistration>();
+  const childIdSet = new Set(childIds);
 
   for (const childId of childIds) {
     const fromResult = chooseRegistrationForChild(syncResult, childId);
     if (fromResult) resolver.set(childId, fromResult);
   }
 
-  if (!importData) return resolver;
+  const missingAfterResult = childIds.filter((childId) => !resolver.has(childId));
+  if (importData && missingAfterResult.length > 0) {
+    const protocolsByChild = new Map<number, string>();
+    for (const childId of missingAfterResult) {
+      const registration = chooseRegistrationFromImportData(importData, childId);
+      if (registration) protocolsByChild.set(childId, registration.protocol);
+    }
 
-  const missingChildIds = childIds.filter((childId) => !resolver.has(childId));
-  if (missingChildIds.length === 0) return resolver;
+    const protocols = Array.from(protocolsByChild.values());
+    if (protocols.length > 0) {
+      const db = getPrisma();
+      const registrations = await db.registration.findMany({
+        where: { protocol: { in: protocols } },
+        select: {
+          id: true,
+          protocol: true,
+          status: true,
+          createdAt: true,
+          contest: { select: { year: true } },
+        },
+      });
+      const byProtocol = new Map(registrations.map((registration) => [registration.protocol, registration]));
 
-  const protocolsByChild = new Map<number, string>();
-  for (const childId of missingChildIds) {
-    const registration = chooseRegistrationFromImportData(importData, childId);
-    if (registration) protocolsByChild.set(childId, registration.protocol);
+      for (const [childId, protocol] of protocolsByChild) {
+        const registration = byProtocol.get(protocol);
+        if (!registration) continue;
+        resolver.set(childId, {
+          id: registration.id,
+          protocol: registration.protocol,
+          year: registration.contest.year,
+          status: registration.status,
+          createdAt: registration.createdAt.toISOString(),
+        });
+      }
+    }
   }
 
-  const protocols = Array.from(protocolsByChild.values());
-  if (protocols.length === 0) return resolver;
-
-  const db = getPrisma();
-  const registrations = await db.registration.findMany({
-    where: { protocol: { in: protocols } },
-    select: {
-      id: true,
-      protocol: true,
-      status: true,
-      createdAt: true,
-      contest: { select: { year: true } },
-    },
-  });
-  const byProtocol = new Map(registrations.map((registration) => [registration.protocol, registration]));
-
-  for (const [childId, protocol] of protocolsByChild) {
-    const registration = byProtocol.get(protocol);
-    if (!registration) continue;
-    resolver.set(childId, {
-      id: registration.id,
-      protocol: registration.protocol,
-      year: registration.contest.year,
-      status: registration.status,
-      createdAt: registration.createdAt.toISOString(),
+  const missingAfterImportData = childIds.filter((childId) => !resolver.has(childId));
+  if (missingAfterImportData.length > 0) {
+    const db = getPrisma();
+    const participants = await db.participant.findMany({
+      where: { registrations: { some: {} } },
+      select: {
+        slug: true,
+        registrations: {
+          select: {
+            id: true,
+            protocol: true,
+            status: true,
+            createdAt: true,
+            contest: { select: { year: true } },
+          },
+        },
+      },
     });
+
+    for (const participant of participants) {
+      const legacyChildId = legacyChildIdFromSlug(participant.slug);
+      if (legacyChildId === null || !childIdSet.has(legacyChildId) || resolver.has(legacyChildId)) continue;
+      const best = chooseBestRegistration(
+        participant.registrations.map((registration) => ({
+          id: registration.id,
+          protocol: registration.protocol,
+          year: registration.contest.year,
+          status: registration.status,
+          createdAt: registration.createdAt.toISOString(),
+        })),
+      );
+      if (!best) continue;
+      resolver.set(legacyChildId, best);
+    }
   }
 
   return resolver;
+}
+
+function countRegistrationCoverage(
+  syncResult: SyncResult,
+  importData: NormalizedLegacyImport | null,
+  resolver: Map<number, ResolvedRegistration>,
+  childIds: number[],
+) {
+  let fromResult = 0;
+  let fromImportData = 0;
+  let fromDbSlug = 0;
+
+  for (const childId of childIds) {
+    if (!resolver.has(childId)) continue;
+    if (chooseRegistrationForChild(syncResult, childId)) {
+      fromResult += 1;
+      continue;
+    }
+    if (importData && chooseRegistrationFromImportData(importData, childId)) {
+      fromImportData += 1;
+      continue;
+    }
+    fromDbSlug += 1;
+  }
+
+  return { fromResult, fromImportData, fromDbSlug };
+}
+
+function chooseBestRegistration(registrations: ResolvedRegistration[]) {
+  if (registrations.length === 0) return null;
+  return sortRegistrationsByPriority(registrations)[0];
+}
+
+function legacyChildIdFromSlug(slug: string) {
+  const match = slug.match(/-(\d+)$/);
+  if (!match) return null;
+  return Number.parseInt(match[1], 10);
+}
+
+async function logRegistrationResolutionHints(childIds: number[], sampleFiles: string[]) {
+  const db = getPrisma();
+  const [participantCount, registrationCount, photoCount] = await Promise.all([
+    db.participant.count(),
+    db.registration.count(),
+    db.photo.count(),
+  ]);
+
+  console.log(
+    [
+      "Diagnóstico:",
+      `Participantes no banco: ${participantCount}`,
+      `Inscrições no banco: ${registrationCount}`,
+      `Fotos no banco: ${photoCount}`,
+      `Exemplos child_id do zip: ${childIds.join(", ") || "(nenhum)"}`,
+      `Exemplos arquivos: ${sampleFiles.map((filePath) => path.basename(filePath)).join(", ") || "(nenhum)"}`,
+    ].join("\n"),
+  );
+
+  for (const childId of childIds) {
+    const participant = await db.participant.findFirst({
+      where: { slug: { endsWith: `-${childId}` } },
+      select: { slug: true, registrations: { select: { id: true, protocol: true }, take: 1 } },
+    });
+    console.log(
+      participant
+        ? `slug encontrado para ${childId}: ${participant.slug} -> ${participant.registrations[0]?.protocol ?? "sem inscrição"}`
+        : `slug não encontrado para child_id=${childId}`,
+    );
+  }
 }
 
 async function replaceRegistrationPhotos(params: {
