@@ -1,0 +1,288 @@
+{
+  "contests": {
+    "2": "cmq8lzvlo00007i22uledlc0z",
+    "3": "cmq8lzvoj00067i22njo0s91o",
+    "4": "cmq8lzvoq000c7i221ob3sllv",
+    "5": "cmq8lzvou000i7i22grdxnp15",
+    "6": "cmq8lzvoy000o7i22wa31eq89",
+    "7": "cmq8lzvp2000u7i22trv1tt31",
+    "8": "cmq7htzuf0001rn2203mp8dlc"
+  },
+  "categories": {
+    "3:1": "cmq8lzvol00077i22yafa7sml",
+    "3:2": "cmq8lzvol00087i22b26du9lq",
+    "3:3": "cmq8lzvom00097i22g57rgmmm",
+    "3:4": "cmq8lzvop000a7i22k6ma2ae2",
+    "3:5": "cmq8lzvoq000b7i22e90tiofu"
+  },
+  "guardians": {
+    "1": "cmq8lzvpd00177i22nzcpb7oc",
+    "2": "cmq8lzvpk00197i22pxeoh1vb",
+    "3": "cmq8lzvpm001b7i22aorvm5uu",
+    "4": "cmq8lzvpn001d7i2261fmfsb4",
+    "5": "cmq8lzvpo001f7i22qjv9mgo6",
+    "6": "cmq8lzvpp001h7i22vfggogue",
+    "7": "cmq8lzvpr001j7i22i2spn0ko",
+    "8": "cmq8lzvps001l7i2273el313l",
+    "9": "cmq8lzvpt001n7i22a4geoxmj",
+    "10": "cmq8lzvpu001p7i22l5j7s56l",
+    "11": "cmq8lzvpv001r7i22tgvlpskr",
+    "12": "cmq8lzvpw001t7i226jisgjy2",
+    "13": "cmq8lzvpx001v7i22khdfyiu1",
+    "14": "cmq8lzvpy001x7i22i1ljjkt7",
+    "15": "cmq8lzvpz001z7i225qmst61u",
+    "16": "cmq8lzvq100217i22smhdi925",
+    "17": "cmq8lzvq200237i223nlv2qw1",
+    "18": "cmq8lzvq300257i22s0ogqydf",
+    "19": "cmq8lzvq400277i228ecaza9v",
+    "20": "cmq8lzvq500297i22md9471o2"
+  },
+  "children": {
+    "1": "cmq8lzy96048w7i22df6qpvov",
+    "2": "cmq8lzy9h048z7i22ydsio3lf",
+    "3": "cmq8lzy9j04927i22xs148xav",
+    "4": "cmq8lzy9l04957i22lthly083",
+    "5": "cmq8lzy9n04987i22rlxubbqm",
+    "6": "cmq8lzy9p049b7i22k3wnm40e",
+    "7": "cmq8lzy9q049e7i22h80rejsp",
+    "8": "cmq8lzy9s049h7i22yrv8toab",
+    "9": "cmq8lzy9u049k7i224sgbvhew",
+    "10": "cmq8lzy9v049n7i22gsa4uf75",
+    "11": "cmq8lzy9x049q7i22hjudhck7",
+    "12": "cmq8lzy9z049t7i22ppo9bvop",
+    "13": "cmq8lzya1049w7i22vwa9qsne",
+    "14": "cmq8lzya2049z7i22qmod96vr",
+    "15": "cmq8lzya404a27i22wpgdcijx",
+    "16": "cmq8lzya504a57i22i07ebpvv",
+    "17": "cmq8lzya704a87i22czh1qp3p",
+    "18": "cmq8lzya904ab7i22cco3u0m7",
+    "19": "cmq8lzyab04ae7i22ftu6egsx",
+    "20": "cmq8lzyac04ah7i22l1pbqn7v"
+  },
+  "registrationsByChildId": {
+    "1": [
+      {
+        "id": "cmq8lzy98048x7i224lotqvkb",
+        "protocol": "CCMF-2021-000001",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "2": [
+      {
+        "id": "cmq8lzy9h04907i22xd7dd4ef",
+        "protocol": "CCMF-2021-000002",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "3": [
+      {
+        "id": "cmq8lzy9j04937i22vgnbxp00",
+        "protocol": "CCMF-2021-000003",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "4": [
+      {
+        "id": "cmq8lzy9l04967i22juuqupnm",
+        "protocol": "CCMF-2021-000004",
+        "year": 2021,
+        "status": "UNDER_REVIEW",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "5": [
+      {
+        "id": "cmq8lzy9n04997i22ij7kwzup",
+        "protocol": "CCMF-2021-000005",
+        "year": 2021,
+        "status": "SEMIFINALIST",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "6": [
+      {
+        "id": "cmq8lzy9p049c7i22dftaozk6",
+        "protocol": "CCMF-2021-000006",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "7": [
+      {
+        "id": "cmq8lzy9r049f7i22ek4t7b30",
+        "protocol": "CCMF-2021-000007",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "8": [
+      {
+        "id": "cmq8lzy9t049i7i226bbplqri",
+        "protocol": "CCMF-2021-000008",
+        "year": 2021,
+        "status": "SEMIFINALIST",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "9": [
+      {
+        "id": "cmq8lzy9u049l7i2200qr2xjp",
+        "protocol": "CCMF-2021-000009",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "10": [
+      {
+        "id": "cmq8lzy9w049o7i22tv7wlfmz",
+        "protocol": "CCMF-2021-000010",
+        "year": 2021,
+        "status": "SEMIFINALIST",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "11": [
+      {
+        "id": "cmq8lzy9y049r7i22odb7fxve",
+        "protocol": "CCMF-2021-000011",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "12": [
+      {
+        "id": "cmq8lzya0049u7i22uuz97c57",
+        "protocol": "CCMF-2021-000012",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "13": [
+      {
+        "id": "cmq8lzya1049x7i22lccrz3t2",
+        "protocol": "CCMF-2021-000013",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "14": [
+      {
+        "id": "cmq8lzya304a07i224i6zvqxk",
+        "protocol": "CCMF-2021-000014",
+        "year": 2021,
+        "status": "SEMIFINALIST",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "15": [
+      {
+        "id": "cmq8lzya404a37i22p0pkx54s",
+        "protocol": "CCMF-2021-000015",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "16": [
+      {
+        "id": "cmq8lzya604a67i22ajwm8d0z",
+        "protocol": "CCMF-2021-000016",
+        "year": 2021,
+        "status": "WINNER",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "17": [
+      {
+        "id": "cmq8lzya804a97i2221spdm5a",
+        "protocol": "CCMF-2021-000017",
+        "year": 2021,
+        "status": "SEMIFINALIST",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "18": [
+      {
+        "id": "cmq8lzyaa04ac7i225pcf2jc6",
+        "protocol": "CCMF-2021-000018",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "19": [
+      {
+        "id": "cmq8lzyab04af7i22rugglptz",
+        "protocol": "CCMF-2021-000019",
+        "year": 2021,
+        "status": "APPROVED",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ],
+    "20": [
+      {
+        "id": "cmq8lzyad04ai7i22ctrxa6po",
+        "protocol": "CCMF-2021-000020",
+        "year": 2021,
+        "status": "SEMIFINALIST",
+        "createdAt": "2021-05-24T22:15:03.000Z"
+      }
+    ]
+  },
+  "registrationsByLegacyInvoiceId": {
+    "1": "cmq8lzy98048x7i224lotqvkb",
+    "2": "cmq8lzy9h04907i22xd7dd4ef",
+    "3": "cmq8lzy9j04937i22vgnbxp00",
+    "4": "cmq8lzy9l04967i22juuqupnm",
+    "5": "cmq8lzy9n04997i22ij7kwzup",
+    "6": "cmq8lzy9p049c7i22dftaozk6",
+    "7": "cmq8lzy9r049f7i22ek4t7b30",
+    "8": "cmq8lzy9t049i7i226bbplqri",
+    "9": "cmq8lzy9u049l7i2200qr2xjp",
+    "10": "cmq8lzy9w049o7i22tv7wlfmz",
+    "11": "cmq8lzy9y049r7i22odb7fxve",
+    "12": "cmq8lzya0049u7i22uuz97c57",
+    "13": "cmq8lzya1049x7i22lccrz3t2",
+    "14": "cmq8lzya304a07i224i6zvqxk",
+    "15": "cmq8lzya404a37i22p0pkx54s",
+    "16": "cmq8lzya604a67i22ajwm8d0z",
+    "17": "cmq8lzya804a97i2221spdm5a",
+    "18": "cmq8lzyaa04ac7i225pcf2jc6",
+    "19": "cmq8lzyab04af7i22rugglptz",
+    "20": "cmq8lzyad04ai7i22ctrxa6po"
+  },
+  "payments": {
+    "1": "cmq8lzy9d048y7i22bmul25ed",
+    "2": "cmq8lzy9i04917i229zjsypdw",
+    "3": "cmq8lzy9k04947i22anuidows",
+    "4": "cmq8lzy9m04977i22tix28c09",
+    "5": "cmq8lzy9o049a7i22dzv3r6xo",
+    "6": "cmq8lzy9q049d7i22tp52g1m7",
+    "7": "cmq8lzy9s049g7i227e6eeh1y",
+    "8": "cmq8lzy9t049j7i22yr018nvf",
+    "9": "cmq8lzy9v049m7i22f6j4tkc9",
+    "10": "cmq8lzy9w049p7i22ifynqcuq",
+    "11": "cmq8lzy9y049s7i22uqbttm5b",
+    "12": "cmq8lzya0049v7i22mzk6bcrk",
+    "13": "cmq8lzya2049y7i22h8heedal",
+    "14": "cmq8lzya304a17i22y32h9nha",
+    "15": "cmq8lzya504a47i2220mhiucv",
+    "16": "cmq8lzya704a77i22oidqbbx8",
+    "17": "cmq8lzya904aa7i22yxgcangd",
+    "18": "cmq8lzyaa04ad7i22ua0eaiji",
+    "19": "cmq8lzyac04ag7i22norxm6u9",
+    "20": "cmq8lzyad04aj7i22su7833o8"
+  }
+}
