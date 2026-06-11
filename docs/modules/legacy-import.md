@@ -55,6 +55,9 @@ Lê/usa como fonte:
 | --- | --- | --- |
 | `npm run legacy:analyze` | Lê o SQL e gera relatórios sem escrever no banco | operador |
 | `npm run legacy:import` | Importa dados normalizados para o banco atual | operador |
+| `npm run legacy:build-json` | Lê o SQL e gera `data/legacy/import-data.json` separado por entidades | operador |
+| `npm run legacy:sync-data` | Lê `import-data.json`, cadastra/atualiza dados e gera `import-result.json` | operador |
+| `npm run legacy:upload-images` | Lê `participants.zip` no S3 ou uma pasta local, usa o `child_id` no início do nome, envia ao S3 e sincroniza `Photo` | operador |
 | `npm run legacy:photos` | Baixa fotos antigas, envia ao S3 e cria/atualiza `Photo` | operador |
 | `npm run storage:upload-legacy-photos` | Lê `contests.zip` no S3, mapeia pelo manifesto e sincroniza S3 + `Photo` | operador |
 
@@ -92,6 +95,13 @@ Override: `--sql=/caminho/outro.sql` ou `LEGACY_SQL_FILE`.
    em manifesto até o comando `legacy:photos` enviar os arquivos ao S3.
 11. A importação deve ser idempotente: reexecutar o script não deve duplicar
     registros já importados.
+12. No fluxo V2, o SQL é convertido primeiro para `data/legacy/import-data.json`;
+    depois `legacy:sync-data` grava o banco e gera `data/legacy/import-result.json`.
+13. Imagens do fluxo V2 podem vir do zip `participants.zip` na raiz do bucket
+    (pasta interna `participants/`) ou de uma pasta local via `--imagesDir`.
+    Os arquivos devem começar com o `child_id` legado.
+14. Quando há várias imagens para a mesma criança, os nomes são ordenados
+    alfabeticamente e a primeira foto vira capa.
 
 ## Rotas relacionadas
 

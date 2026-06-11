@@ -1,16 +1,21 @@
 import "dotenv/config";
 
-import { createReadStream } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createReadStream, createWriteStream, existsSync, readFileSync } from "node:fs";
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import readline from "node:readline";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
+import yauzl from "yauzl";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { buildProtocol, slugify } from "../src/shared/utils";
 
-type Command = "analyze" | "import" | "photo-manifest" | "photos";
+type Command = "analyze" | "import" | "photo-manifest" | "photos" | "build-json" | "sync-data" | "upload-images";
 type SqlValue = string | number | null;
 type RegistrationStatusValue =
   | "PENDING_PAYMENT"
@@ -18,6 +23,8 @@ type RegistrationStatusValue =
   | "APPROVED"
   | "SEMIFINALIST"
   | "WINNER";
+type PaymentMethodValue = "PIX" | "BOLETO" | "CREDIT_CARD";
+type PaymentStatusValue = "PENDING" | "CONFIRMED" | "RECEIVED";
 
 type LegacyCategory = {
   id: number;
@@ -154,6 +161,100 @@ type IdMap = {
   payments: Record<string, string>;
 };
 
+type NormalizedLegacyImport = {
+  meta: {
+    sourceFile: string;
+    generatedAt: string;
+  };
+  contests: Array<{
+    legacyId: number;
+    year: number;
+    name: string;
+    status: string;
+    registrationFeeCents: number;
+    frameImageKey: string | null;
+    revealAt: string | null;
+    createdAt: string | null;
+  }>;
+  categories: Array<{
+    legacyContestId: number;
+    legacyCategoryId: number;
+    name: string;
+    slug: string;
+    minAgeMonths: number;
+    maxAgeMonths: number;
+    order: number;
+  }>;
+  guardians: Array<{
+    legacyCustomerId: number;
+    name: string;
+    email: string;
+    cpf: string | null;
+    phone: string | null;
+    zipCode: string | null;
+    street: string | null;
+    number: string | null;
+    complement: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    state: string | null;
+  }>;
+  participants: Array<{
+    legacyChildId: number;
+    legacyCustomerId: number;
+    name: string;
+    slug: string;
+    birthDate: string;
+    gender: "MALE" | "FEMALE" | null;
+    city: string;
+    state: string;
+    imageConsentAt: string;
+    createdAt: string | null;
+    likes: number;
+  }>;
+  registrations: Array<{
+    legacyChildId: number;
+    legacyCustomerId: number;
+    legacyContestId: number;
+    legacyCategoryId: number;
+    legacyInvoiceId: number;
+    legacyInvoiceIds: number[];
+    year: number;
+    protocol: string;
+    status: RegistrationStatusValue;
+    likesCount: number;
+    approvedAt: string | null;
+    createdAt: string | null;
+  }>;
+  payments: Array<{
+    legacyInvoiceId: number;
+    registrationProtocol: string;
+    method: PaymentMethodValue;
+    status: PaymentStatusValue;
+    amountCents: number;
+    dueDate: string | null;
+    paidAt: string | null;
+    invoiceUrl: string | null;
+    pixPayload: string | null;
+    boletoUrl: string | null;
+    createdAt: string | null;
+  }>;
+  indexes: {
+    registrationsByChildId: Record<string, string[]>;
+  };
+  skipped: SkippedRecord[];
+};
+
+type SyncResult = {
+  contests: Record<string, string>;
+  categories: Record<string, string>;
+  guardians: Record<string, string>;
+  children: Record<string, string>;
+  registrationsByChildId: Record<string, Array<{ id: string; protocol: string; year: number; status: string; createdAt: string | null }>>;
+  registrationsByLegacyInvoiceId: Record<string, string>;
+  payments: Record<string, string>;
+};
+
 const RELEVANT_TABLES = new Set([
   "cc_categories",
   "cc_concourses",
@@ -174,6 +275,12 @@ const CATEGORY_RANGES: Record<number, { minAgeMonths: number; maxAgeMonths: numb
 
 const DEFAULT_SQL_FILE = path.join(process.cwd(), "data/legacy/criancam_site.sql");
 const REPORT_DIR = "docs/legacy-import";
+const LEGACY_DATA_DIR = path.join(process.cwd(), "data/legacy");
+const LEGACY_IMPORT_JSON_FILE = path.join(LEGACY_DATA_DIR, "import-data.json");
+const LEGACY_IMPORT_RESULT_FILE = path.join(LEGACY_DATA_DIR, "import-result.json");
+const LEGACY_IMAGE_UPLOAD_REPORT_FILE = path.join(LEGACY_DATA_DIR, "image-upload-report.json");
+const LEGACY_PARTICIPANTS_ZIP_KEY = "participants.zip";
+const LEGACY_PARTICIPANTS_ZIP_ROOT = "participants";
 const PHOTO_MANIFEST_FILE = path.join(REPORT_DIR, "photos-manifest.json");
 const PHOTO_SOURCES_FILE = path.join(REPORT_DIR, "photo-sources.json");
 const PHOTO_MANIFEST_FULL_FILE = path.join(REPORT_DIR, "photos-manifest-full.json");
@@ -200,8 +307,23 @@ async function main() {
     return;
   }
 
+  if (command === "sync-data") {
+    await syncLegacyImportJson();
+    return;
+  }
+
+  if (command === "upload-images") {
+    await uploadLegacyImagesFromFolder();
+    return;
+  }
+
   const data = await parseLegacyDump(sqlFile);
   const analysis = analyzeLegacyData(data);
+
+  if (command === "build-json") {
+    await buildLegacyImportJson(data, analysis.skipped);
+    return;
+  }
 
   if (command === "analyze") {
     await writeReports(reportDir, {
@@ -255,8 +377,20 @@ function parseArgs(argv: string[]) {
 
 function parseCommand(input: string | undefined): Command {
   if (!input) return "analyze";
-  if (input === "analyze" || input === "import" || input === "photo-manifest" || input === "photos") return input;
-  throw new Error(`Comando inválido "${input}". Use analyze, import, photo-manifest ou photos.`);
+  if (
+    input === "analyze" ||
+    input === "import" ||
+    input === "photo-manifest" ||
+    input === "photos" ||
+    input === "build-json" ||
+    input === "sync-data" ||
+    input === "upload-images"
+  ) {
+    return input;
+  }
+  throw new Error(
+    `Comando inválido "${input}". Use analyze, import, photo-manifest, photos, build-json, sync-data ou upload-images.`,
+  );
 }
 
 function readBoolean(value: string | undefined): boolean {
@@ -683,6 +817,501 @@ async function importLegacyData(data: LegacyData) {
   }
 
   return { created, skipped, idMap, photoManifest };
+}
+
+async function buildLegacyImportJson(data: LegacyData, analysisSkipped: SkippedRecord[]) {
+  const normalized = normalizeLegacyImport(data, analysisSkipped);
+  await writeJson(LEGACY_IMPORT_JSON_FILE, normalized);
+  console.log(
+    [
+      `JSON legado gerado em ${LEGACY_IMPORT_JSON_FILE}`,
+      `Concursos: ${normalized.contests.length}`,
+      `Categorias: ${normalized.categories.length}`,
+      `Responsáveis: ${normalized.guardians.length}`,
+      `Participantes: ${normalized.participants.length}`,
+      `Inscrições: ${normalized.registrations.length}`,
+      `Pagamentos: ${normalized.payments.length}`,
+      `Exceções: ${normalized.skipped.length}`,
+    ].join("\n"),
+  );
+}
+
+function normalizeLegacyImport(data: LegacyData, analysisSkipped: SkippedRecord[]): NormalizedLegacyImport {
+  const finalistConcourseIds = new Set(data.finalists.map((finalist) => finalist.concourseId).filter(isPresent));
+  const emailByCustomer = buildCustomerEmailMap(data.customers);
+  const skipped = mergeSkipped(analysisSkipped);
+
+  const contests = Array.from(data.concourses.values())
+    .filter((concourse) => Number.isInteger(concourse.year))
+    .sort((left, right) => left.year - right.year)
+    .map((concourse) => ({
+      legacyId: concourse.id,
+      year: concourse.year,
+      name: `Criança Mais Fotogênica do Brasil ${concourse.year}`,
+      status: resolveContestStatus(concourse, finalistConcourseIds),
+      registrationFeeCents: concourse.amountCents,
+      frameImageKey: concourse.frame ? buildFrameStorageKey(concourse.year, concourse.frame) : null,
+      revealAt: toIso(concourse.revealAt),
+      createdAt: toIso(concourse.createdAt),
+    }));
+
+  const categories = contests.flatMap((contest) =>
+    Array.from(data.categories.values()).flatMap((category) => {
+      const range = CATEGORY_RANGES[category.id];
+      if (!range) return [];
+      return [{
+        legacyContestId: contest.legacyId,
+        legacyCategoryId: category.id,
+        name: category.title,
+        slug: category.slug,
+        minAgeMonths: range.minAgeMonths,
+        maxAgeMonths: range.maxAgeMonths,
+        order: category.order,
+      }];
+    }),
+  );
+
+  const guardiansById = new Map<number, NormalizedLegacyImport["guardians"][number]>();
+  const participantsById = new Map<number, NormalizedLegacyImport["participants"][number]>();
+  const registrations: NormalizedLegacyImport["registrations"] = [];
+  const payments: NormalizedLegacyImport["payments"] = [];
+  const registrationsByChildId: Record<string, string[]> = {};
+
+  for (const group of groupInvoices(data.invoices).values()) {
+    const invoice = selectBestInvoice(group);
+    const child = invoice.childId ? data.children.get(invoice.childId) : null;
+    const customer = invoice.customerId ? data.customers.get(invoice.customerId) : null;
+    const concourse = invoice.concourseId ? data.concourses.get(invoice.concourseId) : null;
+    const category = invoice.categoryId ? data.categories.get(invoice.categoryId) : null;
+
+    if (!child || !customer || !concourse || !category || !invoice.categoryId || !invoice.customerId || !child.birthDate) {
+      validateInvoiceGroup(data, group, skipped);
+      continue;
+    }
+
+    guardiansById.set(customer.id, {
+      legacyCustomerId: customer.id,
+      name: customer.name || `Responsável legado ${customer.id}`,
+      email: emailByCustomer.get(customer.id) ?? buildTechnicalEmail(customer.id),
+      cpf: customer.cpf,
+      phone: customer.phone,
+      zipCode: customer.zipCode,
+      street: customer.street,
+      number: customer.number,
+      complement: customer.complement,
+      neighborhood: customer.neighborhood,
+      city: customer.city,
+      state: customer.state,
+    });
+
+    participantsById.set(child.id, {
+      legacyChildId: child.id,
+      legacyCustomerId: customer.id,
+      name: child.name || `Participante legado ${child.id}`,
+      slug: legacyChildSlug(child),
+      birthDate: child.birthDate.toISOString(),
+      gender: child.gender,
+      city: customer.city || "Não informado",
+      state: customer.state || "NI",
+      imageConsentAt: (child.registeredAt ?? new Date()).toISOString(),
+      createdAt: toIso(child.registeredAt),
+      likes: child.likes,
+    });
+
+    const protocol = buildProtocol(concourse.year, invoice.id);
+    const status = resolveRegistrationStatus(data, invoice, child);
+    const registration = {
+      legacyChildId: child.id,
+      legacyCustomerId: customer.id,
+      legacyContestId: concourse.id,
+      legacyCategoryId: invoice.categoryId,
+      legacyInvoiceId: invoice.id,
+      legacyInvoiceIds: group.map((item) => item.id),
+      year: concourse.year,
+      protocol,
+      status,
+      likesCount: child.likes,
+      approvedAt: ["APPROVED", "SEMIFINALIST", "WINNER"].includes(status)
+        ? toIso(invoice.paidAt ?? invoice.createdAt ?? new Date())
+        : null,
+      createdAt: toIso(invoice.createdAt ?? child.registeredAt),
+    };
+    registrations.push(registration);
+    registrationsByChildId[String(child.id)] ??= [];
+    registrationsByChildId[String(child.id)].push(protocol);
+
+    for (const paymentInvoice of group) {
+      payments.push({
+        legacyInvoiceId: paymentInvoice.id,
+        registrationProtocol: protocol,
+        method: resolvePaymentMethod(paymentInvoice),
+        status: resolvePaymentStatus(paymentInvoice),
+        amountCents: paymentInvoice.returnAmountCents ?? paymentInvoice.amountCents,
+        dueDate: toIso(paymentInvoice.dueDate),
+        paidAt: toIso(paymentInvoice.paidAt),
+        invoiceUrl: paymentInvoice.installmentBilletUrl ?? paymentInvoice.billetUrl,
+        pixPayload: paymentInvoice.pixPayload,
+        boletoUrl: paymentInvoice.billetUrl ?? paymentInvoice.installmentBilletUrl,
+        createdAt: toIso(paymentInvoice.createdAt),
+      });
+    }
+  }
+
+  return {
+    meta: {
+      sourceFile: sqlFile,
+      generatedAt: new Date().toISOString(),
+    },
+    contests,
+    categories,
+    guardians: Array.from(guardiansById.values()).sort((left, right) => left.legacyCustomerId - right.legacyCustomerId),
+    participants: Array.from(participantsById.values()).sort((left, right) => left.legacyChildId - right.legacyChildId),
+    registrations: registrations.sort((left, right) => left.legacyInvoiceId - right.legacyInvoiceId),
+    payments: payments.sort((left, right) => left.legacyInvoiceId - right.legacyInvoiceId),
+    indexes: { registrationsByChildId },
+    skipped: mergeSkipped(skipped),
+  };
+}
+
+async function syncLegacyImportJson() {
+  const inputPath = options.input ?? process.env.LEGACY_IMPORT_JSON ?? LEGACY_IMPORT_JSON_FILE;
+  const outputPath = options.output ?? process.env.LEGACY_IMPORT_RESULT ?? LEGACY_IMPORT_RESULT_FILE;
+  const normalized = sliceNormalizedImport(
+    JSON.parse(await readFile(inputPath, "utf-8")) as NormalizedLegacyImport,
+  );
+  const result = await syncNormalizedLegacyImport(normalized);
+  const mergedResult = mergeSyncResults(readExistingSyncResult(outputPath), result);
+  await writeJson(outputPath, mergedResult);
+  console.log(
+    [
+      `Sincronização concluída a partir de ${inputPath}`,
+      `Resultado gravado em ${outputPath}`,
+      `Concursos: ${Object.keys(mergedResult.contests).length}`,
+      `Categorias: ${Object.keys(mergedResult.categories).length}`,
+      `Responsáveis: ${Object.keys(mergedResult.guardians).length}`,
+      `Participantes: ${Object.keys(mergedResult.children).length}`,
+      `Inscrições: ${Object.keys(mergedResult.registrationsByLegacyInvoiceId).length}`,
+      `Pagamentos: ${Object.keys(mergedResult.payments).length}`,
+    ].join("\n"),
+  );
+}
+
+function readExistingSyncResult(outputPath: string): SyncResult | null {
+  if (!existsSync(outputPath)) return null;
+  try {
+    return JSON.parse(readFileSync(outputPath, "utf-8")) as SyncResult;
+  } catch {
+    return null;
+  }
+}
+
+function mergeSyncResults(existing: SyncResult | null, current: SyncResult): SyncResult {
+  if (!existing) return current;
+  const registrationsByChildId = { ...existing.registrationsByChildId };
+  for (const [childId, registrations] of Object.entries(current.registrationsByChildId)) {
+    const byId = new Map((registrationsByChildId[childId] ?? []).map((registration) => [registration.id, registration]));
+    for (const registration of registrations) byId.set(registration.id, registration);
+    registrationsByChildId[childId] = Array.from(byId.values());
+  }
+
+  return {
+    contests: { ...existing.contests, ...current.contests },
+    categories: { ...existing.categories, ...current.categories },
+    guardians: { ...existing.guardians, ...current.guardians },
+    children: { ...existing.children, ...current.children },
+    registrationsByChildId,
+    registrationsByLegacyInvoiceId: {
+      ...existing.registrationsByLegacyInvoiceId,
+      ...current.registrationsByLegacyInvoiceId,
+    },
+    payments: { ...existing.payments, ...current.payments },
+  };
+}
+
+function sliceNormalizedImport(normalized: NormalizedLegacyImport): NormalizedLegacyImport {
+  if (!limit && offset === 0) return normalized;
+
+  const registrations = normalized.registrations.slice(offset, limit ? offset + limit : undefined);
+  const protocols = new Set(registrations.map((registration) => registration.protocol));
+  const legacyChildIds = new Set(registrations.map((registration) => registration.legacyChildId));
+  const legacyCustomerIds = new Set(registrations.map((registration) => registration.legacyCustomerId));
+  const legacyContestIds = new Set(registrations.map((registration) => registration.legacyContestId));
+
+  return {
+    ...normalized,
+    guardians: normalized.guardians.filter((guardian) => legacyCustomerIds.has(guardian.legacyCustomerId)),
+    participants: normalized.participants.filter((participant) => legacyChildIds.has(participant.legacyChildId)),
+    registrations,
+    payments: normalized.payments.filter((payment) => protocols.has(payment.registrationProtocol)),
+    categories: normalized.categories.filter((category) => legacyContestIds.has(category.legacyContestId)),
+    indexes: {
+      registrationsByChildId: registrations.reduce<Record<string, string[]>>((accumulator, registration) => {
+        accumulator[String(registration.legacyChildId)] ??= [];
+        accumulator[String(registration.legacyChildId)].push(registration.protocol);
+        return accumulator;
+      }, {}),
+    },
+  };
+}
+
+async function syncNormalizedLegacyImport(normalized: NormalizedLegacyImport): Promise<SyncResult> {
+  const db = getPrisma();
+  const result: SyncResult = {
+    contests: {},
+    categories: {},
+    guardians: {},
+    children: {},
+    registrationsByChildId: {},
+    registrationsByLegacyInvoiceId: {},
+    payments: {},
+  };
+  const passwordHash = await bcrypt.hash(`legacy-import-${randomUUID()}`, 10);
+
+  for (const contestData of normalized.contests) {
+    const contest = await db.contest.upsert({
+      where: { year: contestData.year },
+      create: {
+        year: contestData.year,
+        name: contestData.name,
+        status: contestData.status as ReturnType<typeof resolveContestStatus>,
+        registrationFeeCents: contestData.registrationFeeCents,
+        frameImageKey: contestData.frameImageKey,
+        revealAt: parseIsoDate(contestData.revealAt),
+        createdAt: parseIsoDate(contestData.createdAt) ?? undefined,
+      },
+      update: {
+        name: contestData.name,
+        status: contestData.status as ReturnType<typeof resolveContestStatus>,
+        registrationFeeCents: contestData.registrationFeeCents,
+        frameImageKey: contestData.frameImageKey,
+        revealAt: parseIsoDate(contestData.revealAt),
+      },
+      select: { id: true },
+    });
+    result.contests[String(contestData.legacyId)] = contest.id;
+  }
+
+  for (const categoryData of normalized.categories) {
+    const contestId = result.contests[String(categoryData.legacyContestId)];
+    if (!contestId) continue;
+    const category = await db.category.upsert({
+      where: { contestId_slug: { contestId, slug: categoryData.slug } },
+      create: {
+        contestId,
+        name: categoryData.name,
+        slug: categoryData.slug,
+        minAgeMonths: categoryData.minAgeMonths,
+        maxAgeMonths: categoryData.maxAgeMonths,
+        order: categoryData.order,
+      },
+      update: {
+        name: categoryData.name,
+        minAgeMonths: categoryData.minAgeMonths,
+        maxAgeMonths: categoryData.maxAgeMonths,
+        order: categoryData.order,
+      },
+      select: { id: true },
+    });
+    result.categories[`${categoryData.legacyContestId}:${categoryData.legacyCategoryId}`] = category.id;
+  }
+
+  for (const guardianData of normalized.guardians) {
+    const profile = await syncGuardianProfile(guardianData, passwordHash);
+    result.guardians[String(guardianData.legacyCustomerId)] = profile.id;
+  }
+
+  for (const participantData of normalized.participants) {
+    const guardianId = result.guardians[String(participantData.legacyCustomerId)];
+    if (!guardianId) continue;
+    const participant = await db.participant.upsert({
+      where: { slug: participantData.slug },
+      create: {
+        guardianId,
+        name: participantData.name,
+        slug: participantData.slug,
+        birthDate: parseRequiredIsoDate(participantData.birthDate),
+        gender: participantData.gender,
+        city: participantData.city,
+        state: participantData.state,
+        imageConsentAt: parseIsoDate(participantData.imageConsentAt),
+        createdAt: parseIsoDate(participantData.createdAt) ?? undefined,
+      },
+      update: {
+        guardianId,
+        name: participantData.name,
+        birthDate: parseRequiredIsoDate(participantData.birthDate),
+        gender: participantData.gender,
+        city: participantData.city,
+        state: participantData.state,
+        imageConsentAt: parseIsoDate(participantData.imageConsentAt),
+      },
+      select: { id: true },
+    });
+    result.children[String(participantData.legacyChildId)] = participant.id;
+  }
+
+  for (const registrationData of normalized.registrations) {
+    const participantId = result.children[String(registrationData.legacyChildId)];
+    const contestId = result.contests[String(registrationData.legacyContestId)];
+    const categoryId = result.categories[`${registrationData.legacyContestId}:${registrationData.legacyCategoryId}`];
+    if (!participantId || !contestId || !categoryId) continue;
+
+    const existing =
+      (await db.registration.findUnique({ where: { protocol: registrationData.protocol }, select: { id: true } })) ??
+      (await db.registration.findUnique({
+        where: { participantId_contestId: { participantId, contestId } },
+        select: { id: true },
+      }));
+
+    const data = {
+      participantId,
+      contestId,
+      categoryId,
+      status: registrationData.status,
+      protocol: registrationData.protocol,
+      likesCount: registrationData.likesCount,
+      approvedAt: parseIsoDate(registrationData.approvedAt),
+      createdAt: parseIsoDate(registrationData.createdAt) ?? undefined,
+    };
+
+    const registration = existing
+      ? await db.registration.update({
+          where: { id: existing.id },
+          data: {
+            categoryId,
+            status: registrationData.status,
+            likesCount: registrationData.likesCount,
+            approvedAt: parseIsoDate(registrationData.approvedAt),
+          },
+          select: { id: true, protocol: true, status: true, createdAt: true },
+        })
+      : await db.registration.create({
+          data,
+          select: { id: true, protocol: true, status: true, createdAt: true },
+        });
+
+    result.registrationsByLegacyInvoiceId[String(registrationData.legacyInvoiceId)] = registration.id;
+    for (const legacyInvoiceId of registrationData.legacyInvoiceIds) {
+      result.registrationsByLegacyInvoiceId[String(legacyInvoiceId)] = registration.id;
+    }
+    result.registrationsByChildId[String(registrationData.legacyChildId)] ??= [];
+    result.registrationsByChildId[String(registrationData.legacyChildId)].push({
+      id: registration.id,
+      protocol: registration.protocol,
+      year: registrationData.year,
+      status: registration.status,
+      createdAt: registration.createdAt.toISOString(),
+    });
+  }
+
+  for (const paymentData of normalized.payments) {
+    const registrationId = result.registrationsByLegacyInvoiceId[String(paymentData.legacyInvoiceId)];
+    if (!registrationId) continue;
+    const existing = await db.payment.findFirst({
+      where: {
+        registrationId,
+        amountCents: paymentData.amountCents,
+        createdAt: parseIsoDate(paymentData.createdAt) ?? undefined,
+      },
+      select: { id: true },
+    });
+    if (existing) {
+      result.payments[String(paymentData.legacyInvoiceId)] = existing.id;
+      continue;
+    }
+    const payment = await db.payment.create({
+      data: {
+        registrationId,
+        method: paymentData.method,
+        status: paymentData.status,
+        amountCents: paymentData.amountCents,
+        dueDate: parseIsoDate(paymentData.dueDate),
+        paidAt: parseIsoDate(paymentData.paidAt),
+        invoiceUrl: paymentData.invoiceUrl,
+        pixPayload: paymentData.pixPayload,
+        boletoUrl: paymentData.boletoUrl,
+        createdAt: parseIsoDate(paymentData.createdAt) ?? undefined,
+      },
+      select: { id: true },
+    });
+    result.payments[String(paymentData.legacyInvoiceId)] = payment.id;
+  }
+
+  return result;
+}
+
+async function syncGuardianProfile(guardianData: NormalizedLegacyImport["guardians"][number], passwordHash: string) {
+  const db = getPrisma();
+  const existingProfile = guardianData.cpf
+    ? await db.guardianProfile.findUnique({
+        where: { cpf: guardianData.cpf },
+        include: { user: true },
+      })
+    : null;
+
+  if (existingProfile) {
+    await db.user.update({
+      where: { id: existingProfile.userId },
+      data: {
+        name: guardianData.name,
+        email: existingProfile.user.email,
+        phone: guardianData.phone,
+      },
+    });
+    return db.guardianProfile.update({
+      where: { id: existingProfile.id },
+      data: buildGuardianProfileData(guardianData),
+      select: { id: true },
+    });
+  }
+
+  const user = await db.user.upsert({
+    where: { email: guardianData.email },
+    create: {
+      name: guardianData.name,
+      email: guardianData.email,
+      phone: guardianData.phone,
+      passwordHash,
+      role: "GUARDIAN",
+      requiresPasswordSetup: true,
+    },
+    update: {
+      name: guardianData.name,
+      phone: guardianData.phone,
+      requiresPasswordSetup: true,
+    },
+    include: { guardianProfile: true },
+  });
+
+  if (user.guardianProfile) {
+    return db.guardianProfile.update({
+      where: { id: user.guardianProfile.id },
+      data: buildGuardianProfileData(guardianData),
+      select: { id: true },
+    });
+  }
+
+  return db.guardianProfile.create({
+    data: {
+      userId: user.id,
+      ...buildGuardianProfileData(guardianData),
+    },
+    select: { id: true },
+  });
+}
+
+function buildGuardianProfileData(guardianData: NormalizedLegacyImport["guardians"][number]) {
+  return {
+    cpf: guardianData.cpf,
+    whatsapp: guardianData.phone,
+    zipCode: guardianData.zipCode,
+    street: guardianData.street,
+    number: guardianData.number,
+    complement: guardianData.complement,
+    neighborhood: guardianData.neighborhood,
+    city: guardianData.city,
+    state: guardianData.state,
+  };
 }
 
 async function importContestsAndCategories(
@@ -1423,6 +2052,369 @@ function mergeSkipped(...groups: SkippedRecord[][]) {
     }
   }
   return merged;
+}
+
+async function uploadLegacyImagesFromFolder() {
+  const zipKey = options.zipKey ?? process.env.LEGACY_IMAGES_ZIP_KEY ?? LEGACY_PARTICIPANTS_ZIP_KEY;
+  const zipRoot = normalizeOptionalZipRoot(
+    options.zipRoot ?? process.env.LEGACY_IMAGES_ZIP_ROOT ?? LEGACY_PARTICIPANTS_ZIP_ROOT,
+  );
+  const bucket = process.env.S3_BUCKET;
+  const tempImagesDir = path.join(tmpdir(), "ccmf-legacy-participants-images");
+  const usingZip = !options.imagesDir && !process.env.LEGACY_IMAGES_DIR;
+  const imagesDir =
+    options.imagesDir ??
+    process.env.LEGACY_IMAGES_DIR ??
+    (bucket ? await extractLegacyImagesZipFromS3(bucket, zipKey, zipRoot, tempImagesDir) : null);
+  if (!imagesDir) {
+    throw new Error(
+      "Informe --imagesDir=/caminho/das/imagens ou configure S3_BUCKET para baixar participants.zip do bucket.",
+    );
+  }
+
+  const resultPath = options.result ?? process.env.LEGACY_IMPORT_RESULT ?? LEGACY_IMPORT_RESULT_FILE;
+  const execute = readBoolean(options.execute);
+  const force = readBoolean(options.force);
+  const syncResult = JSON.parse(await readFile(resultPath, "utf-8")) as SyncResult;
+  const files = await listImageFiles(imagesDir);
+  const grouped = groupImageFilesByChildId(files);
+
+  const report = {
+    imagesDir,
+    zipKey: options.imagesDir || process.env.LEGACY_IMAGES_DIR ? null : zipKey,
+    zipRoot,
+    resultPath,
+    execute,
+    scanned: files.length,
+    uploaded: 0,
+    created: 0,
+    updated: 0,
+    unchanged: 0,
+    skipped: [] as Array<{ filePath: string; reason: string }>,
+  };
+
+  console.log(
+    [
+      `Imagens encontradas: ${files.length}`,
+      `Crianças com imagens: ${grouped.size}`,
+      execute ? "Modo: EXECUTE" : "Modo: DRY-RUN",
+      force ? "Force: sim" : "Force: não",
+    ].join("\n"),
+  );
+
+  if (!execute) {
+    for (const [childId, childFiles] of Array.from(grouped.entries()).slice(0, 10)) {
+      const registration = chooseRegistrationForChild(syncResult, childId);
+      console.log(
+        registration
+          ? `[ok] child_id=${childId}: ${childFiles.length} arquivo(s) -> ${registration.id}`
+          : `[missing] child_id=${childId}: sem inscrição no resultado`,
+      );
+    }
+    await writeJson(LEGACY_IMAGE_UPLOAD_REPORT_FILE, report);
+    console.log(`Relatório dry-run gravado em ${LEGACY_IMAGE_UPLOAD_REPORT_FILE}. Use --execute para aplicar.`);
+    if (usingZip) {
+      await rm(tempImagesDir, { recursive: true, force: true });
+    }
+    return;
+  }
+
+  const uploadBucket = requireEnv("S3_BUCKET");
+  const s3Client = createS3Client();
+  const db = getPrisma();
+
+  for (const [childId, childFiles] of grouped) {
+    const registration = chooseRegistrationForChild(syncResult, childId);
+    if (!registration) {
+      for (const filePath of childFiles) {
+        report.skipped.push({ filePath, reason: `Sem inscrição importada para child_id=${childId}.` });
+      }
+      continue;
+    }
+
+    const orderedFiles = [...childFiles].sort((left, right) => path.basename(left).localeCompare(path.basename(right)));
+    for (const [index, filePath] of orderedFiles.entries()) {
+      const body = await readFile(filePath);
+      if (!isLikelyImage(body)) {
+        report.skipped.push({ filePath, reason: "Arquivo não parece ser uma imagem válida." });
+        continue;
+      }
+
+      const storageKey = buildLocalLegacyPhotoStorageKey(registration.year, registration.id, index, filePath);
+      if (force || !(await photoObjectExists(s3Client, uploadBucket, storageKey))) {
+        await s3Client.send(
+          new PutObjectCommand({
+            Bucket: uploadBucket,
+            Key: storageKey,
+            Body: body,
+            ContentLength: body.length,
+            ContentType: contentTypeFromPath(filePath),
+          }),
+        );
+        report.uploaded += 1;
+      }
+
+      const sync = await syncLocalPhotoRecord(db, registration.id, storageKey, index, index === 0);
+      if (sync === "created") report.created += 1;
+      else if (sync === "updated") report.updated += 1;
+      else report.unchanged += 1;
+    }
+  }
+
+  await writeJson(LEGACY_IMAGE_UPLOAD_REPORT_FILE, report);
+  console.log(
+    [
+      `Upload concluído: ${report.uploaded} objeto(s) enviados ao S3`,
+      `Banco: ${report.created} criados, ${report.updated} atualizados, ${report.unchanged} inalterados`,
+      `Ignorados: ${report.skipped.length}`,
+      `Relatório: ${LEGACY_IMAGE_UPLOAD_REPORT_FILE}`,
+    ].join("\n"),
+  );
+
+  if (usingZip) {
+    await rm(tempImagesDir, { recursive: true, force: true });
+  }
+}
+
+async function extractLegacyImagesZipFromS3(
+  bucket: string,
+  zipKey: string,
+  zipRoot: string | null,
+  destinationDir: string,
+) {
+  const s3Client = createS3Client();
+  const tempZipPath = path.join(tmpdir(), `ccmf-${path.basename(zipKey)}`);
+  await rm(destinationDir, { recursive: true, force: true });
+  await mkdir(destinationDir, { recursive: true });
+
+  console.log(`Baixando s3://${bucket}/${zipKey}...`);
+  await downloadS3Object(s3Client, bucket, zipKey, tempZipPath);
+
+  console.log(`Extraindo imagens do zip${zipRoot ? ` em ${zipRoot}` : ""}...`);
+  const extractedDir = await extractImageZip(tempZipPath, destinationDir, zipRoot);
+  await rm(tempZipPath, { force: true });
+  return extractedDir;
+}
+
+async function downloadS3Object(s3Client: S3Client, bucket: string, key: string, destination: string) {
+  const response = await s3Client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  if (!response.Body) throw new Error(`Objeto sem Body: s3://${bucket}/${key}`);
+  await pipeline(response.Body as Readable, createWriteStream(destination));
+}
+
+async function extractImageZip(zipPath: string, destinationDir: string, zipRoot: string | null) {
+  const zip = await openZip(zipPath);
+  let extracted = 0;
+
+  await new Promise<void>((resolve, reject) => {
+    zip.readEntry();
+    zip.on("entry", (entry) => {
+      if (entry.fileName.endsWith("/")) {
+        zip.readEntry();
+        return;
+      }
+
+      const normalizedName = normalizeZipPath(entry.fileName);
+      const relativeName = zipRoot ? stripZipRoot(normalizedName, zipRoot) : normalizedName;
+      if (!relativeName || normalizedName.includes("__MACOSX/") || path.basename(relativeName).startsWith(".")) {
+        zip.readEntry();
+        return;
+      }
+      if (!isSupportedImagePath(relativeName)) {
+        zip.readEntry();
+        return;
+      }
+
+      zip.openReadStream(entry, async (error, stream) => {
+        if (error || !stream) {
+          reject(error ?? new Error(`Falha ao ler ${entry.fileName}`));
+          return;
+        }
+
+        try {
+          const outputPath = path.join(destinationDir, relativeName);
+          await mkdir(path.dirname(outputPath), { recursive: true });
+          await pipeline(stream, createWriteStream(outputPath));
+          extracted += 1;
+          zip.readEntry();
+        } catch (extractError) {
+          reject(extractError);
+        }
+      });
+    });
+    zip.on("end", resolve);
+    zip.on("error", reject);
+  });
+
+  if (extracted === 0) {
+    throw new Error(`Nenhuma imagem encontrada no zip com zipRoot="${zipRoot ?? "(raiz)"}".`);
+  }
+
+  console.log(`Imagens extraídas: ${extracted}`);
+  return destinationDir;
+}
+
+function openZip(zipPath: string): Promise<yauzl.ZipFile> {
+  return new Promise((resolve, reject) => {
+    yauzl.open(zipPath, { lazyEntries: true }, (error, zip) => {
+      if (error || !zip) reject(error ?? new Error("Falha ao abrir zip."));
+      else resolve(zip);
+    });
+  });
+}
+
+function normalizeZipPath(value: string) {
+  return value.replace(/\\/g, "/").replace(/^\/+/, "");
+}
+
+function stripZipRoot(fileName: string, zipRoot: string) {
+  if (fileName === zipRoot.replace(/\/$/, "")) return null;
+  if (!fileName.startsWith(zipRoot)) return null;
+  return fileName.slice(zipRoot.length).replace(/^\/+/, "");
+}
+
+function normalizeOptionalZipRoot(value: string | undefined) {
+  if (!value || value === "." || value === "/") return null;
+  return `${value.replace(/^\/+|\/+$/g, "")}/`;
+}
+
+async function listImageFiles(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await listImageFiles(entryPath));
+      continue;
+    }
+    if (!entry.isFile() || !isSupportedImagePath(entry.name)) continue;
+    files.push(entryPath);
+  }
+
+  return files;
+}
+
+function groupImageFilesByChildId(files: string[]) {
+  const grouped = new Map<number, string[]>();
+  for (const filePath of files) {
+    const match = path.basename(filePath).match(/^(\d+)/);
+    if (!match) continue;
+    const childId = Number.parseInt(match[1], 10);
+    const group = grouped.get(childId) ?? [];
+    group.push(filePath);
+    grouped.set(childId, group);
+  }
+  return grouped;
+}
+
+function chooseRegistrationForChild(syncResult: SyncResult, childId: number) {
+  const registrations = syncResult.registrationsByChildId[String(childId)] ?? [];
+  if (registrations.length === 0) return null;
+  const priority: Record<string, number> = {
+    WINNER: 5,
+    SEMIFINALIST: 4,
+    APPROVED: 3,
+    UNDER_REVIEW: 2,
+    PAID: 1,
+    PENDING_PAYMENT: 0,
+  };
+  return [...registrations].sort((left, right) => {
+    const statusDiff = (priority[right.status] ?? 0) - (priority[left.status] ?? 0);
+    if (statusDiff !== 0) return statusDiff;
+    if (right.year !== left.year) return right.year - left.year;
+    return (right.createdAt ?? "").localeCompare(left.createdAt ?? "");
+  })[0];
+}
+
+async function syncLocalPhotoRecord(
+  db: PrismaClient,
+  registrationId: string,
+  storageKey: string,
+  order: number,
+  isCover: boolean,
+) {
+  const existingByOrder = await db.photo.findFirst({
+    where: { registrationId, order },
+    select: { id: true, storageKey: true, isCover: true },
+  });
+
+  if (existingByOrder) {
+    if (existingByOrder.storageKey !== storageKey || existingByOrder.isCover !== isCover) {
+      await db.photo.update({
+        where: { id: existingByOrder.id },
+        data: { storageKey, isCover },
+      });
+      return "updated" as const;
+    }
+    return "unchanged" as const;
+  }
+
+  await db.photo.create({
+    data: { registrationId, storageKey, order, isCover },
+  });
+  return "created" as const;
+}
+
+async function photoObjectExists(s3Client: S3Client, bucket: string, key: string) {
+  if (readBoolean(options.skipExistingCheck)) return false;
+  try {
+    await s3Client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function createS3Client() {
+  return new S3Client({
+    region: requireEnv("S3_REGION"),
+    endpoint: process.env.S3_ENDPOINT || undefined,
+    forcePathStyle: Boolean(process.env.S3_ENDPOINT),
+    credentials: {
+      accessKeyId: requireEnv("S3_ACCESS_KEY_ID"),
+      secretAccessKey: requireEnv("S3_SECRET_ACCESS_KEY"),
+    },
+  });
+}
+
+function buildLocalLegacyPhotoStorageKey(year: number, registrationId: string, order: number, filePath: string) {
+  return `contests/${year}/registrations/${registrationId}/legacy-${String(order).padStart(2, "0")}-${safeFileName(filePath)}`;
+}
+
+function isSupportedImagePath(filePath: string) {
+  return /\.(jpe?g|png|webp|gif)$/i.test(filePath);
+}
+
+function isLikelyImage(body: Buffer) {
+  if (body.length < 12) return false;
+  if (body[0] === 0xff && body[1] === 0xd8) return true;
+  if (body[0] === 0x89 && body[1] === 0x50 && body[2] === 0x4e && body[3] === 0x47) return true;
+  if (body[0] === 0x47 && body[1] === 0x49 && body[2] === 0x46) return true;
+  return body.slice(0, 4).toString("ascii") === "RIFF" && body.slice(8, 12).toString("ascii") === "WEBP";
+}
+
+function parseIsoDate(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseRequiredIsoDate(value: string) {
+  const date = parseIsoDate(value);
+  if (!date) throw new Error(`Data ISO inválida: ${value}`);
+  return date;
+}
+
+function toIso(value: Date | null | undefined) {
+  return value ? value.toISOString() : null;
+}
+
+function requireEnv(name: string) {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} não configurada.`);
+  return value;
 }
 
 function getPrisma() {

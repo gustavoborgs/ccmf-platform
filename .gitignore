@@ -44,5 +44,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# dump SQL legado (temporário — remover após migração)
+# dados legados temporários da importação (sensíveis — remover após migração)
 /data/legacy/*.sql
+/data/legacy/*.json
