@@ -102,6 +102,8 @@ Override: `--sql=/caminho/outro.sql` ou `LEGACY_SQL_FILE`.
     Os arquivos devem começar com o `child_id` legado.
 14. Quando há várias imagens para a mesma criança, os nomes são ordenados
     alfabeticamente e a primeira foto vira capa.
+15. `--force` no `legacy:upload-images` apaga todas as `Photo` da inscrição,
+    remove os objetos antigos no S3 e reenvia tudo do zero.
 
 ## Rotas relacionadas
 

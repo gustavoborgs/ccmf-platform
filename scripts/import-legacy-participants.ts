@@ -8,7 +8,7 @@ import { randomUUID } from "node:crypto";
 import readline from "node:readline";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import yauzl from "yauzl";
@@ -2073,20 +2073,32 @@ async function uploadLegacyImagesFromFolder() {
   }
 
   const resultPath = options.result ?? process.env.LEGACY_IMPORT_RESULT ?? LEGACY_IMPORT_RESULT_FILE;
+  const importDataPath = options.input ?? process.env.LEGACY_IMPORT_JSON ?? LEGACY_IMPORT_JSON_FILE;
   const execute = readBoolean(options.execute);
   const force = readBoolean(options.force);
   const syncResult = JSON.parse(await readFile(resultPath, "utf-8")) as SyncResult;
+  const importData = existsSync(importDataPath)
+    ? (JSON.parse(await readFile(importDataPath, "utf-8")) as NormalizedLegacyImport)
+    : null;
   const files = await listImageFiles(imagesDir);
   const grouped = groupImageFilesByChildId(files);
+  const childIds = Array.from(grouped.keys());
+  const registrationResolver = await buildRegistrationResolver(syncResult, importData, childIds);
+  const coveredFromResult = childIds.filter((childId) =>
+    Boolean(chooseRegistrationForChild(syncResult, childId)),
+  ).length;
 
   const report = {
     imagesDir,
     zipKey: options.imagesDir || process.env.LEGACY_IMAGES_DIR ? null : zipKey,
     zipRoot,
     resultPath,
+    importDataPath,
     execute,
     scanned: files.length,
+    resolvedChildren: registrationResolver.size,
     uploaded: 0,
+    deletedPhotos: 0,
     created: 0,
     updated: 0,
     unchanged: 0,
@@ -2097,18 +2109,19 @@ async function uploadLegacyImagesFromFolder() {
     [
       `Imagens encontradas: ${files.length}`,
       `Crianças com imagens: ${grouped.size}`,
+      `Inscrições resolvidas: ${registrationResolver.size}/${grouped.size} (${coveredFromResult} via import-result, ${registrationResolver.size - coveredFromResult} via banco/import-data)`,
       execute ? "Modo: EXECUTE" : "Modo: DRY-RUN",
-      force ? "Force: sim" : "Force: não",
+      force ? "Force: sim (apaga fotos antigas da inscrição e reenvia tudo)" : "Force: não",
     ].join("\n"),
   );
 
   if (!execute) {
     for (const [childId, childFiles] of Array.from(grouped.entries()).slice(0, 10)) {
-      const registration = chooseRegistrationForChild(syncResult, childId);
+      const registration = registrationResolver.get(childId);
       console.log(
         registration
           ? `[ok] child_id=${childId}: ${childFiles.length} arquivo(s) -> ${registration.id}`
-          : `[missing] child_id=${childId}: sem inscrição no resultado`,
+          : `[missing] child_id=${childId}: sem inscrição importada`,
       );
     }
     await writeJson(LEGACY_IMAGE_UPLOAD_REPORT_FILE, report);
@@ -2124,15 +2137,28 @@ async function uploadLegacyImagesFromFolder() {
   const db = getPrisma();
 
   for (const [childId, childFiles] of grouped) {
-    const registration = chooseRegistrationForChild(syncResult, childId);
+    const registration = registrationResolver.get(childId);
     if (!registration) {
       for (const filePath of childFiles) {
-        report.skipped.push({ filePath, reason: `Sem inscrição importada para child_id=${childId}.` });
+        report.skipped.push({
+          filePath,
+          reason: `Sem inscrição importada para child_id=${childId}. Rode legacy:sync-data completo ou confira import-data.json.`,
+        });
       }
       continue;
     }
 
     const orderedFiles = [...childFiles].sort((left, right) => path.basename(left).localeCompare(path.basename(right)));
+
+    if (force) {
+      report.deletedPhotos += await replaceRegistrationPhotos({
+        db,
+        s3Client,
+        bucket: uploadBucket,
+        registrationId: registration.id,
+      });
+    }
+
     for (const [index, filePath] of orderedFiles.entries()) {
       const body = await readFile(filePath);
       if (!isLikelyImage(body)) {
@@ -2152,9 +2178,12 @@ async function uploadLegacyImagesFromFolder() {
           }),
         );
         report.uploaded += 1;
+      } else {
+        report.skipped.push({ filePath, reason: "Objeto já existe no S3. Use --force para reenviar." });
+        continue;
       }
 
-      const sync = await syncLocalPhotoRecord(db, registration.id, storageKey, index, index === 0);
+      const sync = await syncLocalPhotoRecord(db, registration.id, storageKey, index, index === 0, force);
       if (sync === "created") report.created += 1;
       else if (sync === "updated") report.updated += 1;
       else report.unchanged += 1;
@@ -2165,6 +2194,7 @@ async function uploadLegacyImagesFromFolder() {
   console.log(
     [
       `Upload concluído: ${report.uploaded} objeto(s) enviados ao S3`,
+      `Fotos antigas removidas: ${report.deletedPhotos}`,
       `Banco: ${report.created} criados, ${report.updated} atualizados, ${report.unchanged} inalterados`,
       `Ignorados: ${report.skipped.length}`,
       `Relatório: ${LEGACY_IMAGE_UPLOAD_REPORT_FILE}`,
@@ -2309,23 +2339,135 @@ function groupImageFilesByChildId(files: string[]) {
   return grouped;
 }
 
+type ResolvedRegistration = {
+  id: string;
+  protocol: string;
+  year: number;
+  status: string;
+  createdAt: string | null;
+};
+
+const REGISTRATION_STATUS_PRIORITY: Record<string, number> = {
+  WINNER: 5,
+  SEMIFINALIST: 4,
+  APPROVED: 3,
+  UNDER_REVIEW: 2,
+  PAID: 1,
+  PENDING_PAYMENT: 0,
+};
+
 function chooseRegistrationForChild(syncResult: SyncResult, childId: number) {
   const registrations = syncResult.registrationsByChildId[String(childId)] ?? [];
   if (registrations.length === 0) return null;
-  const priority: Record<string, number> = {
-    WINNER: 5,
-    SEMIFINALIST: 4,
-    APPROVED: 3,
-    UNDER_REVIEW: 2,
-    PAID: 1,
-    PENDING_PAYMENT: 0,
-  };
+  return sortRegistrationsByPriority(registrations)[0];
+}
+
+function chooseRegistrationFromImportData(importData: NormalizedLegacyImport, childId: number) {
+  const registrations = importData.registrations.filter((registration) => registration.legacyChildId === childId);
+  if (registrations.length === 0) return null;
+  return sortRegistrationsByPriority(
+    registrations.map((registration) => ({
+      protocol: registration.protocol,
+      year: registration.year,
+      status: registration.status,
+      createdAt: registration.createdAt,
+    })),
+  )[0];
+}
+
+function sortRegistrationsByPriority<T extends { status: string; year: number; createdAt: string | null }>(
+  registrations: T[],
+) {
   return [...registrations].sort((left, right) => {
-    const statusDiff = (priority[right.status] ?? 0) - (priority[left.status] ?? 0);
+    const statusDiff =
+      (REGISTRATION_STATUS_PRIORITY[right.status] ?? 0) - (REGISTRATION_STATUS_PRIORITY[left.status] ?? 0);
     if (statusDiff !== 0) return statusDiff;
     if (right.year !== left.year) return right.year - left.year;
     return (right.createdAt ?? "").localeCompare(left.createdAt ?? "");
-  })[0];
+  });
+}
+
+async function buildRegistrationResolver(
+  syncResult: SyncResult,
+  importData: NormalizedLegacyImport | null,
+  childIds: number[],
+) {
+  const resolver = new Map<number, ResolvedRegistration>();
+
+  for (const childId of childIds) {
+    const fromResult = chooseRegistrationForChild(syncResult, childId);
+    if (fromResult) resolver.set(childId, fromResult);
+  }
+
+  if (!importData) return resolver;
+
+  const missingChildIds = childIds.filter((childId) => !resolver.has(childId));
+  if (missingChildIds.length === 0) return resolver;
+
+  const protocolsByChild = new Map<number, string>();
+  for (const childId of missingChildIds) {
+    const registration = chooseRegistrationFromImportData(importData, childId);
+    if (registration) protocolsByChild.set(childId, registration.protocol);
+  }
+
+  const protocols = Array.from(protocolsByChild.values());
+  if (protocols.length === 0) return resolver;
+
+  const db = getPrisma();
+  const registrations = await db.registration.findMany({
+    where: { protocol: { in: protocols } },
+    select: {
+      id: true,
+      protocol: true,
+      status: true,
+      createdAt: true,
+      contest: { select: { year: true } },
+    },
+  });
+  const byProtocol = new Map(registrations.map((registration) => [registration.protocol, registration]));
+
+  for (const [childId, protocol] of protocolsByChild) {
+    const registration = byProtocol.get(protocol);
+    if (!registration) continue;
+    resolver.set(childId, {
+      id: registration.id,
+      protocol: registration.protocol,
+      year: registration.contest.year,
+      status: registration.status,
+      createdAt: registration.createdAt.toISOString(),
+    });
+  }
+
+  return resolver;
+}
+
+async function replaceRegistrationPhotos(params: {
+  db: PrismaClient;
+  s3Client: S3Client;
+  bucket: string;
+  registrationId: string;
+}) {
+  const existing = await params.db.photo.findMany({
+    where: { registrationId: params.registrationId },
+    select: { storageKey: true },
+  });
+  if (existing.length === 0) return 0;
+
+  for (const photo of existing) {
+    try {
+      await params.s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: params.bucket,
+          Key: photo.storageKey,
+        }),
+      );
+    } catch {
+      // Objeto pode já ter sido removido manualmente do bucket.
+    }
+  }
+
+  await params.db.photo.deleteMany({ where: { registrationId: params.registrationId } });
+  return existing.length;
 }
 
 async function syncLocalPhotoRecord(
@@ -2334,7 +2476,15 @@ async function syncLocalPhotoRecord(
   storageKey: string,
   order: number,
   isCover: boolean,
+  force = false,
 ) {
+  if (force) {
+    await db.photo.create({
+      data: { registrationId, storageKey, order, isCover },
+    });
+    return "created" as const;
+  }
+
   const existingByOrder = await db.photo.findFirst({
     where: { registrationId, order },
     select: { id: true, storageKey: true, isCover: true },
