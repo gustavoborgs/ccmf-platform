@@ -10,7 +10,7 @@ import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { buildProtocol, slugify } from "../src/shared/utils";
 
-type Command = "analyze" | "import" | "photos";
+type Command = "analyze" | "import" | "photo-manifest" | "photos";
 type SqlValue = string | number | null;
 type RegistrationStatusValue =
   | "PENDING_PAYMENT"
@@ -134,6 +134,16 @@ type PhotoManifestEntry = {
   isCover: boolean;
 };
 
+type PhotoSourceEntry = {
+  legacyInvoiceId: number;
+  legacyChildId: number;
+  year: number;
+  picture1: string | null;
+  officialPicture: string | null;
+  picture2: string | null;
+  pictureWithFrame: string | null;
+};
+
 type IdMap = {
   contests: Record<string, string>;
   categories: Record<string, string>;
@@ -165,6 +175,8 @@ const CATEGORY_RANGES: Record<number, { minAgeMonths: number; maxAgeMonths: numb
 const DEFAULT_SQL_FILE = path.join(process.cwd(), "data/legacy/criancam_site.sql");
 const REPORT_DIR = "docs/legacy-import";
 const PHOTO_MANIFEST_FILE = path.join(REPORT_DIR, "photos-manifest.json");
+const PHOTO_SOURCES_FILE = path.join(REPORT_DIR, "photo-sources.json");
+const PHOTO_MANIFEST_FULL_FILE = path.join(REPORT_DIR, "photos-manifest-full.json");
 const DEFAULT_PHOTO_BASE_URL = "https://criancamaisfotogenica.com.br/site/views/_data/concourses/";
 const FAKE_EMAIL_PATTERN = /^email\d+@cmf\.com\.br$/i;
 const PAID_STATUSES = new Set(["pago", "baixa manual"]);
@@ -174,6 +186,7 @@ const command = parseCommand(options.command);
 const sqlFile = options.sql ?? process.env.LEGACY_SQL_FILE ?? DEFAULT_SQL_FILE;
 const reportDir = options.reportDir ?? process.env.LEGACY_REPORT_DIR ?? REPORT_DIR;
 const limit = options.limit ? Number.parseInt(options.limit, 10) : null;
+const offset = options.offset ? Number.parseInt(options.offset, 10) : 0;
 const photoBaseUrl = normalizeBaseUrl(
   options.photoBaseUrl ?? process.env.LEGACY_PHOTO_BASE_URL ?? DEFAULT_PHOTO_BASE_URL,
 );
@@ -198,6 +211,11 @@ async function main() {
       photoManifest: buildAnalysisPhotoManifest(data),
     });
     printAnalysis(analysis);
+    return;
+  }
+
+  if (command === "photo-manifest") {
+    await generateFullPhotoManifest(data);
     return;
   }
 
@@ -237,8 +255,8 @@ function parseArgs(argv: string[]) {
 
 function parseCommand(input: string | undefined): Command {
   if (!input) return "analyze";
-  if (input === "analyze" || input === "import" || input === "photos") return input;
-  throw new Error(`Comando inválido "${input}". Use analyze, import ou photos.`);
+  if (input === "analyze" || input === "import" || input === "photo-manifest" || input === "photos") return input;
+  throw new Error(`Comando inválido "${input}". Use analyze, import, photo-manifest ou photos.`);
 }
 
 function readBoolean(value: string | undefined): boolean {
@@ -599,13 +617,22 @@ async function importLegacyData(data: LegacyData) {
 
   const contestMap = await importContestsAndCategories(data, idMap, photoManifest);
   const invoiceGroups = Array.from(groupInvoices(data.invoices).values());
-  const selectedGroups = limit ? invoiceGroups.slice(0, limit) : invoiceGroups;
+  const selectedGroups = invoiceGroups.slice(offset, limit ? offset + limit : undefined);
   const selectedCustomerIds = new Set(
     selectedGroups.map((group) => selectBestInvoice(group).customerId).filter(isPresent),
   );
   const guardianMap = await importGuardians(data, idMap, passwordHash, created, selectedCustomerIds);
 
+  let processedGroups = 0;
   for (const group of selectedGroups) {
+    processedGroups += 1;
+    if (processedGroups === 1 || processedGroups % 50 === 0 || processedGroups === selectedGroups.length) {
+      console.log(
+        `Importando inscrições ${offset + processedGroups}/${invoiceGroups.length} ` +
+          `(lote ${processedGroups}/${selectedGroups.length})`,
+      );
+    }
+
     const invoice = selectBestInvoice(group);
     const child = invoice.childId ? data.children.get(invoice.childId) : null;
     const customer = invoice.customerId ? data.customers.get(invoice.customerId) : null;
@@ -751,78 +778,144 @@ async function importGuardians(
   const db = getPrisma();
   const guardianMap = new Map<number, string>();
   const emailByCustomer = buildCustomerEmailMap(data.customers);
+  const selectedCustomers = Array.from(data.customers.values()).filter(
+    (customer) => !onlyCustomerIds || onlyCustomerIds.has(customer.id),
+  );
+  console.log(`Preparando ${selectedCustomers.length} responsáveis do lote...`);
 
-  for (const customer of data.customers.values()) {
-    if (onlyCustomerIds && !onlyCustomerIds.has(customer.id)) continue;
+  const cpfs = unique(selectedCustomers.map((customer) => customer.cpf).filter(isPresent));
+  const existingProfilesByCpf = new Map<string, string>();
+  if (cpfs.length > 0) {
+    const existingProfiles = await db.guardianProfile.findMany({
+      where: { cpf: { in: cpfs } },
+      select: { id: true, cpf: true },
+    });
+    for (const profile of existingProfiles) {
+      if (profile.cpf) existingProfilesByCpf.set(profile.cpf, profile.id);
+    }
+  }
+
+  for (const customer of selectedCustomers) {
+    const existingProfileId = customer.cpf ? existingProfilesByCpf.get(customer.cpf) : null;
+    if (!existingProfileId) continue;
+    guardianMap.set(customer.id, existingProfileId);
+    idMap.customers[String(customer.id)] = existingProfileId;
+  }
+
+  const canonicalCustomers: LegacyCustomer[] = [];
+  const duplicateCustomerCpf = new Map<number, string>();
+  const canonicalCpf = new Set<string>();
+  for (const customer of selectedCustomers) {
+    if (guardianMap.has(customer.id)) continue;
     if (customer.cpf) {
-      const existingByCpf = await db.guardianProfile.findUnique({
-        where: { cpf: customer.cpf },
-        select: { id: true },
-      });
-      if (existingByCpf) {
-        guardianMap.set(customer.id, existingByCpf.id);
-        idMap.customers[String(customer.id)] = existingByCpf.id;
+      if (canonicalCpf.has(customer.cpf)) {
+        duplicateCustomerCpf.set(customer.id, customer.cpf);
         continue;
       }
+      canonicalCpf.add(customer.cpf);
     }
+    canonicalCustomers.push(customer);
+  }
 
+  const emails = unique(
+    canonicalCustomers.map((customer) => emailByCustomer.get(customer.id) ?? buildTechnicalEmail(customer.id)),
+  );
+  const existingUsers = emails.length
+    ? await db.user.findMany({
+        where: { email: { in: emails } },
+        include: { guardianProfile: true },
+      })
+    : [];
+  const existingUsersByEmail = new Map(existingUsers.map((user) => [user.email, user]));
+
+  const usersToCreate = canonicalCustomers.filter((customer) => {
     const email = emailByCustomer.get(customer.id) ?? buildTechnicalEmail(customer.id);
-    const existingUser = await db.user.findUnique({
-      where: { email },
-      include: { guardianProfile: true },
-    });
+    return !existingUsersByEmail.has(email);
+  });
 
-    if (existingUser?.guardianProfile) {
-      guardianMap.set(customer.id, existingUser.guardianProfile.id);
-      idMap.customers[String(customer.id)] = existingUser.guardianProfile.id;
-      continue;
-    }
-
-    const user = await db.user.upsert({
-      where: { email },
-      create: {
+  if (usersToCreate.length > 0) {
+    const result = await db.user.createMany({
+      data: usersToCreate.map((customer) => ({
         name: customer.name || `Responsável legado ${customer.id}`,
-        email,
+        email: emailByCustomer.get(customer.id) ?? buildTechnicalEmail(customer.id),
         phone: customer.phone,
         passwordHash,
         role: "GUARDIAN",
-      },
-      update: {
-        phone: customer.phone ?? undefined,
-      },
-      select: { id: true },
+        requiresPasswordSetup: true,
+      })),
+      skipDuplicates: true,
     });
+    created.users += result.count;
+    console.log(`Responsáveis: ${result.count} usuários novos criados.`);
+  }
 
-    const profile = await db.guardianProfile.upsert({
-      where: { userId: user.id },
-      create: {
-        userId: user.id,
-        cpf: customer.cpf,
-        whatsapp: customer.phone,
-        zipCode: customer.zipCode,
-        street: customer.street,
-        number: customer.number,
-        complement: customer.complement,
-        neighborhood: customer.neighborhood,
-        city: customer.city,
-        state: customer.state,
-      },
-      update: {
-        whatsapp: customer.phone ?? undefined,
-        zipCode: customer.zipCode ?? undefined,
-        street: customer.street ?? undefined,
-        number: customer.number ?? undefined,
-        complement: customer.complement ?? undefined,
-        neighborhood: customer.neighborhood ?? undefined,
-        city: customer.city ?? undefined,
-        state: customer.state ?? undefined,
-      },
-      select: { id: true },
+  const users = emails.length
+    ? await db.user.findMany({
+        where: { email: { in: emails } },
+        include: { guardianProfile: true },
+      })
+    : [];
+  const usersByEmail = new Map(users.map((user) => [user.email, user]));
+
+  const profilesToCreate = [];
+  for (const customer of canonicalCustomers) {
+    const email = emailByCustomer.get(customer.id) ?? buildTechnicalEmail(customer.id);
+    const user = usersByEmail.get(email);
+    if (!user) continue;
+    if (user.guardianProfile) {
+      guardianMap.set(customer.id, user.guardianProfile.id);
+      idMap.customers[String(customer.id)] = user.guardianProfile.id;
+      continue;
+    }
+
+    profilesToCreate.push({
+      userId: user.id,
+      cpf: customer.cpf,
+      whatsapp: customer.phone,
+      zipCode: customer.zipCode,
+      street: customer.street,
+      number: customer.number,
+      complement: customer.complement,
+      neighborhood: customer.neighborhood,
+      city: customer.city,
+      state: customer.state,
     });
+  }
 
+  if (profilesToCreate.length > 0) {
+    await db.guardianProfile.createMany({ data: profilesToCreate, skipDuplicates: true });
+  }
+
+  const profileUserIds = unique(profilesToCreate.map((profile) => profile.userId));
+  const savedProfiles = profileUserIds.length
+    ? await db.guardianProfile.findMany({
+        where: { userId: { in: profileUserIds } },
+        select: { id: true, userId: true, cpf: true },
+      })
+    : [];
+  const savedProfilesByUserId = new Map(savedProfiles.map((profile) => [profile.userId, profile]));
+  const savedProfilesByCpf = new Map(
+    savedProfiles.filter((profile) => profile.cpf).map((profile) => [profile.cpf!, profile]),
+  );
+
+  for (const customer of canonicalCustomers) {
+    if (guardianMap.has(customer.id)) continue;
+    const email = emailByCustomer.get(customer.id) ?? buildTechnicalEmail(customer.id);
+    const user = usersByEmail.get(email);
+    const profile = user ? savedProfilesByUserId.get(user.id) : null;
+    if (!profile) continue;
     guardianMap.set(customer.id, profile.id);
     idMap.customers[String(customer.id)] = profile.id;
-    if (!existingUser) created.users += 1;
+  }
+
+  for (const [customerId, cpf] of duplicateCustomerCpf) {
+    const profileId =
+      guardianMap.get(canonicalCustomers.find((customer) => customer.cpf === cpf)?.id ?? -1) ??
+      savedProfilesByCpf.get(cpf)?.id ??
+      existingProfilesByCpf.get(cpf);
+    if (!profileId) continue;
+    guardianMap.set(customerId, profileId);
+    idMap.customers[String(customerId)] = profileId;
   }
 
   return guardianMap;
@@ -957,14 +1050,28 @@ async function importPhotos() {
   const manifestPath = options.manifest ?? process.env.LEGACY_PHOTO_MANIFEST ?? PHOTO_MANIFEST_FILE;
   const raw = await readFile(manifestPath, "utf-8");
   const entries = JSON.parse(raw) as PhotoManifestEntry[];
-  const selected = limit ? entries.slice(0, limit) : entries;
+  const selected = entries.slice(offset, limit ? offset + limit : undefined);
   const { uploadObject } = await import("../src/shared/integrations/s3/storage");
+  const db = getPrisma();
+  const existingPhotos = await db.photo.findMany({
+    where: { registrationId: { in: unique(selected.map((entry) => entry.registrationId).filter(Boolean)) } },
+    select: { registrationId: true, storageKey: true },
+  });
+  const existingPhotoKeys = new Set(
+    existingPhotos.map((photo) => `${photo.registrationId}:${photo.storageKey}`),
+  );
 
   let uploaded = 0;
   let skipped = 0;
+  let alreadyExists = 0;
   for (const entry of selected) {
     if (entry.kind === "frame" || !entry.registrationId) {
       skipped += 1;
+      continue;
+    }
+    const photoKey = `${entry.registrationId}:${entry.targetStorageKey}`;
+    if (existingPhotoKeys.has(photoKey)) {
+      alreadyExists += 1;
       continue;
     }
 
@@ -979,10 +1086,111 @@ async function importPhotos() {
     const contentType = response.headers.get("content-type") ?? contentTypeFromPath(entry.sourcePath);
     await uploadObject(entry.targetStorageKey, body, contentType);
     await ensurePhotoRows(entry.registrationId, [entry]);
+    existingPhotoKeys.add(photoKey);
     uploaded += 1;
   }
 
-  console.log(`Fotos processadas: ${uploaded} enviadas ao S3, ${skipped} ignoradas.`);
+  console.log(
+    `Fotos processadas: ${uploaded} enviadas ao S3, ${alreadyExists} já existiam, ${skipped} ignoradas.`,
+  );
+}
+
+async function generateFullPhotoManifest(data: LegacyData) {
+  const sources = buildPhotoSources(data);
+  const registrationsByProtocol = await getRegistrationsByProtocol(
+    sources.map((source) => buildProtocol(source.year, source.legacyInvoiceId)),
+  );
+  const manifest: PhotoManifestEntry[] = [];
+  let missingRegistrations = 0;
+
+  for (const source of sources) {
+    const registration = registrationsByProtocol.get(buildProtocol(source.year, source.legacyInvoiceId));
+    if (!registration) {
+      missingRegistrations += 1;
+      continue;
+    }
+
+    manifest.push(
+      ...buildRegistrationPhotoManifest(registration.id, source.year, {
+        id: source.legacyInvoiceId,
+        concourseId: null,
+        categoryId: null,
+        customerId: null,
+        childId: source.legacyChildId,
+        type: null,
+        status: null,
+        createdAt: null,
+        amountCents: 0,
+        dueDate: null,
+        paidAt: null,
+        returnText: null,
+        returnAmountCents: null,
+        billetUrl: null,
+        installmentBilletUrl: null,
+        pixPayload: null,
+      }, {
+        id: source.legacyChildId,
+        customerId: null,
+        likes: 0,
+        registeredAt: null,
+        statusSite: 0,
+        birthDate: null,
+        gender: null,
+        name: null,
+        picture1: source.picture1,
+        officialPicture: source.officialPicture,
+        picture2: source.picture2,
+        url: null,
+        pictureWithFrame: source.pictureWithFrame,
+      }),
+    );
+  }
+
+  await mkdir(reportDir, { recursive: true });
+  await writeJson(PHOTO_SOURCES_FILE, sources);
+  await writeJson(PHOTO_MANIFEST_FULL_FILE, manifest);
+  console.log(
+    `Manifesto completo gerado: ${manifest.length} fotos em ${PHOTO_MANIFEST_FULL_FILE}. ` +
+      `${missingRegistrations} fontes sem inscrição importada.`,
+  );
+}
+
+function buildPhotoSources(data: LegacyData): PhotoSourceEntry[] {
+  const sources: PhotoSourceEntry[] = [];
+  for (const group of groupInvoices(data.invoices).values()) {
+    const invoice = selectBestInvoice(group);
+    const child = invoice.childId ? data.children.get(invoice.childId) : null;
+    const concourse = invoice.concourseId ? data.concourses.get(invoice.concourseId) : null;
+    if (!child || !concourse) continue;
+    if (!child.picture1 && !child.officialPicture && !child.picture2 && !child.pictureWithFrame) continue;
+    sources.push({
+      legacyInvoiceId: invoice.id,
+      legacyChildId: child.id,
+      year: concourse.year,
+      picture1: child.picture1,
+      officialPicture: child.officialPicture,
+      picture2: child.picture2,
+      pictureWithFrame: child.pictureWithFrame,
+    });
+  }
+  return sources;
+}
+
+async function getRegistrationsByProtocol(protocols: string[]) {
+  const db = getPrisma();
+  const map = new Map<string, { id: string; protocol: string }>();
+  const uniqueProtocols = unique(protocols);
+  for (let index = 0; index < uniqueProtocols.length; index += 500) {
+    const chunk = uniqueProtocols.slice(index, index + 500);
+    const registrations = await db.registration.findMany({
+      where: { protocol: { in: chunk } },
+      select: { id: true, protocol: true },
+    });
+    for (const registration of registrations) {
+      map.set(registration.protocol, registration);
+    }
+  }
+  return map;
 }
 
 function groupInvoices(invoices: LegacyInvoice[]) {
@@ -1311,6 +1519,10 @@ function parseLegacyDate(value: SqlValue): Date | null {
 
 function isPresent<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
+}
+
+function unique<T>(values: T[]): T[] {
+  return Array.from(new Set(values));
 }
 
 main()

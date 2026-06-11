@@ -27,6 +27,8 @@ model User {
   passwordHash String
   role         UserRole  @default(GUARDIAN)
   phone        String?
+  /// criado por importação/convite e ainda precisa definir a própria senha
+  requiresPasswordSetup Boolean @default(false)
   emailVerifiedAt DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

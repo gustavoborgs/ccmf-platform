@@ -69,24 +69,27 @@ Override: `--sql=/caminho/outro.sql` ou `LEGACY_SQL_FILE`.
 3. `cc_customers` cria responsáveis. Deduplicação usa CPF válido primeiro, e-mail
    válido depois. E-mails ausentes, fakes ou duplicados recebem endereço técnico
    `legacy-customer-<id>@import.local`.
-4. `cc_concourses.amount` é tratado como centavos e gravado em
+4. Responsáveis criados pela importação recebem `requiresPasswordSetup = true` e
+   uma senha aleatória inutilizável. O login futuro deve passar por fluxo de
+   primeiro acesso/recuperação de senha.
+5. `cc_concourses.amount` é tratado como centavos e gravado em
    `registrationFeeCents`.
-5. Categorias históricas são preservadas pelo `id_category` da fatura. Quando a
+6. Categorias históricas são preservadas pelo `id_category` da fatura. Quando a
    categoria não existir na edição, o registro é enviado ao relatório de
    exceções.
-6. Crianças sem data de nascimento não são importadas como participantes, porque
+7. Crianças sem data de nascimento não são importadas como participantes, porque
    `Participant.birthDate` é obrigatório no modelo atual.
-7. Status de inscrição:
+8. Status de inscrição:
    - finalista vencedor (`cc_finalists.winner = 1`) vira `WINNER`;
    - finalista sem vitória vira `SEMIFINALIST`;
    - fatura paga e `status_site = 1` vira `APPROVED`;
    - fatura paga sem publicação vira `UNDER_REVIEW`;
    - fatura gerada/não paga vira `PENDING_PAYMENT`.
-8. Pagamentos históricos podem criar `Payment`, mas `asaasPaymentId` permanece
+9. Pagamentos históricos podem criar `Payment`, mas `asaasPaymentId` permanece
    vazio para não confundir dados Juno/Click2Pay com Asaas.
-9. O banco atual guarda somente `storageKey`. URLs e paths antigos de fotos ficam
+10. O banco atual guarda somente `storageKey`. URLs e paths antigos de fotos ficam
    em manifesto até o comando `legacy:photos` enviar os arquivos ao S3.
-10. A importação deve ser idempotente: reexecutar o script não deve duplicar
+11. A importação deve ser idempotente: reexecutar o script não deve duplicar
     registros já importados.
 
 ## Rotas relacionadas

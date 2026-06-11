@@ -19,7 +19,9 @@
     "blog:import": "tsx scripts/import-blog-posts.ts",
     "legacy:analyze": "tsx scripts/import-legacy-participants.ts analyze",
     "legacy:import": "tsx scripts/import-legacy-participants.ts import",
+    "legacy:photo-manifest": "tsx scripts/import-legacy-participants.ts photo-manifest",
     "legacy:photos": "tsx scripts/import-legacy-participants.ts photos",
+    "storage:replace-contests": "tsx scripts/replace-contests-from-zip.ts",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio"
   },
@@ -41,6 +43,7 @@
     "react-easy-crop": "^5.5.7",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.6.0",
+    "yauzl": "^3.4.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -50,6 +53,7 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@types/yauzl": "^3.3.0",
     "eslint": "^9",
     "eslint-config-next": "^15.5.19",
     "prisma": "^7.8.0",

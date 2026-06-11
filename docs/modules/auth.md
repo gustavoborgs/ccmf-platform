@@ -17,6 +17,8 @@ jurado (`JUDGE`) e administrador (`ADMIN`).
   autenticar (decisão de conversão). O login acontece num segundo momento —
   senha existente ou recuperação. O wizard nunca expõe dados do cadastro
   existente (ver `registrations.md`).
+- `requiresPasswordSetup` marca responsáveis importados/convites que ainda não
+  definiram a própria senha.
 - Jurados e admins são criados pelo admin (sem signup público).
 
 ## API pública
