@@ -239,6 +239,16 @@ type NormalizedLegacyImport = {
     boletoUrl: string | null;
     createdAt: string | null;
   }>;
+  photos: Array<{
+    legacyChildId: number;
+    registrationProtocol: string;
+    year: number;
+    kind: "official" | "picture1" | "picture2" | "framed";
+    sourcePath: string;
+    sourceUrl: string;
+    order: number;
+    isCover: boolean;
+  }>;
   indexes: {
     registrationsByChildId: Record<string, string[]>;
   };
@@ -284,7 +294,8 @@ const LEGACY_PARTICIPANTS_ZIP_ROOT = "participants";
 const PHOTO_MANIFEST_FILE = path.join(REPORT_DIR, "photos-manifest.json");
 const PHOTO_SOURCES_FILE = path.join(REPORT_DIR, "photo-sources.json");
 const PHOTO_MANIFEST_FULL_FILE = path.join(REPORT_DIR, "photos-manifest-full.json");
-const DEFAULT_PHOTO_BASE_URL = "https://criancamaisfotogenica.com.br/site/views/_data/concourses/";
+const DEFAULT_PHOTO_BASE_URL = "https://criancamaisfotogenica.com.br/participantes/image/";
+const LEGACY_IMPORT_YEARS = new Set([2024, 2025, 2026]);
 const FAKE_EMAIL_PATTERN = /^email\d+@cmf\.com\.br$/i;
 const PAID_STATUSES = new Set(["pago", "baixa manual"]);
 
@@ -831,6 +842,7 @@ async function buildLegacyImportJson(data: LegacyData, analysisSkipped: SkippedR
       `Participantes: ${normalized.participants.length}`,
       `Inscrições: ${normalized.registrations.length}`,
       `Pagamentos: ${normalized.payments.length}`,
+      `Fotos: ${normalized.photos.length}`,
       `Exceções: ${normalized.skipped.length}`,
     ].join("\n"),
   );
@@ -842,7 +854,7 @@ function normalizeLegacyImport(data: LegacyData, analysisSkipped: SkippedRecord[
   const skipped = mergeSkipped(analysisSkipped);
 
   const contests = Array.from(data.concourses.values())
-    .filter((concourse) => Number.isInteger(concourse.year))
+    .filter((concourse) => Number.isInteger(concourse.year) && LEGACY_IMPORT_YEARS.has(concourse.year))
     .sort((left, right) => left.year - right.year)
     .map((concourse) => ({
       legacyId: concourse.id,
@@ -875,6 +887,7 @@ function normalizeLegacyImport(data: LegacyData, analysisSkipped: SkippedRecord[
   const participantsById = new Map<number, NormalizedLegacyImport["participants"][number]>();
   const registrations: NormalizedLegacyImport["registrations"] = [];
   const payments: NormalizedLegacyImport["payments"] = [];
+  const photos: NormalizedLegacyImport["photos"] = [];
   const registrationsByChildId: Record<string, string[]> = {};
 
   for (const group of groupInvoices(data.invoices).values()) {
@@ -883,6 +896,8 @@ function normalizeLegacyImport(data: LegacyData, analysisSkipped: SkippedRecord[
     const customer = invoice.customerId ? data.customers.get(invoice.customerId) : null;
     const concourse = invoice.concourseId ? data.concourses.get(invoice.concourseId) : null;
     const category = invoice.categoryId ? data.categories.get(invoice.categoryId) : null;
+
+    if (!concourse || !LEGACY_IMPORT_YEARS.has(concourse.year)) continue;
 
     if (!child || !customer || !concourse || !category || !invoice.categoryId || !invoice.customerId || !child.birthDate) {
       validateInvoiceGroup(data, group, skipped);
@@ -955,6 +970,8 @@ function normalizeLegacyImport(data: LegacyData, analysisSkipped: SkippedRecord[
         createdAt: toIso(paymentInvoice.createdAt),
       });
     }
+
+    photos.push(...buildNormalizedPhotoEntries(child, protocol, concourse.year));
   }
 
   return {
@@ -968,9 +985,40 @@ function normalizeLegacyImport(data: LegacyData, analysisSkipped: SkippedRecord[
     participants: Array.from(participantsById.values()).sort((left, right) => left.legacyChildId - right.legacyChildId),
     registrations: registrations.sort((left, right) => left.legacyInvoiceId - right.legacyInvoiceId),
     payments: payments.sort((left, right) => left.legacyInvoiceId - right.legacyInvoiceId),
+    photos: photos.sort((left, right) => left.legacyChildId - right.legacyChildId || left.order - right.order),
     indexes: { registrationsByChildId },
     skipped: mergeSkipped(skipped),
   };
+}
+
+function buildNormalizedPhotoEntries(child: LegacyChild, registrationProtocol: string, year: number): NormalizedLegacyImport["photos"] {
+  const candidates: Array<{
+    kind: "official" | "picture1" | "picture2" | "framed";
+    sourcePath: string | null;
+    order: number;
+    isCover: boolean;
+  }> = [
+    { kind: "official", sourcePath: child.officialPicture, order: 0, isCover: true },
+    { kind: "picture1", sourcePath: child.picture1, order: child.officialPicture ? 1 : 0, isCover: !child.officialPicture },
+    { kind: "picture2", sourcePath: child.picture2, order: 2, isCover: false },
+    { kind: "framed", sourcePath: child.pictureWithFrame, order: 3, isCover: false },
+  ];
+
+  const seen = new Set<string>();
+  return candidates.flatMap((candidate) => {
+    if (!candidate.sourcePath || seen.has(candidate.sourcePath)) return [];
+    seen.add(candidate.sourcePath);
+    return [{
+      legacyChildId: child.id,
+      registrationProtocol,
+      year,
+      kind: candidate.kind,
+      sourcePath: candidate.sourcePath,
+      sourceUrl: buildParticipantPhotoSourceUrl(candidate.kind, candidate.sourcePath),
+      order: candidate.order,
+      isCover: candidate.isCover,
+    }];
+  });
 }
 
 async function syncLegacyImportJson() {
@@ -1003,6 +1051,18 @@ function readExistingSyncResult(outputPath: string): SyncResult | null {
   } catch {
     return null;
   }
+}
+
+function readSyncResult(outputPath: string): SyncResult {
+  return readExistingSyncResult(outputPath) ?? {
+    contests: {},
+    categories: {},
+    guardians: {},
+    children: {},
+    registrationsByChildId: {},
+    registrationsByLegacyInvoiceId: {},
+    payments: {},
+  };
 }
 
 function mergeSyncResults(existing: SyncResult | null, current: SyncResult): SyncResult {
@@ -1043,6 +1103,7 @@ function sliceNormalizedImport(normalized: NormalizedLegacyImport): NormalizedLe
     participants: normalized.participants.filter((participant) => legacyChildIds.has(participant.legacyChildId)),
     registrations,
     payments: normalized.payments.filter((payment) => protocols.has(payment.registrationProtocol)),
+    photos: (normalized.photos ?? []).filter((photo) => protocols.has(photo.registrationProtocol)),
     categories: normalized.categories.filter((category) => legacyContestIds.has(category.legacyContestId)),
     indexes: {
       registrationsByChildId: registrations.reduce<Record<string, string[]>>((accumulator, registration) => {
@@ -1985,6 +2046,21 @@ function buildSourceUrl(sourcePath: string) {
   return new URL(sourcePath.replace(/^\/+/, ""), photoBaseUrl).toString();
 }
 
+function buildParticipantPhotoSourceUrl(kind: NormalizedLegacyImport["photos"][number]["kind"], sourcePath: string) {
+  if (/^https?:\/\//i.test(sourcePath)) return sourcePath;
+  const normalizedPath = sourcePath.replace(/^\/+/, "");
+  if (normalizedPath.startsWith("participantes/image/")) {
+    return new URL(normalizedPath, "https://criancamaisfotogenica.com.br/").toString();
+  }
+  if (normalizedPath.startsWith("image/")) {
+    return new URL(`participantes/${normalizedPath}`, "https://criancamaisfotogenica.com.br/").toString();
+  }
+  if (kind === "official") {
+    return new URL(`official/${encodeURIComponent(path.posix.basename(normalizedPath))}`, photoBaseUrl).toString();
+  }
+  return new URL(encodeURIComponent(path.posix.basename(normalizedPath)), photoBaseUrl).toString();
+}
+
 function buildPhotoStorageKey(year: number, registrationId: string, kind: string, sourcePath: string) {
   const fileName = safeFileName(sourcePath);
   return `contests/${year}/registrations/${registrationId}/legacy-${kind}-${fileName}`;
@@ -2055,6 +2131,28 @@ function mergeSkipped(...groups: SkippedRecord[][]) {
 }
 
 async function uploadLegacyImagesFromFolder() {
+  const resultPath = options.result ?? process.env.LEGACY_IMPORT_RESULT ?? LEGACY_IMPORT_RESULT_FILE;
+  const importDataPath = options.input ?? process.env.LEGACY_IMPORT_JSON ?? LEGACY_IMPORT_JSON_FILE;
+  const execute = readBoolean(options.execute);
+  const force = readBoolean(options.force);
+  const syncResult = readSyncResult(resultPath);
+  const importData = existsSync(importDataPath)
+    ? (JSON.parse(await readFile(importDataPath, "utf-8")) as NormalizedLegacyImport)
+    : null;
+  const useUrlSource = !options.imagesDir && !options.zipKey && !process.env.LEGACY_IMAGES_DIR && !process.env.LEGACY_IMAGES_ZIP_KEY;
+
+  if (useUrlSource && importData?.photos?.length) {
+    await uploadLegacyImagesFromUrls({
+      importData,
+      syncResult,
+      resultPath,
+      importDataPath,
+      execute,
+      force,
+    });
+    return;
+  }
+
   const zipKey = options.zipKey ?? process.env.LEGACY_IMAGES_ZIP_KEY ?? LEGACY_PARTICIPANTS_ZIP_KEY;
   const zipRoot = normalizeOptionalZipRoot(
     options.zipRoot ?? process.env.LEGACY_IMAGES_ZIP_ROOT ?? LEGACY_PARTICIPANTS_ZIP_ROOT,
@@ -2072,14 +2170,6 @@ async function uploadLegacyImagesFromFolder() {
     );
   }
 
-  const resultPath = options.result ?? process.env.LEGACY_IMPORT_RESULT ?? LEGACY_IMPORT_RESULT_FILE;
-  const importDataPath = options.input ?? process.env.LEGACY_IMPORT_JSON ?? LEGACY_IMPORT_JSON_FILE;
-  const execute = readBoolean(options.execute);
-  const force = readBoolean(options.force);
-  const syncResult = JSON.parse(await readFile(resultPath, "utf-8")) as SyncResult;
-  const importData = existsSync(importDataPath)
-    ? (JSON.parse(await readFile(importDataPath, "utf-8")) as NormalizedLegacyImport)
-    : null;
   const files = await listImageFiles(imagesDir);
   const grouped = groupImageFilesByChildId(files);
   const childIds = Array.from(grouped.keys());
@@ -2214,6 +2304,170 @@ async function uploadLegacyImagesFromFolder() {
   if (usingZip) {
     await rm(tempImagesDir, { recursive: true, force: true });
   }
+}
+
+async function uploadLegacyImagesFromUrls(params: {
+  importData: NormalizedLegacyImport;
+  syncResult: SyncResult;
+  resultPath: string;
+  importDataPath: string;
+  execute: boolean;
+  force: boolean;
+}) {
+  const photos = (params.importData.photos ?? []).filter((photo) => LEGACY_IMPORT_YEARS.has(photo.year));
+  const childIds = unique(photos.map((photo) => photo.legacyChildId));
+  const registrationResolver = await buildRegistrationResolver(params.syncResult, params.importData, childIds);
+  const coverage = countRegistrationCoverage(params.syncResult, params.importData, registrationResolver, childIds);
+  const report = {
+    source: "urls",
+    resultPath: params.resultPath,
+    importDataPath: params.importDataPath,
+    execute: params.execute,
+    scanned: photos.length,
+    resolvedChildren: registrationResolver.size,
+    uploaded: 0,
+    deletedPhotos: 0,
+    created: 0,
+    updated: 0,
+    unchanged: 0,
+    skipped: [] as Array<{ sourceUrl: string; reason: string }>,
+  };
+
+  console.log(
+    [
+      `Fotos no JSON: ${photos.length}`,
+      `Crianças com fotos: ${childIds.length}`,
+      `Inscrições resolvidas: ${registrationResolver.size}/${childIds.length} (${coverage.fromResult} via import-result, ${coverage.fromImportData} via import-data+banco, ${coverage.fromDbSlug} via slug no banco)`,
+      `Anos filtrados: ${Array.from(LEGACY_IMPORT_YEARS).join(", ")}`,
+      params.execute ? "Modo: EXECUTE" : "Modo: DRY-RUN",
+      params.force ? "Force: sim (apaga fotos antigas da inscrição e reenvia tudo)" : "Force: não",
+    ].join("\n"),
+  );
+
+  if (!params.execute) {
+    for (const photo of photos.slice(0, 10)) {
+      const registration = registrationResolver.get(photo.legacyChildId);
+      console.log(
+        registration
+          ? `[ok] child_id=${photo.legacyChildId}: ${photo.sourceUrl} -> ${registration.id}`
+          : `[missing] child_id=${photo.legacyChildId}: ${photo.sourceUrl}`,
+      );
+    }
+    if (registrationResolver.size === 0) {
+      await logRegistrationResolutionHints(childIds.slice(0, 5), photos.slice(0, 5).map((photo) => photo.sourceUrl));
+    }
+    await writeJson(LEGACY_IMAGE_UPLOAD_REPORT_FILE, report);
+    console.log(`Relatório dry-run gravado em ${LEGACY_IMAGE_UPLOAD_REPORT_FILE}. Use --execute para aplicar.`);
+    return;
+  }
+
+  const uploadBucket = requireEnv("S3_BUCKET");
+  const s3Client = createS3Client();
+  const db = getPrisma();
+  const forceResetRegistrations = new Set<string>();
+
+  if (registrationResolver.size === 0) {
+    await logRegistrationResolutionHints(childIds.slice(0, 5), photos.slice(0, 5).map((photo) => photo.sourceUrl));
+    throw new Error("Nenhuma inscrição foi resolvida para as fotos do JSON.");
+  }
+
+  for (const photo of photos) {
+    const registration = registrationResolver.get(photo.legacyChildId);
+    if (!registration) {
+      report.skipped.push({ sourceUrl: photo.sourceUrl, reason: `Sem inscrição para child_id=${photo.legacyChildId}.` });
+      continue;
+    }
+
+    if (params.force && !forceResetRegistrations.has(registration.id)) {
+      report.deletedPhotos += await replaceRegistrationPhotos({
+        db,
+        s3Client,
+        bucket: uploadBucket,
+        registrationId: registration.id,
+      });
+      forceResetRegistrations.add(registration.id);
+    }
+
+    const downloaded = await downloadLegacyPhoto(photo);
+    if (!downloaded) {
+      report.skipped.push({ sourceUrl: photo.sourceUrl, reason: "URL não retornou uma imagem válida." });
+      continue;
+    }
+
+    const storageKey = buildUrlLegacyPhotoStorageKey(registration.year, registration.id, photo);
+    if (params.force || !(await photoObjectExists(s3Client, uploadBucket, storageKey))) {
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: uploadBucket,
+          Key: storageKey,
+          Body: downloaded.body,
+          ContentLength: downloaded.body.length,
+          ContentType: downloaded.contentType,
+        }),
+      );
+      report.uploaded += 1;
+    } else {
+      report.skipped.push({ sourceUrl: photo.sourceUrl, reason: "Objeto já existe no S3. Use --force para reenviar." });
+      continue;
+    }
+
+    const sync = await syncLocalPhotoRecord(db, registration.id, storageKey, photo.order, photo.isCover, params.force);
+    if (sync === "created") report.created += 1;
+    else if (sync === "updated") report.updated += 1;
+    else report.unchanged += 1;
+  }
+
+  await writeJson(LEGACY_IMAGE_UPLOAD_REPORT_FILE, report);
+  console.log(
+    [
+      `Upload concluído: ${report.uploaded} objeto(s) enviados ao S3`,
+      `Fotos antigas removidas: ${report.deletedPhotos}`,
+      `Banco: ${report.created} criados, ${report.updated} atualizados, ${report.unchanged} inalterados`,
+      `Ignorados: ${report.skipped.length}`,
+      `Relatório: ${LEGACY_IMAGE_UPLOAD_REPORT_FILE}`,
+    ].join("\n"),
+  );
+}
+
+async function downloadLegacyPhoto(photo: NormalizedLegacyImport["photos"][number]) {
+  const candidates = buildPhotoUrlCandidates(photo);
+  for (const sourceUrl of candidates) {
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        const response = await fetch(sourceUrl);
+        const responseContentType = response.headers.get("content-type");
+        if (!response.ok) continue;
+        const body = Buffer.from(await response.arrayBuffer());
+        if (!isLikelyImage(body)) continue;
+        const contentType = responseContentType?.startsWith("image/")
+          ? responseContentType
+          : contentTypeFromPath(sourceUrl);
+        return { body, contentType, sourceUrl };
+      } catch {
+        if (attempt === 2) break;
+      }
+    }
+  }
+  return null;
+}
+
+function buildPhotoUrlCandidates(photo: NormalizedLegacyImport["photos"][number]) {
+  const candidates = [photo.sourceUrl];
+  const fileName = path.posix.basename(photo.sourcePath);
+  if (photo.kind === "official") {
+    candidates.push(new URL(`official/${encodeURIComponent(fileName)}`, photoBaseUrl).toString());
+  }
+  candidates.push(new URL(encodeURIComponent(fileName), photoBaseUrl).toString());
+  candidates.push(buildSourceUrl(photo.sourcePath));
+  return unique(candidates);
+}
+
+function buildUrlLegacyPhotoStorageKey(
+  year: number,
+  registrationId: string,
+  photo: NormalizedLegacyImport["photos"][number],
+) {
+  return `contests/${year}/registrations/${registrationId}/legacy-${photo.kind}-${safeFileName(photo.sourcePath)}`;
 }
 
 async function extractLegacyImagesZipFromS3(
