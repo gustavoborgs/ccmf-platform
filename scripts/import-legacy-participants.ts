@@ -2664,6 +2664,8 @@ async function buildRegistrationResolver(
     if (fromResult) resolver.set(childId, fromResult);
   }
 
+  await reconcileResolvedRegistrationsWithDb(resolver);
+
   const missingAfterResult = childIds.filter((childId) => !resolver.has(childId));
   if (importData && missingAfterResult.length > 0) {
     const protocolsByChild = new Map<number, string>();
@@ -2738,6 +2740,45 @@ async function buildRegistrationResolver(
   }
 
   return resolver;
+}
+
+async function reconcileResolvedRegistrationsWithDb(resolver: Map<number, ResolvedRegistration>) {
+  const protocols = unique(Array.from(resolver.values()).map((registration) => registration.protocol));
+  if (protocols.length === 0) return;
+
+  const db = getPrisma();
+  const registrations = [];
+  for (let index = 0; index < protocols.length; index += 500) {
+    const chunk = protocols.slice(index, index + 500);
+    registrations.push(
+      ...(await db.registration.findMany({
+        where: { protocol: { in: chunk } },
+        select: {
+          id: true,
+          protocol: true,
+          status: true,
+          createdAt: true,
+          contest: { select: { year: true } },
+        },
+      })),
+    );
+  }
+
+  const byProtocol = new Map(registrations.map((registration) => [registration.protocol, registration]));
+  for (const [childId, registration] of resolver) {
+    const currentRegistration = byProtocol.get(registration.protocol);
+    if (!currentRegistration) {
+      resolver.delete(childId);
+      continue;
+    }
+    resolver.set(childId, {
+      id: currentRegistration.id,
+      protocol: currentRegistration.protocol,
+      year: currentRegistration.contest.year,
+      status: currentRegistration.status,
+      createdAt: currentRegistration.createdAt.toISOString(),
+    });
+  }
 }
 
 function countRegistrationCoverage(
