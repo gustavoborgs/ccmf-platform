@@ -63,6 +63,8 @@ Lê/usa como fonte:
 
 Dump padrão: `data/legacy/criancam_site.sql` (temporário, ignorado pelo git).
 Override: `--sql=/caminho/outro.sql` ou `LEGACY_SQL_FILE`.
+O fluxo V2 usa por padrão `--maxYear=2023`. Outros recortes podem ser feitos
+com `--years=2024,2025,2026`, `--minYear` ou `--maxYear`.
 
 ## Regras de negócio
 
@@ -96,7 +98,7 @@ Override: `--sql=/caminho/outro.sql` ou `LEGACY_SQL_FILE`.
 11. A importação deve ser idempotente: reexecutar o script não deve duplicar
     registros já importados.
 12. No fluxo V2, o SQL é convertido primeiro para `data/legacy/import-data.json`,
-    limitado às edições 2024, 2025 e 2026; depois `legacy:sync-data` grava o
+    limitado por padrão às edições até 2023; depois `legacy:sync-data` grava o
     banco e gera `data/legacy/import-result.json`.
 13. `import-data.json` inclui os paths de fotos dos participantes e suas URLs
     absolutas em `https://criancamaisfotogenica.com.br/participantes/image/...`.

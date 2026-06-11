@@ -23,6 +23,9 @@ const BLOG_COVER_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as co
 const MIN_BLOG_COVER_WIDTH = 900;
 const MIN_BLOG_COVER_HEIGHT = 500;
 const PARTNER_LOGO_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+const PUBLIC_REGISTRATION_STATUSES: readonly string[] = ["APPROVED", "SEMIFINALIST", "WINNER"];
+
+export type MediaCachePolicy = "public-photo" | "public-asset" | "private";
 
 /** Gera URL de upload direto para o S3 e registra a foto na inscrição. */
 export async function requestPhotoUpload(params: {
@@ -168,4 +171,33 @@ export async function getFramedPhotoData(registrationId: string) {
     photoUrl: getPublicUrl(cover.storageKey),
     frameUrl: getPublicUrl(registration.contest.frameImageKey),
   };
+}
+
+/**
+ * Decide se a rota /api/media pode usar cache compartilhado.
+ * Fotos de inscrição só recebem cache público após aprovação/publicação.
+ */
+export async function getMediaCachePolicy(storageKey: string): Promise<MediaCachePolicy> {
+  if (storageKey.startsWith("blog/") || storageKey.startsWith("partners/") || isContestFrameKey(storageKey)) {
+    return "public-asset";
+  }
+
+  if (!isRegistrationPhotoKey(storageKey)) return "private";
+
+  const photo = await db.photo.findFirst({
+    where: { storageKey },
+    select: { registration: { select: { status: true } } },
+  });
+
+  return photo && PUBLIC_REGISTRATION_STATUSES.includes(photo.registration.status)
+    ? "public-photo"
+    : "private";
+}
+
+function isContestFrameKey(storageKey: string): boolean {
+  return /^contests\/\d{4}\/frame(?:-[a-z0-9-]+)?\.[a-z0-9]+$/i.test(storageKey);
+}
+
+function isRegistrationPhotoKey(storageKey: string): boolean {
+  return /^contests\/\d{4}\/registrations\/[^/]+\/[^/]+$/i.test(storageKey);
 }

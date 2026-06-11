@@ -295,7 +295,7 @@ const PHOTO_MANIFEST_FILE = path.join(REPORT_DIR, "photos-manifest.json");
 const PHOTO_SOURCES_FILE = path.join(REPORT_DIR, "photo-sources.json");
 const PHOTO_MANIFEST_FULL_FILE = path.join(REPORT_DIR, "photos-manifest-full.json");
 const DEFAULT_PHOTO_BASE_URL = "https://criancamaisfotogenica.com.br/participantes/image/";
-const LEGACY_IMPORT_YEARS = new Set([2024, 2025, 2026]);
+const DEFAULT_LEGACY_MAX_YEAR = 2023;
 const FAKE_EMAIL_PATTERN = /^email\d+@cmf\.com\.br$/i;
 const PAID_STATUSES = new Set(["pago", "baixa manual"]);
 
@@ -309,6 +309,7 @@ const photoBaseUrl = normalizeBaseUrl(
   options.photoBaseUrl ?? process.env.LEGACY_PHOTO_BASE_URL ?? DEFAULT_PHOTO_BASE_URL,
 );
 const createPhotoRows = readBoolean(options.createPhotoRows ?? process.env.LEGACY_CREATE_PHOTO_ROWS);
+const yearFilter = buildLegacyYearFilter();
 
 let prisma: PrismaClient | null = null;
 
@@ -410,6 +411,47 @@ function readBoolean(value: string | undefined): boolean {
 
 function normalizeBaseUrl(value: string) {
   return value.endsWith("/") ? value : `${value}/`;
+}
+
+function buildLegacyYearFilter() {
+  const explicitYears = options.years ?? process.env.LEGACY_IMPORT_YEARS;
+  if (explicitYears) {
+    const years = new Set(
+      explicitYears
+        .split(",")
+        .map((value) => Number.parseInt(value.trim(), 10))
+        .filter(Number.isInteger),
+    );
+    if (years.size === 0) throw new Error(`LEGACY_IMPORT_YEARS inválido: ${explicitYears}`);
+    return { years, minYear: null, maxYear: null };
+  }
+
+  const minYearValue = options.minYear ?? process.env.LEGACY_MIN_YEAR;
+  const maxYearValue = options.maxYear ?? process.env.LEGACY_MAX_YEAR ?? String(DEFAULT_LEGACY_MAX_YEAR);
+  const minYear = minYearValue ? Number.parseInt(minYearValue, 10) : null;
+  const maxYear = maxYearValue ? Number.parseInt(maxYearValue, 10) : null;
+
+  if (minYear !== null && !Number.isInteger(minYear)) throw new Error(`minYear inválido: ${minYearValue}`);
+  if (maxYear !== null && !Number.isInteger(maxYear)) throw new Error(`maxYear inválido: ${maxYearValue}`);
+
+  return { years: null, minYear, maxYear };
+}
+
+function shouldImportLegacyYear(year: number) {
+  if (yearFilter.years) return yearFilter.years.has(year);
+  if (yearFilter.minYear !== null && year < yearFilter.minYear) return false;
+  if (yearFilter.maxYear !== null && year > yearFilter.maxYear) return false;
+  return true;
+}
+
+function formatLegacyYearFilter() {
+  if (yearFilter.years) return Array.from(yearFilter.years).sort((left, right) => left - right).join(", ");
+  if (yearFilter.minYear !== null && yearFilter.maxYear !== null) {
+    return `${yearFilter.minYear} até ${yearFilter.maxYear}`;
+  }
+  if (yearFilter.minYear !== null) return `a partir de ${yearFilter.minYear}`;
+  if (yearFilter.maxYear !== null) return `até ${yearFilter.maxYear}`;
+  return "todos";
 }
 
 async function parseLegacyDump(filePath: string): Promise<LegacyData> {
@@ -836,6 +878,7 @@ async function buildLegacyImportJson(data: LegacyData, analysisSkipped: SkippedR
   console.log(
     [
       `JSON legado gerado em ${LEGACY_IMPORT_JSON_FILE}`,
+      `Filtro de anos: ${formatLegacyYearFilter()}`,
       `Concursos: ${normalized.contests.length}`,
       `Categorias: ${normalized.categories.length}`,
       `Responsáveis: ${normalized.guardians.length}`,
@@ -854,7 +897,7 @@ function normalizeLegacyImport(data: LegacyData, analysisSkipped: SkippedRecord[
   const skipped = mergeSkipped(analysisSkipped);
 
   const contests = Array.from(data.concourses.values())
-    .filter((concourse) => Number.isInteger(concourse.year) && LEGACY_IMPORT_YEARS.has(concourse.year))
+    .filter((concourse) => Number.isInteger(concourse.year) && shouldImportLegacyYear(concourse.year))
     .sort((left, right) => left.year - right.year)
     .map((concourse) => ({
       legacyId: concourse.id,
@@ -897,7 +940,7 @@ function normalizeLegacyImport(data: LegacyData, analysisSkipped: SkippedRecord[
     const concourse = invoice.concourseId ? data.concourses.get(invoice.concourseId) : null;
     const category = invoice.categoryId ? data.categories.get(invoice.categoryId) : null;
 
-    if (!concourse || !LEGACY_IMPORT_YEARS.has(concourse.year)) continue;
+    if (!concourse || !shouldImportLegacyYear(concourse.year)) continue;
 
     if (!child || !customer || !concourse || !category || !invoice.categoryId || !invoice.customerId || !child.birthDate) {
       validateInvoiceGroup(data, group, skipped);
@@ -2314,7 +2357,7 @@ async function uploadLegacyImagesFromUrls(params: {
   execute: boolean;
   force: boolean;
 }) {
-  const photos = (params.importData.photos ?? []).filter((photo) => LEGACY_IMPORT_YEARS.has(photo.year));
+  const photos = (params.importData.photos ?? []).filter((photo) => shouldImportLegacyYear(photo.year));
   const childIds = unique(photos.map((photo) => photo.legacyChildId));
   const registrationResolver = await buildRegistrationResolver(params.syncResult, params.importData, childIds);
   const coverage = countRegistrationCoverage(params.syncResult, params.importData, registrationResolver, childIds);
@@ -2338,7 +2381,7 @@ async function uploadLegacyImagesFromUrls(params: {
       `Fotos no JSON: ${photos.length}`,
       `Crianças com fotos: ${childIds.length}`,
       `Inscrições resolvidas: ${registrationResolver.size}/${childIds.length} (${coverage.fromResult} via import-result, ${coverage.fromImportData} via import-data+banco, ${coverage.fromDbSlug} via slug no banco)`,
-      `Anos filtrados: ${Array.from(LEGACY_IMPORT_YEARS).join(", ")}`,
+      `Filtro de anos: ${formatLegacyYearFilter()}`,
       params.execute ? "Modo: EXECUTE" : "Modo: DRY-RUN",
       params.force ? "Force: sim (apaga fotos antigas da inscrição e reenvia tudo)" : "Force: não",
     ].join("\n"),
