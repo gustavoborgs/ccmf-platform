@@ -56,6 +56,7 @@ Lê/usa como fonte:
 | `npm run legacy:analyze` | Lê o SQL e gera relatórios sem escrever no banco | operador |
 | `npm run legacy:import` | Importa dados normalizados para o banco atual | operador |
 | `npm run legacy:photos` | Baixa fotos antigas, envia ao S3 e cria/atualiza `Photo` | operador |
+| `npm run storage:upload-legacy-photos` | Lê `contests.zip` no S3, mapeia pelo manifesto e sincroniza S3 + `Photo` | operador |
 
 Dump padrão: `data/legacy/criancam_site.sql` (temporário, ignorado pelo git).
 Override: `--sql=/caminho/outro.sql` ou `LEGACY_SQL_FILE`.

@@ -22,6 +22,7 @@
     "legacy:photo-manifest": "tsx scripts/import-legacy-participants.ts photo-manifest",
     "legacy:photos": "tsx scripts/import-legacy-participants.ts photos",
     "storage:replace-contests": "tsx scripts/replace-contests-from-zip.ts",
+    "storage:upload-legacy-photos": "tsx scripts/upload-legacy-photos-from-zip.ts",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio"
   },
