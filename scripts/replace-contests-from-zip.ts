@@ -22,9 +22,11 @@ type ZipEntry = {
 
 const options = parseArgs(process.argv.slice(2));
 const execute = Boolean(options.execute);
-const zipKey = options.zipKey ?? process.env.CONTESTS_ZIP_KEY ?? "contests.zap";
+const zipKey = options.zipKey ?? process.env.CONTESTS_ZIP_KEY ?? "contests.zip";
 const targetPrefix = normalizePrefix(options.targetPrefix ?? process.env.CONTESTS_TARGET_PREFIX ?? "contests");
-const sourceRoot = normalizeOptionalPrefix(options.sourceRoot ?? process.env.CONTESTS_ZIP_SOURCE_ROOT ?? "contest");
+const sourceRoot = normalizeOptionalPrefix(
+  options.sourceRoot ?? process.env.CONTESTS_ZIP_SOURCE_ROOT ?? "",
+);
 const tempDir = path.join(tmpdir(), "ccmf-contests-zip");
 const tempZipPath = path.join(tempDir, path.basename(zipKey));
 
@@ -138,11 +140,13 @@ async function uploadZipEntries(bucket: string, zipPath: string, entries: ZipEnt
 
         try {
           const key = destinationKey(entry.fileName);
+          const body = await readStreamToBuffer(stream);
           await client.send(
             new PutObjectCommand({
               Bucket: bucket,
               Key: key,
-              Body: stream,
+              Body: body,
+              ContentLength: body.length,
               ContentType: contentTypeFromPath(key),
             }),
           );
@@ -159,6 +163,14 @@ async function uploadZipEntries(bucket: string, zipPath: string, entries: ZipEnt
     zip.on("end", resolve);
     zip.on("error", reject);
   });
+}
+
+async function readStreamToBuffer(stream: NodeJS.ReadableStream) {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
 }
 
 function openZip(zipPath: string): Promise<yauzl.ZipFile> {
