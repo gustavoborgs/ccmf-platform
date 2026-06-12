@@ -21,7 +21,7 @@ export default async function PasswordResetRequestPage() {
             Esqueci minha senha
           </h1>
           <p className="mt-3 text-sm text-ink-muted">
-            Informe seu CPF ou e-mail cadastrado. Se encontrarmos sua conta, enviaremos
+            Informe seu CPF ou e-mail do responsável cadastrado. Se encontrarmos sua conta, enviaremos
             um link para você criar uma nova senha.
           </p>
         </div>

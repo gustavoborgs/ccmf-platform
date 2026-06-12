@@ -31,7 +31,7 @@ export function PasswordResetRequestForm() {
 
   return (
     <form action={formAction} className="space-y-5">
-      <Field label="CPF ou e-mail" hint="Use o CPF do responsável ou o e-mail cadastrado.">
+      <Field label="CPF ou e-mail do responsável" hint="Use o CPF do responsável ou o e-mail cadastrado.">
         <TextInput
           name="identifier"
           type="text"

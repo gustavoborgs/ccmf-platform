@@ -21,7 +21,7 @@ export const passwordResetRequestSchema = z.object({
   identifier: z
     .string()
     .trim()
-    .min(1, "Informe seu CPF ou e-mail.")
+    .min(1, "Informe seu CPF ou e-mail do responsável.")
     .refine((value) => {
       const normalized = value.toLowerCase();
       const cpfDigits = value.replace(/\D/g, "");

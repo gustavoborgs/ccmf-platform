@@ -11,7 +11,7 @@ import { db } from "@/shared/db";
 
 /**
  * Captura progressiva no step 1 (ex.: blur do e-mail/CPF no frontend).
- * Identifica por CPF ou e-mail, o que chegar primeiro.
+ * Identifica por CPF ou e-mail do responsável, o que chegar primeiro.
  */
 export async function captureLead(params: {
   name?: string;
