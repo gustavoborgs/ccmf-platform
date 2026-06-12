@@ -62,5 +62,9 @@ export const adminParticipantPhotoSchema = z.object({
   photoId: z.string().cuid(),
 });
 
+export const adminParticipantRegistrationIdSchema = z.object({
+  registrationId: z.string().cuid(),
+});
+
 export type AdminParticipantFilters = z.infer<typeof adminParticipantFiltersSchema>;
 export type AdminRegistrationStatus = (typeof ADMIN_REGISTRATION_STATUSES)[number];

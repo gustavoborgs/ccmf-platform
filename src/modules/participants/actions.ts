@@ -4,10 +4,17 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { requireRole } from "@/modules/auth/guards";
 import { removeRegistrationPhoto, requestPhotoUpload } from "@/modules/media/service";
-import { buildLikeFingerprint, likeRegistration, updateAdminParticipantStatus } from "./service";
+import {
+  buildLikeFingerprint,
+  getAdminParticipantRegistration,
+  likeRegistration,
+  updateAdminParticipantStatus,
+  type AdminParticipantRegistration,
+} from "./service";
 import {
   adminParticipantPhotoSchema,
   adminParticipantPhotoUploadSchema,
+  adminParticipantRegistrationIdSchema,
   adminParticipantStatusSchema,
   likeInputSchema,
 } from "./validators";
@@ -33,9 +40,27 @@ function fail(error: unknown): { ok: false; error: string } {
 function revalidateParticipantViews(year?: number, slug?: string) {
   revalidatePath("/admin/participantes");
   revalidatePath("/admin/inscricoes");
+  revalidatePath("/admin/responsaveis");
   revalidatePath("/participantes");
   if (year) revalidatePath(`/participantes/${year}`);
   if (year && slug) revalidatePath(`/participantes/${year}/${slug}`);
+}
+
+export async function getAdminParticipantRegistrationAction(
+  input: unknown,
+): Promise<ActionResult<AdminParticipantRegistration>> {
+  await requireRole("ADMIN");
+
+  const parsed = adminParticipantRegistrationIdSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Inscrição inválida." };
+
+  try {
+    const registration = await getAdminParticipantRegistration(parsed.data.registrationId);
+    if (!registration) return { ok: false, error: "Inscrição não encontrada." };
+    return { ok: true, data: registration };
+  } catch (error) {
+    return fail(error);
+  }
 }
 
 export async function likeRegistrationAction(input: unknown): Promise<LikeResult> {

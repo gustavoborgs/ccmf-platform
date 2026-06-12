@@ -1,35 +1,19 @@
 import { listContestFilterOptions } from "@/modules/contests/service";
-import {
-  AdminParticipantPhotoManager,
-  AdminParticipantStatusControl,
-} from "@/modules/participants/components/admin-participant-controls";
+import { AdminParticipantDetailsDialog } from "@/modules/participants/components/admin-participant-details-dialog";
 import { listAdminParticipants } from "@/modules/participants/service";
 import {
   ADMIN_REGISTRATION_STATUSES,
   adminParticipantFiltersSchema,
 } from "@/modules/participants/validators";
-import { getPublicUrl } from "@/shared/integrations/s3/storage";
 import {
   Card,
   DataTable,
   DataTablePagination,
   DataTableToolbar,
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
   type DataTableColumn,
   type DataTableFilter,
 } from "@/shared/ui";
 import {
-  DetailGrid,
-  DetailSection,
-  formatDate,
-  formatDateTime,
-  paymentStatusLabel,
-  paymentStatusTone,
   registrationStatusLabel,
   registrationStatusTone,
   StatusBadge,
@@ -86,7 +70,7 @@ const columns: DataTableColumn<AdminParticipantRow>[] = [
     header: "",
     headClassName: "w-24",
     cellClassName: "text-right",
-    cell: (registration) => <ParticipantDetailsDialog registration={registration} />,
+    cell: (registration) => <AdminParticipantDetailsDialog registration={registration} />,
   },
 ];
 
@@ -161,124 +145,5 @@ export default async function AdminParticipantsPage({
         <DataTablePagination pagination={pagination} />
       </Card>
     </div>
-  );
-}
-
-function genderLabel(gender: string | null) {
-  if (gender === "MALE") return "Masculino";
-  if (gender === "FEMALE") return "Feminino";
-  return "Gênero não informado";
-}
-
-function ParticipantDetailsDialog({ registration }: { registration: AdminParticipantRow }) {
-  const guardian = registration.participant.guardian.user;
-  const latestPayment = registration.payments[0];
-  const photos = registration.photos.map((photo) => ({
-    id: photo.id,
-    url: getPublicUrl(photo.storageKey),
-    order: photo.order,
-    isCover: photo.isCover,
-    width: photo.width,
-    height: photo.height,
-  }));
-
-  return (
-    <Dialog>
-      <DialogTrigger className="rounded-full border border-primary-100 px-4 py-2 text-sm font-bold text-primary-700 transition hover:bg-primary-50">
-        Detalhes
-      </DialogTrigger>
-      <DialogContent className="max-w-3xl">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <DialogTitle>{registration.participant.name}</DialogTitle>
-            <DialogDescription>
-              {registration.protocol} · Edição {registration.contest.year} ·{" "}
-              {registration.category.name}
-            </DialogDescription>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <StatusBadge tone={registrationStatusTone(registration.status)}>
-              {registrationStatusLabel(registration.status)}
-            </StatusBadge>
-            <StatusBadge tone={registration._count.photos >= 2 ? "success" : "warning"}>
-              {registration._count.photos}/2 fotos
-            </StatusBadge>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_220px]">
-          <div className="space-y-5">
-            <DetailSection title="Dados da criança">
-              <DetailGrid
-                items={[
-                  ["Nascimento", formatDate(registration.participant.birthDate)],
-                  ["Gênero", genderLabel(registration.participant.gender)],
-                  ["Cidade/UF", `${registration.participant.city}/${registration.participant.state}`],
-                  [
-                    "Consentimento de imagem",
-                    registration.participant.imageConsentAt
-                      ? formatDateTime(registration.participant.imageConsentAt)
-                      : "Não registrado",
-                  ],
-                ]}
-              />
-            </DetailSection>
-
-            <DetailSection title="Responsável">
-              <DetailGrid
-                items={[
-                  ["Nome", guardian.name],
-                  ["E-mail", guardian.email],
-                  ["Telefone", guardian.phone ?? "Não informado"],
-                ]}
-              />
-            </DetailSection>
-
-            <DetailSection title="Operação">
-              <div className="flex flex-wrap gap-2">
-                {latestPayment ? (
-                  <StatusBadge tone={paymentStatusTone(latestPayment.status)}>
-                    {paymentStatusLabel(latestPayment.status)}
-                  </StatusBadge>
-                ) : (
-                  <StatusBadge>Sem cobrança</StatusBadge>
-                )}
-                <StatusBadge tone="info">Likes: {registration.likesCount}</StatusBadge>
-                <StatusBadge tone="info">Votos: {registration._count.votes}</StatusBadge>
-              </div>
-              <div className="mt-4">
-                <AdminParticipantStatusControl
-                  registrationId={registration.id}
-                  currentStatus={registration.status}
-                  options={statusOptions}
-                />
-              </div>
-              <DetailGrid
-                className="mt-4"
-                items={[
-                  ["Criada em", formatDateTime(registration.createdAt)],
-                  ["Atualizada em", formatDateTime(registration.updatedAt)],
-                  [
-                    "Aprovada em",
-                    registration.approvedAt ? formatDateTime(registration.approvedAt) : "Não aprovada",
-                  ],
-                  ["Motivo de recusa", registration.rejectionReason ?? "Nenhum"],
-                ]}
-              />
-            </DetailSection>
-          </div>
-
-          <DetailSection title="Fotos enviadas">
-            <AdminParticipantPhotoManager registrationId={registration.id} photos={photos} />
-          </DetailSection>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <DialogClose className="rounded-full px-5 py-2 text-sm font-bold text-primary-700 transition hover:bg-primary-50">
-            Fechar
-          </DialogClose>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

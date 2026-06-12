@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import type { AdminGuardianListItem } from "@/modules/guardians/service";
 import { updateAdminGuardianAction } from "@/modules/guardians/actions";
+import { AdminParticipantRegistrationViewDialog } from "@/modules/participants/components/admin-participant-registration-view-dialog";
 import {
   Button,
   Dialog,
@@ -16,7 +17,14 @@ import {
   TextInput,
   cn,
 } from "@/shared/ui";
-import { DetailGrid, DetailSection, formatDateTime, StatusBadge } from "../../_components/admin-ui";
+import {
+  DetailGrid,
+  DetailSection,
+  formatDateTime,
+  registrationStatusLabel,
+  registrationStatusTone,
+  StatusBadge,
+} from "../../_components/admin-ui";
 
 type Mode = "details" | "edit";
 
@@ -401,9 +409,34 @@ function GuardianDetailsView({
                 >
                   <p className="font-bold text-ink">{participant.name}</p>
                   <p className="text-sm text-ink-muted">
-                    {participant.city}/{participant.state} · {participant._count.registrations} inscrições ·{" "}
-                    {participant.registrations.length} pagas
+                    {participant.city}/{participant.state} · {participant._count.registrations}{" "}
+                    inscrições · {participant.paidRegistrationsCount} pagas
                   </p>
+                  {participant.registrations.length > 0 ? (
+                    <div className="mt-2 space-y-2">
+                      {participant.registrations.map((registration) => (
+                        <div
+                          key={registration.id}
+                          className="flex items-center justify-between gap-2 rounded-lg bg-primary-50/50 px-2 py-1.5"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-semibold text-ink">
+                                {registration.contest.year} · {registration.category.name}
+                              </p>
+                              <StatusBadge tone={registrationStatusTone(registration.status)}>
+                                {registrationStatusLabel(registration.status)}
+                              </StatusBadge>
+                            </div>
+                            <p className="text-xs text-ink-muted">{registration.protocol}</p>
+                          </div>
+                          <AdminParticipantRegistrationViewDialog registrationId={registration.id} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-ink-muted">Sem inscrições cadastradas.</p>
+                  )}
                 </div>
               ))}
             </div>

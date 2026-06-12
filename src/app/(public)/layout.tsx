@@ -15,6 +15,8 @@ const NAV_LINKS = [
   { href: "/contato", label: "Contato" },
 ];
 
+const COPYRIGHT_YEAR = 2026;
+
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
@@ -120,7 +122,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         </Container>
 
         <div className="border-t border-white/20 py-5 text-center text-xs text-white/70">
-          © {new Date().getFullYear()} Criança Mais Fotogênica. Todos os direitos reservados.
+          © {COPYRIGHT_YEAR} Criança Mais Fotogênica. Todos os direitos reservados.
         </div>
       </footer>
     </div>

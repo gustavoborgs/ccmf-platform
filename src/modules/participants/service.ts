@@ -91,6 +91,30 @@ export async function likeRegistration(registrationId: string, fingerprint: stri
   return { liked: true, likesCount: updated.likesCount };
 }
 
+const adminParticipantRegistrationInclude = {
+  participant: {
+    include: {
+      guardian: {
+        include: {
+          user: { select: { name: true, email: true, phone: true } },
+        },
+      },
+    },
+  },
+  contest: true,
+  category: true,
+  photos: { orderBy: { order: "asc" as const } },
+  payments: {
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+  },
+  _count: { select: { photos: true, likes: true, votes: true } },
+} satisfies Prisma.RegistrationInclude;
+
+export type AdminParticipantRegistration = Prisma.RegistrationGetPayload<{
+  include: typeof adminParticipantRegistrationInclude;
+}>;
+
 /** Listagem administrativa: uma linha por inscrição de participante. */
 export async function listAdminParticipants(filters: AdminParticipantFilters) {
   const where = buildAdminParticipantWhere(filters);
@@ -99,31 +123,21 @@ export async function listAdminParticipants(filters: AdminParticipantFilters) {
 
   const items = await db.registration.findMany({
     where,
-    include: {
-      participant: {
-        include: {
-          guardian: {
-            include: {
-              user: { select: { name: true, email: true, phone: true } },
-            },
-          },
-        },
-      },
-      contest: true,
-      category: true,
-      photos: { orderBy: { order: "asc" } },
-      payments: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-      _count: { select: { photos: true, likes: true, votes: true } },
-    },
+    include: adminParticipantRegistrationInclude,
     orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
     skip,
     take: filters.pageSize,
   });
 
   return { items, pagination };
+}
+
+/** Detalhe administrativo de uma inscrição de participante. */
+export async function getAdminParticipantRegistration(registrationId: string) {
+  return db.registration.findUnique({
+    where: { id: registrationId },
+    include: adminParticipantRegistrationInclude,
+  });
 }
 
 /** Alteração administrativa livre do status da inscrição. */

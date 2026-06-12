@@ -17,12 +17,21 @@ const PAID_REGISTRATION_STATUSES: RegistrationStatus[] = [
   "WINNER",
 ];
 
+type AdminGuardianParticipantRegistration = {
+  id: string;
+  protocol: string;
+  status: RegistrationStatus;
+  contest: { year: number };
+  category: { name: string };
+};
+
 type AdminGuardianParticipant = {
   id: string;
   name: string;
   city: string;
   state: string;
-  registrations: { id: string }[];
+  registrations: AdminGuardianParticipantRegistration[];
+  paidRegistrationsCount: number;
   _count: { registrations: number };
 };
 
@@ -69,8 +78,14 @@ export async function listAdminGuardians(filters: AdminGuardianFilters) {
           city: true,
           state: true,
           registrations: {
-            where: { status: { in: PAID_REGISTRATION_STATUSES } },
-            select: { id: true },
+            select: {
+              id: true,
+              protocol: true,
+              status: true,
+              contest: { select: { year: true } },
+              category: { select: { name: true } },
+            },
+            orderBy: { createdAt: "desc" },
           },
           _count: { select: { registrations: true } },
         },
@@ -87,8 +102,18 @@ export async function listAdminGuardians(filters: AdminGuardianFilters) {
   return {
     items: guardians.map((guardian) => ({
       ...guardian,
+      participants: guardian.participants.map((participant) => ({
+        ...participant,
+        paidRegistrationsCount: participant.registrations.filter((registration) =>
+          PAID_REGISTRATION_STATUSES.includes(registration.status),
+        ).length,
+      })),
       paidRegistrationsCount: guardian.participants.reduce(
-        (sum, participant) => sum + participant.registrations.length,
+        (sum, participant) =>
+          sum +
+          participant.registrations.filter((registration) =>
+            PAID_REGISTRATION_STATUSES.includes(registration.status),
+          ).length,
         0,
       ),
     })),
