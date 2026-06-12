@@ -182,6 +182,8 @@ model Registration {
   likesCount      Int                @default(0)
   approvedAt      DateTime?
   rejectionReason String?
+  /// soft delete: inscrição cancelada pelo responsável antes do pagamento
+  deletedAt       DateTime?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 

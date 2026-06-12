@@ -96,6 +96,20 @@ export const registrationReviewSchema = z.object({
   registrationId: z.string().cuid(),
 });
 
+/** Cancelamento da inscrição pelo responsável (`/conta`). */
+export const guardianCancelRegistrationSchema = z.object({
+  registrationId: z.string().cuid(),
+});
+
+/** Substituição de foto pelo responsável antes do pagamento confirmado. */
+export const guardianPhotoReplaceSchema = z.object({
+  photoId: z.string().cuid(),
+  fileName: z.string().min(1),
+  contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+  width: z.number().int().min(600, "Foto muito pequena (mínimo 600px de largura)"),
+  height: z.number().int().min(800),
+});
+
 export const registrationRejectionSchema = registrationReviewSchema.extend({
   rejectionReason: z
     .string()

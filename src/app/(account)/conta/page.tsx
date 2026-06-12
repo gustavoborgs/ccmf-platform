@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/modules/auth/actions";
 import { requireRole } from "@/modules/auth/guards";
@@ -6,21 +7,39 @@ import {
   getGuardianByUserId,
   listGuardianRegistrations,
 } from "@/modules/registrations/service";
+import {
+  CancelRegistrationButton,
+  GuardianPhotoManager,
+} from "@/modules/registrations/components/account-registration-actions";
 import { PhotoReview, type ReviewPhoto } from "@/modules/registrations/components/photo-review";
 import { getPublicUrl } from "@/shared/integrations/s3/storage";
-import { Button, Card, Container } from "@/shared/ui";
+import { Button, Card, Container, cn } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/utils";
 
 /**
  * Área do responsável: acompanhar inscrições, baixar foto com moldura,
  * realizar novas inscrições. Spec: docs/modules/registrations.md
  */
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireRole("GUARDIAN");
   const guardian = await getGuardianByUserId(user.id);
   if (!guardian) redirect("/inscricao");
 
   const registrations = await listGuardianRegistrations(guardian.id);
+
+  const years = [...new Set(registrations.map((registration) => registration.contest.year))].sort(
+    (a, b) => b - a,
+  );
+  const rawParams = await searchParams;
+  const requestedYear = Number.parseInt(String(rawParams.ano ?? ""), 10);
+  const selectedYear = years.includes(requestedYear) ? requestedYear : null;
+  const visibleRegistrations = selectedYear
+    ? registrations.filter((registration) => registration.contest.year === selectedYear)
+    : registrations;
 
   return (
     <Container className="py-12">
@@ -45,6 +64,19 @@ export default async function AccountPage() {
         </div>
       </div>
 
+      {years.length > 1 && (
+        <nav aria-label="Filtrar por edição" className="mt-8 flex flex-wrap gap-2">
+          <YearBadge href="/conta" active={selectedYear === null}>
+            Todas
+          </YearBadge>
+          {years.map((year) => (
+            <YearBadge key={year} href={`/conta?ano=${year}`} active={selectedYear === year}>
+              Edição {year}
+            </YearBadge>
+          ))}
+        </nav>
+      )}
+
       {registrations.length === 0 ? (
         <Card className="mt-10 text-center">
           <h2 className="text-2xl font-extrabold text-primary-700">Nenhuma inscrição ainda</h2>
@@ -56,8 +88,8 @@ export default async function AccountPage() {
           </Button>
         </Card>
       ) : (
-        <div className="mt-10 grid gap-5">
-          {registrations.map((registration) => {
+        <div className="mt-8 grid gap-5">
+          {visibleRegistrations.map((registration) => {
             const latestPayment = registration.payments[0];
             const status = getAccountStatus(registration.status, registration._count.photos);
             const resumeHref = `/inscricao/retomar/${registration.protocol}`;
@@ -65,6 +97,7 @@ export default async function AccountPage() {
               ? getPublicUrl(registration.contest.frameImageKey)
               : null;
             const canDownloadFramedPhotos = isPaymentConfirmed(registration.status);
+            const canManage = ["DRAFT", "PENDING_PAYMENT"].includes(registration.status);
             const photos: ReviewPhoto[] = registration.photos.map((photo) => ({
               id: photo.id,
               url: getPublicUrl(photo.storageKey),
@@ -102,14 +135,41 @@ export default async function AccountPage() {
                         Motivo: {registration.rejectionReason}
                       </p>
                     )}
+                    </div>
 
-                    {latestPayment && (
-                      <p className="mt-4 text-sm text-ink-muted">
-                        Último pagamento: {paymentMethodLabel[latestPayment.method]} ·{" "}
-                        {paymentStatusLabel[latestPayment.status]} ·{" "}
-                        {formatCentsBRL(latestPayment.amountCents)}
-                      </p>
-                    )}
+                    <div className="rounded-2xl border border-primary-100 bg-primary-50/40 px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="text-xs font-extrabold uppercase tracking-wide text-primary-700/60">
+                          Pagamento
+                        </h3>
+                        <span
+                          className={cn(
+                            "rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-wide",
+                            latestPayment
+                              ? paymentStatusTone[latestPayment.status]
+                              : "bg-primary-50 text-primary-700",
+                          )}
+                        >
+                          {latestPayment ? paymentStatusLabel[latestPayment.status] : "Sem cobrança"}
+                        </span>
+                      </div>
+                      {latestPayment ? (
+                        <div className="mt-2 text-sm text-ink">
+                          <p className="font-semibold">
+                            {paymentMethodLabel[latestPayment.method]} ·{" "}
+                            {formatCentsBRL(latestPayment.amountCents)}
+                          </p>
+                          {latestPayment.status === "PENDING" && latestPayment.dueDate && (
+                            <p className="mt-1 text-xs text-ink-muted">
+                              Vencimento: {formatDate(latestPayment.dueDate)}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-ink-muted">
+                          A cobrança aparece aqui assim que você concluir o checkout.
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -154,6 +214,13 @@ export default async function AccountPage() {
                           Ver página pública
                         </Button>
                       )}
+                      {canManage && (
+                        <CancelRegistrationButton
+                          registrationId={registration.id}
+                          participantName={registration.participant.name}
+                          protocol={registration.protocol}
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -161,11 +228,23 @@ export default async function AccountPage() {
                     <h3 className="mb-3 font-display text-lg font-extrabold text-primary-700">
                       Fotos anexadas para participação
                     </h3>
-                    <PhotoReview
-                      photos={photos}
-                      emptyTitle="Nenhuma foto anexada"
-                      emptyDescription="Continue a inscrição para enviar as 2 fotos obrigatórias."
-                    />
+                    {canManage ? (
+                      <GuardianPhotoManager
+                        registrationId={registration.id}
+                        photos={photos.map((photo) => ({
+                          id: photo.id,
+                          url: photo.url,
+                          order: photo.order,
+                          isCover: photo.isCover,
+                        }))}
+                      />
+                    ) : (
+                      <PhotoReview
+                        photos={photos}
+                        emptyTitle="Nenhuma foto anexada"
+                        emptyDescription="Continue a inscrição para enviar as 2 fotos obrigatórias."
+                      />
+                    )}
 
                     {canDownloadFramedPhotos && photos.length > 0 && (
                       <div className="mt-5">
@@ -188,9 +267,44 @@ export default async function AccountPage() {
               </Card>
             );
           })}
+
+          {visibleRegistrations.length === 0 && (
+            <Card className="text-center">
+              <h2 className="text-xl font-extrabold text-primary-700">
+                Nenhuma inscrição nesta edição
+              </h2>
+              <p className="mx-auto mt-2 max-w-xl text-sm text-ink-muted">
+                Escolha outra edição acima ou faça uma nova inscrição.
+              </p>
+            </Card>
+          )}
         </div>
       )}
     </Container>
+  );
+}
+
+function YearBadge({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "rounded-full px-4 py-1.5 font-display text-sm font-bold transition",
+        active
+          ? "bg-accent-600 text-white shadow-brand"
+          : "border border-primary-100 bg-white text-primary-700 hover:bg-primary-50",
+      )}
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -284,11 +398,21 @@ const paymentMethodLabel: Record<string, string> = {
 };
 
 const paymentStatusLabel: Record<string, string> = {
-  PENDING: "pendente",
-  CONFIRMED: "confirmado",
-  RECEIVED: "recebido",
-  OVERDUE: "vencido",
-  REFUNDED: "reembolsado",
-  CANCELED: "cancelado",
-  FAILED: "falhou",
+  PENDING: "Pendente",
+  CONFIRMED: "Confirmado",
+  RECEIVED: "Recebido",
+  OVERDUE: "Vencido",
+  REFUNDED: "Reembolsado",
+  CANCELED: "Cancelado",
+  FAILED: "Falhou",
+};
+
+const paymentStatusTone: Record<string, string> = {
+  PENDING: "bg-yellow-50 text-yellow-800",
+  CONFIRMED: "bg-emerald-50 text-emerald-700",
+  RECEIVED: "bg-emerald-50 text-emerald-700",
+  OVERDUE: "bg-red-50 text-red-700",
+  REFUNDED: "bg-sky-50 text-sky-700",
+  CANCELED: "bg-red-50 text-red-700",
+  FAILED: "bg-red-50 text-red-700",
 };

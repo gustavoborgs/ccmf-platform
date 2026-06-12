@@ -170,6 +170,9 @@ export async function createCheckout(params: {
   if (registration.participant.guardianId !== params.guardianId) {
     throw new Error("Inscrição não pertence a este responsável.");
   }
+  if (registration.deletedAt) {
+    throw new Error("Esta inscrição foi cancelada.");
+  }
   if (!["DRAFT", "PENDING_PAYMENT"].includes(registration.status)) {
     throw new Error("Esta inscrição não está aguardando pagamento.");
   }

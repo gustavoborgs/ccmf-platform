@@ -47,6 +47,10 @@ browser → PUT direto no S3 (a imagem não passa pelo servidor Next)
 ## Regras de negócio
 
 1. Máximo de **2 fotos** por inscrição; primeira enviada vira capa.
+   O responsável pode **anexar** (`requestPhotoUploadForGuardian`) ou **substituir**
+   (`replaceRegistrationPhotoForGuardian`) fotos enquanto o pagamento não foi
+   confirmado (`DRAFT`/`PENDING_PAYMENT`). Na substituição, a foto antiga é
+   removida (banco + S3) preservando ordem/capa e uma nova presigned URL é emitida.
 2. Tipos aceitos: `image/jpeg`, `image/png`, `image/webp`. Limite de 10 MB
    (validado no presign via `ContentLength` — pendente).
 3. O banco guarda apenas `storageKey`; URLs públicas via `getPublicUrl()`.

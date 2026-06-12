@@ -228,6 +228,7 @@ export async function resumeEnrollment(guardianId: string, contestId: string) {
       contestId,
       participant: { guardianId },
       status: { in: ["DRAFT", "PENDING_PAYMENT"] },
+      deletedAt: null,
     },
     include: { _count: { select: { photos: true } } },
     orderBy: { createdAt: "desc" },
@@ -288,7 +289,7 @@ export async function resolveResumeLink(publicId: string): Promise<ResumeLinkRes
   }
 
   const registration = await findRegistrationForResume(publicId);
-  if (!registration) return null;
+  if (!registration || registration.deletedAt) return null;
 
   if (registration.status === "DRAFT") {
     return {
@@ -369,7 +370,7 @@ const FUNNEL_BY_STATUS: Partial<Record<string, EnrollmentFunnelStep>> = {
  */
 export async function getEnrollmentFunnel(contestId: string) {
   const registrations = await db.registration.findMany({
-    where: { contestId, status: { not: "REJECTED" } },
+    where: { contestId, status: { not: "REJECTED" }, deletedAt: null },
     include: {
       participant: {
         include: { guardian: { include: { user: { select: { name: true, email: true, phone: true } } } } },
@@ -396,10 +397,10 @@ export async function getEnrollmentFunnel(contestId: string) {
   });
 }
 
-/** Dados mínimos da inscrição para o wizard renderizar o estado atual. */
+/** Dados mínimos da inscrição para o wizard renderizar o estado atual (ignora canceladas). */
 export function getWizardRegistration(registrationId: string) {
-  return db.registration.findUnique({
-    where: { id: registrationId },
+  return db.registration.findFirst({
+    where: { id: registrationId, deletedAt: null },
     select: {
       id: true,
       status: true,
@@ -454,7 +455,7 @@ export async function getWizardStateFromRef(
 
 export function listGuardianRegistrations(guardianId: string) {
   return db.registration.findMany({
-    where: { participant: { guardianId } },
+    where: { participant: { guardianId }, deletedAt: null },
     include: {
       participant: true,
       category: true,
@@ -464,6 +465,46 @@ export function listGuardianRegistrations(guardianId: string) {
       _count: { select: { photos: true } },
     },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+const CANCELABLE_STATUSES = ["DRAFT", "PENDING_PAYMENT"] as const;
+
+/**
+ * Cancelamento pelo responsável — permitido apenas antes da confirmação do
+ * pagamento (DRAFT/PENDING_PAYMENT). Soft delete: marca `deletedAt` e cancela
+ * os Payment locais pendentes (sem chamada ao Asaas nesta versão).
+ */
+export async function cancelGuardianRegistration(guardianId: string, registrationId: string) {
+  const registration = await db.registration.findUnique({
+    where: { id: registrationId },
+    select: {
+      id: true,
+      status: true,
+      deletedAt: true,
+      participant: { select: { guardianId: true } },
+    },
+  });
+  if (!registration || registration.participant.guardianId !== guardianId) {
+    throw new Error("Inscrição não encontrada.");
+  }
+  if (registration.deletedAt) return registration;
+  if (!CANCELABLE_STATUSES.includes(registration.status as (typeof CANCELABLE_STATUSES)[number])) {
+    throw new Error(
+      "Esta inscrição já tem pagamento confirmado e não pode ser cancelada por aqui. Fale com a nossa equipe.",
+    );
+  }
+
+  return db.$transaction(async (tx) => {
+    await tx.payment.updateMany({
+      where: { registrationId: registration.id, status: "PENDING" },
+      data: { status: "CANCELED" },
+    });
+
+    return tx.registration.update({
+      where: { id: registration.id },
+      data: { deletedAt: new Date() },
+    });
   });
 }
 
@@ -477,9 +518,11 @@ const REVIEWABLE_STATUSES = ["PAID", "UNDER_REVIEW"] as const;
 export async function sendRegistrationToReview(registrationId: string) {
   const registration = await db.registration.findUnique({
     where: { id: registrationId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, deletedAt: true },
   });
   if (!registration) throw new Error("Inscrição não encontrada.");
+  // cancelada pelo responsável: não ressuscitar via webhook tardio
+  if (registration.deletedAt) return registration;
   if (!["PENDING_PAYMENT", "PAID"].includes(registration.status)) return registration;
 
   return db.registration.update({
@@ -568,7 +611,7 @@ export async function listAdminRegistrations(filters: AdminRegistrationFilters) 
 function buildAdminRegistrationWhere(
   filters: AdminRegistrationFilters,
 ): Prisma.RegistrationWhereInput {
-  const where: Prisma.RegistrationWhereInput = {};
+  const where: Prisma.RegistrationWhereInput = { deletedAt: null };
 
   if (filters.year) where.contest = { year: filters.year };
   if (filters.categoryId) where.categoryId = filters.categoryId;

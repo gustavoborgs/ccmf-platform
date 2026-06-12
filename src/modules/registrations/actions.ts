@@ -3,20 +3,28 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/modules/auth/guards";
 import { captureLead } from "@/modules/leads/service";
-import { requestPhotoUpload } from "@/modules/media/service";
+import {
+  replaceRegistrationPhotoForGuardian,
+  requestPhotoUpload,
+  requestPhotoUploadForGuardian,
+} from "@/modules/media/service";
 import { getActiveContest } from "@/modules/contests/service";
 import { resolveEnrollmentGuardianId } from "./context";
 import {
   approveRegistration,
+  cancelGuardianRegistration,
   checkCpfExists,
   createRegistration,
   ensureGuardian,
+  getGuardianByUserId,
   linkGuardianByCpf,
   rejectRegistration,
   updateRegistrationParticipant,
 } from "./service";
 import {
   cpfSchema,
+  guardianCancelRegistrationSchema,
+  guardianPhotoReplaceSchema,
   guardianStep1Schema,
   participantSchema,
   photoUploadSchema,
@@ -219,6 +227,80 @@ export async function requestPhotoUploadAction(
 
   try {
     const { photo, uploadUrl } = await requestPhotoUpload(parsed.data);
+    return { ok: true, data: { photoId: photo.id, uploadUrl } };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+// ── Conta do responsável (/conta) ────────────────────────────────────
+
+/** Guardian autenticado da sessão atual (redireciona se não logado). */
+async function requireGuardianId(): Promise<string | null> {
+  const user = await requireRole("GUARDIAN");
+  const guardian = await getGuardianByUserId(user.id);
+  return guardian?.id ?? null;
+}
+
+/** Cancela a inscrição (soft delete) — somente antes do pagamento confirmado. */
+export async function cancelGuardianRegistrationAction(input: unknown): Promise<ActionResult> {
+  const guardianId = await requireGuardianId();
+  if (!guardianId) return { ok: false, error: "Conta de responsável não encontrada." };
+
+  const parsed = guardianCancelRegistrationSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Inscrição inválida." };
+
+  try {
+    await cancelGuardianRegistration(guardianId, parsed.data.registrationId);
+    revalidatePath("/conta");
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Anexa uma nova foto à inscrição — somente antes do pagamento confirmado. */
+export async function uploadGuardianPhotoAction(
+  input: unknown,
+): Promise<ActionResult<{ photoId: string; uploadUrl: string }>> {
+  const guardianId = await requireGuardianId();
+  if (!guardianId) return { ok: false, error: "Conta de responsável não encontrada." };
+
+  const parsed = photoUploadSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Arquivo inválido." };
+  }
+
+  try {
+    const { photo, uploadUrl } = await requestPhotoUploadForGuardian({
+      guardianId,
+      ...parsed.data,
+    });
+    revalidatePath("/conta");
+    return { ok: true, data: { photoId: photo.id, uploadUrl } };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Substitui uma foto da inscrição — somente antes do pagamento confirmado. */
+export async function replaceGuardianPhotoAction(
+  input: unknown,
+): Promise<ActionResult<{ photoId: string; uploadUrl: string }>> {
+  const guardianId = await requireGuardianId();
+  if (!guardianId) return { ok: false, error: "Conta de responsável não encontrada." };
+
+  const parsed = guardianPhotoReplaceSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Arquivo inválido." };
+  }
+
+  try {
+    const { photo, uploadUrl } = await replaceRegistrationPhotoForGuardian({
+      guardianId,
+      ...parsed.data,
+    });
+    revalidatePath("/conta");
     return { ok: true, data: { photoId: photo.id, uploadUrl } };
   } catch (error) {
     return fail(error);

@@ -114,7 +114,8 @@ Regras de segurança do link:
 | `resumeEnrollment(guardianId, contestId)` | Em qual step o responsável parou (derivado) | wizard, `/conta` |
 | `resolveResumeLink(publicId)` | Resolve o link permanente de retomada (lead ou inscrição) | `/inscricao/retomar/[id]` |
 | `getEnrollmentFunnel(contestId)` | Funil de vendas derivado de Registration | `/admin/leads`, dashboard |
-| `listGuardianRegistrations(guardianId)` | Inscrições do responsável | `/conta` |
+| `listGuardianRegistrations(guardianId)` | Inscrições do responsável (ignora canceladas) | `/conta` |
+| `cancelGuardianRegistration(guardianId, registrationId)` | Cancela inscrição não paga (soft delete) | `/conta` |
 
 ## Regras de negócio
 
@@ -127,10 +128,23 @@ Regras de segurança do link:
 6. Responsável pode ter vários filhos: nova inscrição via `/conta/inscricoes/nova`.
 7. Inscrição `REJECTED` pode ser reativada pelo admin (volta a `UNDER_REVIEW`)
    após troca de fotos — evolução futura.
+8. **Cancelamento pelo responsável**: permitido somente antes da confirmação do
+   pagamento (`DRAFT` ou `PENDING_PAYMENT`). É um **soft delete**
+   (`Registration.deletedAt`): a inscrição sai de todas as listagens
+   (conta, admin, funil, retomada), e os `Payment` locais `PENDING` são
+   marcados como `CANCELED` (sem chamada ao Asaas nesta versão).
+9. **Troca de foto pelo responsável**: permitida enquanto o pagamento não foi
+   confirmado (`DRAFT`/`PENDING_PAYMENT`), via módulo `media`
+   (`replaceRegistrationPhotoForGuardian`).
 
 ## Área do responsável (`/conta`)
 
-- Lista inscrições com status e pagamento.
+- Lista inscrições com status e pagamento, com **filtro em badges por edição
+  (ano)** via query string `?ano=`.
+- Card exibe coluna dedicada de **status do pagamento** (método, situação,
+  valor e vencimento da última cobrança).
+- `DRAFT`/`PENDING_PAYMENT`: trocar fotos (crop 3:4) e **cancelar a inscrição**
+  (confirmação em dialog + soft delete).
 - `PAID+`: baixar fotos com moldura (módulo `media`) quando a edição tem
   `frameImageKey`.
 - `APPROVED+`: link público do participante.

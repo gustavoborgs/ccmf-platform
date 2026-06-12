@@ -34,6 +34,7 @@ erDiagram
 | `WebhookEvent` com `externalId` único | Idempotência e auditoria dos webhooks do Asaas. |
 | `Lead` cobre só o pré-conta | O funil pós-conta é **derivado** de `Registration` (fotos/checkout/pagamento) — evita duplicar estado. Lead captura abandono antes do cadastro, identificado por CPF ou e-mail. |
 | `Vote` com `round` | Rodada 1 elege os 80 semifinalistas, rodada 2 os 10 vencedores. |
+| `Registration.deletedAt` (soft delete) | Cancelamento pelo responsável antes do pagamento confirmado. Mantém histórico/auditoria; todas as listagens filtram `deletedAt: null`. |
 | `Partner.type` (`MASTER`/`MEDIA`/`SPONSOR`) | Uma tabela para parceiros master, veículos de comunicação e patrocinadores. |
 | `BlogPost.publishedAt` opcional | Permite rascunho/agendamento; leitura pública só considera posts com data no passado. |
 

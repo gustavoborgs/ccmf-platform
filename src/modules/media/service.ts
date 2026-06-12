@@ -50,6 +50,9 @@ export async function requestPhotoUpload(params: {
     },
   });
 
+  if (registration.deletedAt) {
+    throw new Error("Esta inscrição foi cancelada.");
+  }
   if (registration._count.photos >= MAX_PHOTOS_PER_REGISTRATION) {
     throw new Error(`Limite de ${MAX_PHOTOS_PER_REGISTRATION} fotos por inscrição.`);
   }
@@ -74,6 +77,109 @@ export async function requestPhotoUpload(params: {
   });
 
   return { photo, uploadUrl, registration };
+}
+
+const GUARDIAN_PHOTO_EDIT_STATUSES: readonly string[] = ["DRAFT", "PENDING_PAYMENT"];
+
+/** Nova foto pelo responsável (`/conta`) — antes da confirmação do pagamento. */
+export async function requestPhotoUploadForGuardian(params: {
+  guardianId: string;
+  registrationId: string;
+  fileName: string;
+  contentType: string;
+  width: number;
+  height: number;
+}) {
+  const registration = await db.registration.findUnique({
+    where: { id: params.registrationId },
+    select: {
+      id: true,
+      status: true,
+      deletedAt: true,
+      participant: { select: { guardianId: true } },
+    },
+  });
+  if (!registration || registration.participant.guardianId !== params.guardianId) {
+    throw new Error("Inscrição não encontrada.");
+  }
+  if (registration.deletedAt) {
+    throw new Error("Esta inscrição foi cancelada.");
+  }
+  if (!GUARDIAN_PHOTO_EDIT_STATUSES.includes(registration.status)) {
+    throw new Error("As fotos não podem ser alteradas após a confirmação do pagamento.");
+  }
+
+  return requestPhotoUpload(params);
+}
+
+/**
+ * Substituição de foto pelo responsável (`/conta`) — permitida apenas antes da
+ * confirmação do pagamento. Remove a foto antiga (banco + S3) preservando
+ * ordem/capa e emite presigned URL para o novo arquivo.
+ */
+export async function replaceRegistrationPhotoForGuardian(params: {
+  guardianId: string;
+  photoId: string;
+  fileName: string;
+  contentType: string;
+  width: number;
+  height: number;
+}) {
+  if (!isValidPhotoAspect(params.width, params.height)) {
+    throw new Error("A foto deve estar no formato retrato 3:4 (use o recorte).");
+  }
+
+  const photo = await db.photo.findUnique({
+    where: { id: params.photoId },
+    include: {
+      registration: {
+        select: {
+          id: true,
+          status: true,
+          deletedAt: true,
+          contest: { select: { year: true } },
+          participant: { select: { guardianId: true } },
+        },
+      },
+    },
+  });
+  if (!photo || photo.registration.participant.guardianId !== params.guardianId) {
+    throw new Error("Foto não encontrada.");
+  }
+  if (photo.registration.deletedAt) {
+    throw new Error("Esta inscrição foi cancelada.");
+  }
+  if (!GUARDIAN_PHOTO_EDIT_STATUSES.includes(photo.registration.status)) {
+    throw new Error("As fotos não podem ser alteradas após a confirmação do pagamento.");
+  }
+
+  const key = buildPhotoKey({
+    contestYear: photo.registration.contest.year,
+    registrationId: photo.registration.id,
+    fileName: params.fileName,
+  });
+
+  const { uploadUrl } = await createPresignedUploadUrl(key, params.contentType);
+
+  const newPhoto = await db.$transaction(async (tx) => {
+    await tx.photo.delete({ where: { id: photo.id } });
+    return tx.photo.create({
+      data: {
+        registrationId: photo.registrationId,
+        storageKey: key,
+        order: photo.order,
+        isCover: photo.isCover,
+        width: params.width,
+        height: params.height,
+      },
+    });
+  });
+
+  await deleteObject(photo.storageKey).catch(() => {
+    // objeto antigo órfão no S3 não compromete o fluxo
+  });
+
+  return { photo: newPhoto, uploadUrl };
 }
 
 /** Remove uma foto da inscrição e promove a próxima foto disponível para capa. */
