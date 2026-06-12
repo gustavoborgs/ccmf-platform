@@ -16,6 +16,7 @@ API REST v3 do Asaas para cobranças PIX, Boleto e Cartão de Crédito.
 | Endpoint | Uso |
 | --- | --- |
 | `POST /customers` | Criar customer do responsável (1× por guardian, cache em `GuardianProfile.asaasCustomerId`) |
+| `GET /customers/:id` | Validar se o customer salvo ainda existe no ambiente/conta atual antes de criar cobrança |
 | `POST /payments` | Criar cobrança (`billingType`: PIX/BOLETO/CREDIT_CARD, `externalReference` = registrationId). Cartão envia `creditCard` + `creditCardHolderInfo` + `remoteIp` (exigido pelo Asaas) |
 | `GET /payments/:id` | Conciliação ativa (polling do PIX/boleto via `syncPaymentStatus`) |
 | `GET /payments/:id/pixQrCode` | QR Code (imagem base64) + payload copia-e-cola |

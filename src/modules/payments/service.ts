@@ -3,6 +3,7 @@ import { resolvePagination } from "@/shared/list-params";
 import { asaas, AsaasError } from "@/shared/integrations/asaas/client";
 import type {
   AsaasBillingType,
+  AsaasCustomer,
   AsaasCreditCard,
 } from "@/shared/integrations/asaas/types";
 import type { Prisma } from "@/generated/prisma/client";
@@ -48,15 +49,53 @@ export async function ensureAsaasCustomer(guardianId: string): Promise<string> {
     include: { user: true },
   });
 
-  if (guardian.asaasCustomerId) return guardian.asaasCustomerId;
   if (!guardian.cpf) throw new Error("CPF do responsável é obrigatório para o pagamento.");
 
-  const customer = await asaas.createCustomer({
-    name: guardian.user.name,
-    email: guardian.user.email,
-    cpfCnpj: guardian.cpf,
-    mobilePhone: guardian.whatsapp ?? undefined,
-  });
+  if (guardian.asaasCustomerId) {
+    try {
+      const customer = await asaas.getCustomer(guardian.asaasCustomerId);
+      return customer.id;
+    } catch (error) {
+      if (!(error instanceof AsaasError)) throw error;
+      if (!isInvalidAsaasCustomerError(error)) {
+        console.error("[payments] failed to validate saved Asaas customer", {
+          guardianId,
+          userId: guardian.userId,
+          savedCustomerId: guardian.asaasCustomerId,
+          asaasStatus: error.status,
+          asaasBody: error.body,
+        });
+        throw error;
+      }
+
+      console.warn("[payments] saved Asaas customer is invalid, creating a new one", {
+        guardianId,
+        userId: guardian.userId,
+        savedCustomerId: guardian.asaasCustomerId,
+        asaasStatus: error.status,
+        asaasBody: error.body,
+      });
+    }
+  }
+
+  let customer: AsaasCustomer;
+  try {
+    customer = await asaas.createCustomer({
+      name: guardian.user.name,
+      email: guardian.user.email,
+      cpfCnpj: guardian.cpf,
+      mobilePhone: guardian.whatsapp ?? undefined,
+    });
+  } catch (error) {
+    console.error("[payments] failed to create Asaas customer", {
+      guardianId,
+      userId: guardian.userId,
+      hasCpf: Boolean(guardian.cpf),
+      asaasStatus: error instanceof AsaasError ? error.status : undefined,
+      asaasBody: error instanceof AsaasError ? error.body : undefined,
+    });
+    throw error;
+  }
 
   await db.guardianProfile.update({
     where: { id: guardianId },
@@ -64,6 +103,11 @@ export async function ensureAsaasCustomer(guardianId: string): Promise<string> {
   });
 
   return customer.id;
+}
+
+function isInvalidAsaasCustomerError(error: AsaasError): boolean {
+  const body = error.body as { errors?: { code?: string }[] } | null;
+  return error.status === 404 || body?.errors?.some((item) => item.code === "invalid_customer") === true;
 }
 
 export type CheckoutResult = {
@@ -166,6 +210,16 @@ export async function createCheckout(params: {
     });
   } catch (error) {
     if (error instanceof AsaasError) {
+      console.error("[payments] failed to create Asaas payment", {
+        registrationId: registration.id,
+        guardianId: params.guardianId,
+        method: params.method,
+        customerId,
+        amountCents: registration.contest.registrationFeeCents,
+        dueDate: dueDate.toISOString().slice(0, 10),
+        asaasStatus: error.status,
+        asaasBody: error.body,
+      });
       throw new Error(error.friendlyMessage ?? "Não foi possível processar o pagamento.");
     }
     throw error;

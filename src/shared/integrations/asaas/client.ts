@@ -41,6 +41,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   const body = await response.json().catch(() => null);
   if (!response.ok) {
+    console.error("[asaas] request failed", {
+      path,
+      method: init?.method ?? "GET",
+      status: response.status,
+      baseUrl: env.ASAAS_BASE_URL,
+      body,
+    });
     throw new AsaasError(`Asaas request failed: ${path}`, response.status, body);
   }
   return body as T;
@@ -52,6 +59,10 @@ export const asaas = {
       method: "POST",
       body: JSON.stringify(input),
     });
+  },
+
+  getCustomer(customerId: string) {
+    return request<AsaasCustomer>(`/customers/${customerId}`);
   },
 
   createPayment(input: AsaasCreatePaymentInput) {
