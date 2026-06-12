@@ -53,6 +53,7 @@ export default async function RegistrationPage({
     paymentPending: false,
     summary: null,
     feeFormatted,
+    feeCents: contest.registrationFeeCents,
   };
 
   // Prefill de lead (link de retomada pré-conta) — dados mascarados.
@@ -84,6 +85,7 @@ export default async function RegistrationPage({
         participantName: registration.participant.name,
         categoryName: registration.category.name,
         feeFormatted,
+        feeCents: contest.registrationFeeCents,
       };
       initial.participant = {
         name: registration.participant.name,

@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  centsToAnalyticsValue,
+  registrationFeeItem,
+  trackEvent,
+  trackPurchaseOnce,
+} from "@/shared/analytics/events";
 import { cn } from "@/shared/ui/cn";
 import { Button } from "@/shared/ui/button";
 import {
@@ -39,6 +45,7 @@ export function Checkout({
   registrationId,
   protocol,
   feeFormatted,
+  feeCents,
   hasPendingPayment,
   onPaid,
 }: {
@@ -47,6 +54,7 @@ export function Checkout({
   registrationId: string;
   protocol: string;
   feeFormatted: string;
+  feeCents: number;
   hasPendingPayment: boolean;
   onPaid?: () => void;
 }) {
@@ -60,10 +68,11 @@ export function Checkout({
   const onPaidRef = useRef(onPaid);
   onPaidRef.current = onPaid;
 
-  const markPaid = useCallback(() => {
+  const markPaid = useCallback((paymentMethod?: Method) => {
     setPaid(true);
+    trackPurchaseOnce({ protocol, feeCents, paymentMethod });
     onPaidRef.current?.();
-  }, []);
+  }, [feeCents, protocol]);
 
   // Retomada: restaura a cobrança ativa (ex.: usuário fechou a tela do PIX).
   useEffect(() => {
@@ -76,7 +85,7 @@ export function Checkout({
       if (result.ok && result.data) {
         setCheckout(result.data);
         setMethod(result.data.method);
-        if (result.data.paid) markPaid();
+        if (result.data.paid) markPaid(result.data.method);
       }
     });
 
@@ -95,7 +104,7 @@ export function Checkout({
 
       if (result.data.paid) {
         clearInterval(interval);
-        markPaid();
+        markPaid(checkout.method);
       } else if (result.data.status !== "PENDING") {
         // venceu/cancelou → libera nova tentativa
         clearInterval(interval);
@@ -117,7 +126,17 @@ export function Checkout({
         return;
       }
       setCheckout(result.data);
-      if (result.data.paid) markPaid();
+      trackEvent("add_payment_info", {
+        currency: "BRL",
+        value: centsToAnalyticsValue(feeCents),
+        payment_type: result.data.method,
+        items: registrationFeeItem(feeCents),
+      });
+      trackEvent("payment_generated", {
+        payment_type: result.data.method,
+        status: result.data.status,
+      });
+      if (result.data.paid) markPaid(result.data.method);
     } finally {
       setSubmitting(false);
     }
@@ -125,6 +144,7 @@ export function Checkout({
 
   async function copyPixPayload(payload: string) {
     await navigator.clipboard.writeText(payload).catch(() => null);
+    trackEvent("pix_code_copy", { payment_type: "PIX" });
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   }
@@ -167,6 +187,7 @@ export function Checkout({
               onClick={() => {
                 setMethod(item.id);
                 setError(null);
+                trackEvent("select_payment_method", { payment_type: item.id });
               }}
               className={cn(
                 "rounded-2xl border-2 p-3 text-center transition",
@@ -262,6 +283,7 @@ export function Checkout({
               href={(checkout.boletoUrl ?? checkout.invoiceUrl)!}
               target="_blank"
               rel="noreferrer"
+              onClick={() => trackEvent("boleto_open", { payment_type: "BOLETO" })}
               className="w-full"
             >
               Abrir boleto

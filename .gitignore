@@ -49,3 +49,4 @@ next-env.d.ts
 /data/legacy/*.json
 /docs
 /scripts
+.env.local

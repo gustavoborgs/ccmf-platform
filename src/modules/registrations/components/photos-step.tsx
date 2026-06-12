@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
+import { trackEvent } from "@/shared/analytics/events";
 import { Button } from "@/shared/ui/button";
 import { requestPhotoUploadAction } from "../actions";
 
@@ -83,7 +84,15 @@ export function PhotosStep({
       if (!put.ok) throw new Error("Falha no envio da foto. Tente novamente.");
 
       const previewUrl = URL.createObjectURL(result.blob);
+      const nextUploadedCount = slots.filter((slot, i) => i === slotIndex || Boolean(slot)).length;
       setSlots((current) => current.map((slot, i) => (i === slotIndex ? { previewUrl } : slot)));
+      trackEvent("photo_upload", {
+        photo_slot: slotIndex + 1,
+        photos_count: nextUploadedCount,
+      });
+      if (nextUploadedCount === TOTAL_PHOTOS) {
+        trackEvent("registration_photos_complete", { photos_count: TOTAL_PHOTOS });
+      }
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Erro no envio.");
     } finally {
@@ -140,7 +149,13 @@ export function PhotosStep({
       {uploading && <p className="text-sm font-semibold text-primary-700">Enviando foto...</p>}
       {error && <p className="text-sm font-semibold text-accent-700">{error}</p>}
 
-      <Button onClick={onDone} disabled={uploadedCount < TOTAL_PHOTOS || uploading}>
+      <Button
+        onClick={() => {
+          trackEvent("registration_step_complete", { step: "photos", photos_count: TOTAL_PHOTOS });
+          onDone();
+        }}
+        disabled={uploadedCount < TOTAL_PHOTOS || uploading}
+      >
         Continuar para o pagamento
       </Button>
 

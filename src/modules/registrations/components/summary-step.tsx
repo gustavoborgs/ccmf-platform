@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { Checkout } from "@/modules/payments/components/checkout";
+import {
+  centsToAnalyticsValue,
+  registrationFeeItem,
+  trackEvent,
+} from "@/shared/analytics/events";
 import { Button } from "@/shared/ui/button";
 
 /**
@@ -16,7 +21,13 @@ export function SummaryStep({
 }: {
   wizardRef: string | null;
   registrationId: string;
-  summary: { protocol: string; participantName: string; categoryName: string; feeFormatted: string };
+  summary: {
+    protocol: string;
+    participantName: string;
+    categoryName: string;
+    feeFormatted: string;
+    feeCents: number;
+  };
   paymentPending: boolean;
 }) {
   const [confirmed, setConfirmed] = useState(paymentPending);
@@ -50,7 +61,17 @@ export function SummaryStep({
             Confira os dados antes de gerar a cobrança. Se precisar alterar algo, use os botões das
             etapas acima.
           </p>
-          <Button className="w-full" onClick={() => setConfirmed(true)}>
+          <Button
+            className="w-full"
+            onClick={() => {
+              trackEvent("begin_checkout", {
+                currency: "BRL",
+                value: centsToAnalyticsValue(summary.feeCents),
+                items: registrationFeeItem(summary.feeCents),
+              });
+              setConfirmed(true);
+            }}
+          >
             Confirmar dados e ir para pagamento
           </Button>
         </div>
@@ -60,6 +81,7 @@ export function SummaryStep({
           registrationId={registrationId}
           protocol={summary.protocol}
           feeFormatted={summary.feeFormatted}
+          feeCents={summary.feeCents}
           hasPendingPayment={paymentPending}
         />
       )}

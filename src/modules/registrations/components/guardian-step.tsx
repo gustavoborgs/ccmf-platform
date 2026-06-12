@@ -1,6 +1,8 @@
 "use client";
 
+import posthog from "posthog-js";
 import { useState, useTransition } from "react";
+import { trackEvent } from "@/shared/analytics/events";
 import { Button } from "@/shared/ui/button";
 import { Field, TextInput } from "@/shared/ui/field";
 import {
@@ -90,7 +92,11 @@ export function GuardianStep({
       const result = await checkCpfAction(cpf);
       if (!result.ok) return setError(result.error);
       setCpfStatus(result.data.exists ? "exists" : "new");
-      if (!result.data.exists) void captureLeadAction({ cpf, name: form.name });
+      trackEvent("registration_cpf_checked", { cpf_exists: result.data.exists });
+      if (!result.data.exists) {
+        trackEvent("generate_lead", { method: "enrollment_step_1" });
+        void captureLeadAction({ cpf, name: form.name });
+      }
     });
   }
 
@@ -98,8 +104,15 @@ export function GuardianStep({
     setError(null);
     startTransition(async () => {
       const result = await linkGuardianAction(cpf);
-      if (result.ok) onDone(result.data.ref);
-      else setError(result.error);
+      if (result.ok) {
+        trackEvent("registration_step_complete", {
+          step: "guardian",
+          account_type: "existing",
+        });
+        onDone(result.data.ref);
+      } else {
+        setError(result.error);
+      }
     });
   }
 
@@ -107,8 +120,18 @@ export function GuardianStep({
     setError(null);
     startTransition(async () => {
       const result = await createGuardianAction({ cpf, ...form });
-      if (result.ok) onDone(result.data.ref);
-      else setError(result.error);
+      if (result.ok) {
+        posthog.identify(form.email, { email: form.email, name: form.name });
+        posthog.capture("sign_up", { method: "enrollment_form" });
+        trackEvent("sign_up", { method: "enrollment_form" });
+        trackEvent("registration_step_complete", {
+          step: "guardian",
+          account_type: "new",
+        });
+        onDone(result.data.ref);
+      } else {
+        setError(result.error);
+      }
     });
   }
 

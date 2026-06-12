@@ -24,6 +24,8 @@ export type WizardInitialState = {
     participantName: string;
     categoryName: string;
     feeFormatted: string;
+    feeCents: number;
   } | null;
   feeFormatted: string;
+  feeCents: number;
 };

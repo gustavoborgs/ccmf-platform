@@ -1,6 +1,6 @@
 # Módulo Guardians (visão admin)
 
-> Código: consultas via `registrations`/Prisma · Status: planejado
+> Código: `src/modules/guardians` · Status: em desenvolvimento
 
 ## Objetivo
 
@@ -13,6 +13,9 @@ Visão administrativa dos responsáveis e seus participantes.
 - Listagem paginada: nome, e-mail, telefone, nº de participantes,
   nº de inscrições pagas, data de cadastro.
 - Busca por nome/e-mail/CPF.
+- Modal responsivo com dados cadastrais, endereço, integração Asaas e
+  participantes vinculados.
+- Edição administrativa de dados cadastrais/endereço e definição de nova senha.
 
 ### `/admin/responsaveis/[id]`
 
@@ -29,8 +32,11 @@ Visão administrativa dos responsáveis e seus participantes.
 
 ## Regras de negócio
 
-1. Somente leitura de dados pessoais; correções cadastrais ficam registradas.
-2. Exclusão de responsável só se não houver inscrição paga (LGPD: processo de
+1. Dados pessoais podem ser corrigidos por `ADMIN`; a ação deve validar e
+   normalizar CPF/contatos/endereço antes de persistir.
+2. Nova senha pode ser definida pelo admin sem expor a senha atual; tokens de
+   recuperação pendentes do usuário são invalidados.
+3. Exclusão de responsável só se não houver inscrição paga (LGPD: processo de
    anonimização é evolução futura).
 
 ## Permissões

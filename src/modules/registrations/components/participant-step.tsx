@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { trackEvent } from "@/shared/analytics/events";
 import { Button } from "@/shared/ui/button";
 import { Field, SelectInput, TextInput } from "@/shared/ui/field";
 import { createParticipantAction, updateParticipantAction } from "../actions";
@@ -58,6 +59,12 @@ export function ParticipantStep({
         ? await updateParticipantAction(wizardRef, registrationId, input)
         : await createParticipantAction(wizardRef, input);
       if (result.ok) {
+        trackEvent("registration_step_complete", {
+          step: "participant",
+          category_name: result.data.categoryName,
+          participant_state: form.state,
+          edited_existing: Boolean(registrationId),
+        });
         onDone({
           ...result.data,
           participant: {

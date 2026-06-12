@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import { trackEvent } from "@/shared/analytics/events";
 import { Button, Field, TextInput } from "@/shared/ui";
 import { createContactMessageAction } from "../actions";
 
@@ -37,6 +38,8 @@ export function ContactForm() {
       setPhone("");
       setMessage("");
       setSuccess(true);
+      trackEvent("generate_lead", { method: "contact_form" });
+      trackEvent("contact_form_submit", { has_phone: Boolean(phone) });
     });
   }
 

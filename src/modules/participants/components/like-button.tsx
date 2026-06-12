@@ -1,6 +1,7 @@
 "use client";
 
 import { Heart } from "lucide-react";
+import posthog from "posthog-js";
 import { useEffect, useState, useTransition } from "react";
 import { cn } from "@/shared/ui";
 import { likeRegistrationAction } from "../actions";
@@ -60,6 +61,11 @@ export function LikeButton({
       setLiked(true);
       setJustLiked(true);
       rememberLiked(registrationId);
+      posthog.capture("participant_liked", {
+        registration_id: registrationId,
+        participant_name: participantName,
+        likes_count: result.likesCount,
+      });
     });
   }
 

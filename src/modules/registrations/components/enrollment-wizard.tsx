@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { trackEvent } from "@/shared/analytics/events";
 import { cn } from "@/shared/ui/cn";
 import { WIZARD_REF_COOKIE, WIZARD_REF_MAX_AGE_SECONDS } from "../wizard-cookie";
 import { GuardianStep } from "./guardian-step";
@@ -60,6 +61,14 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
     syncRefToUrl(ref);
     rememberRef(ref);
   }, [ref]);
+
+  useEffect(() => {
+    trackEvent("enrollment_step_view", {
+      step,
+      step_number: currentIndex + 1,
+      registration_resumed: Boolean(initial.ref),
+    });
+  }, [currentIndex, initial.ref, step]);
 
   function advanceRef(nextRef: string) {
     setRef(nextRef);
@@ -162,6 +171,7 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
                 participantName: data.participantName,
                 categoryName: data.categoryName,
                 feeFormatted: initial.feeFormatted,
+                feeCents: initial.feeCents,
               });
               setStep("photos");
             }}

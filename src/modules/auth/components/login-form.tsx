@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSession, signIn } from "next-auth/react";
+import posthog from "posthog-js";
 import { FormEvent, useState, useTransition } from "react";
 import { loginSchema } from "../validators";
 import { Button, Field, TextInput } from "@/shared/ui";
@@ -54,6 +55,15 @@ export function LoginForm({ callbackUrl = "/conta" }: { callbackUrl?: string }) 
             : "/conta";
       const destination =
         parsed.data.callbackUrl === "/conta" ? defaultDestination : parsed.data.callbackUrl;
+
+      if (session?.user?.id) {
+        posthog.identify(session.user.id, {
+          email: session.user.email ?? undefined,
+          name: session.user.name ?? undefined,
+          role: session.user.role,
+        });
+      }
+      posthog.capture("sign_in", { method: "credentials" });
 
       router.push(destination);
       router.refresh();

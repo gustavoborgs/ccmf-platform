@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Share2 } from "lucide-react";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { cn } from "@/shared/ui";
 
@@ -17,6 +18,7 @@ export function ShareButton({ title, text }: { title: string; text: string }) {
     if (navigator.share) {
       try {
         await navigator.share({ title, text, url });
+        posthog.capture("participant_shared", { method: "native_share", url });
         return;
       } catch {
         // usuário cancelou o share — não fazer nada
@@ -25,6 +27,7 @@ export function ShareButton({ title, text }: { title: string; text: string }) {
     }
 
     await navigator.clipboard.writeText(url);
+    posthog.capture("participant_shared", { method: "clipboard_copy", url });
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   }

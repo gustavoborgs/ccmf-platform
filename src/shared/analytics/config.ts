@@ -1,0 +1,4 @@
+export const GA_MEASUREMENT_ID =
+  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "G-3687YJY9H0";
+
+export const GA_STREAM_ID = "4347140559";

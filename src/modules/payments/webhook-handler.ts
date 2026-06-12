@@ -1,5 +1,6 @@
 import { db } from "@/shared/db";
 import { sendRegistrationToReview } from "@/modules/registrations/service";
+import { getPostHogClient } from "@/shared/posthog-server";
 import type { AsaasWebhookEvent } from "@/shared/integrations/asaas/types";
 
 /**
@@ -74,5 +75,17 @@ async function applyEvent(event: AsaasWebhookEvent) {
   // O funil do CRM é derivado de Registration.status — nada a atualizar em Lead.
   if (isPaid && payment.registration.status === "PENDING_PAYMENT") {
     await sendRegistrationToReview(payment.registrationId);
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: payment.registrationId,
+      event: "payment_confirmed",
+      properties: {
+        payment_id: payment.id,
+        registration_id: payment.registrationId,
+        payment_method: payment.method,
+        status: newStatus,
+      },
+    });
   }
 }

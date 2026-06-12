@@ -5,15 +5,10 @@ import {
   DataTable,
   DataTablePagination,
   DataTableToolbar,
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
   type DataTableColumn,
 } from "@/shared/ui";
-import { DetailGrid, DetailSection, formatDateTime, StatusBadge } from "../_components/admin-ui";
+import { StatusBadge } from "../_components/admin-ui";
+import { GuardianDetailsDialog } from "./_components/guardian-details-dialog";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -94,104 +89,4 @@ export default async function AdminGuardiansPage({
       </Card>
     </div>
   );
-}
-
-function GuardianDetailsDialog({ guardian }: { guardian: AdminGuardianListItem }) {
-  return (
-    <Dialog>
-      <DialogTrigger className="rounded-full border border-primary-100 px-4 py-2 text-sm font-bold text-primary-700 transition hover:bg-primary-50">
-        Detalhes
-      </DialogTrigger>
-      <DialogContent className="max-w-3xl">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <DialogTitle>{guardian.user.name}</DialogTitle>
-            <DialogDescription>{guardian.user.email}</DialogDescription>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <StatusBadge tone={guardian.asaasCustomerId ? "success" : "neutral"}>
-              {guardian.asaasCustomerId ? "Asaas vinculado" : "Asaas não criado"}
-            </StatusBadge>
-            <StatusBadge tone="info">{guardian._count.participants} participantes</StatusBadge>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-5 lg:grid-cols-2">
-          <DetailSection title="Dados cadastrais">
-            <DetailGrid
-              items={[
-                ["Nome", guardian.user.name],
-                ["E-mail", guardian.user.email],
-                ["Telefone", guardian.user.phone ?? "Não informado"],
-                ["WhatsApp", guardian.whatsapp ?? "Não informado"],
-                ["CPF", guardian.cpf ?? "Não informado"],
-                ["Cadastro", formatDateTime(guardian.user.createdAt)],
-              ]}
-            />
-          </DetailSection>
-
-          <DetailSection title="Endereço">
-            <DetailGrid
-              items={[
-                ["CEP", guardian.zipCode ?? "Não informado"],
-                ["Cidade/UF", guardian.city && guardian.state ? `${guardian.city}/${guardian.state}` : "Não informado"],
-                ["Bairro", guardian.neighborhood ?? "Não informado"],
-                ["Logradouro", formatAddressLine(guardian)],
-                ["Complemento", guardian.complement ?? "Nenhum"],
-              ]}
-            />
-          </DetailSection>
-        </div>
-
-        <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.2fr]">
-          <DetailSection title="Pagamentos e integração">
-            <div className="flex flex-wrap gap-2">
-              <StatusBadge tone={guardian.paidRegistrationsCount > 0 ? "success" : "neutral"}>
-                {guardian.paidRegistrationsCount} inscrições pagas
-              </StatusBadge>
-              <StatusBadge tone={guardian.asaasCustomerId ? "success" : "neutral"}>
-                {guardian.asaasCustomerId ? "Customer criado" : "Sem customer"}
-              </StatusBadge>
-            </div>
-            <DetailGrid
-              className="mt-4"
-              items={[["Asaas customer", guardian.asaasCustomerId ?? "Não criado"]]}
-            />
-          </DetailSection>
-
-          <DetailSection title="Participantes vinculados">
-            {guardian.participants.length === 0 ? (
-              <p className="text-sm text-ink-muted">Nenhum participante cadastrado.</p>
-            ) : (
-              <div className="space-y-3">
-                {guardian.participants.map((participant) => (
-                  <div
-                    key={participant.id}
-                    className="rounded-xl border border-primary-100 bg-white px-3 py-2"
-                  >
-                    <p className="font-bold text-ink">{participant.name}</p>
-                    <p className="text-sm text-ink-muted">
-                      {participant.city}/{participant.state} · {participant._count.registrations} inscrições ·{" "}
-                      {participant.registrations.length} pagas
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </DetailSection>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <DialogClose className="rounded-full px-5 py-2 text-sm font-bold text-primary-700 transition hover:bg-primary-50">
-            Fechar
-          </DialogClose>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function formatAddressLine(guardian: AdminGuardianListItem) {
-  if (!guardian.street) return "Não informado";
-  return [guardian.street, guardian.number].filter(Boolean).join(", ");
 }
