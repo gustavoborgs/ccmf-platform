@@ -143,7 +143,7 @@ export default function ContactPage() {
         </Container>
       </section>
 
-      <section className="bg-surface-muted py-20">
+      {/* <section className="bg-surface-muted py-20">
         <Container>
           <SectionHeading
             kicker="Envie uma mensagem"
@@ -184,7 +184,7 @@ export default function ContactPage() {
             </Card>
           </div>
         </Container>
-      </section>
+      </section> */}
 
       <section className="py-20">
         <Container>
