@@ -28,7 +28,7 @@ wizard (step 3) → createCheckoutAction(method [, creditCard])
   pré-condições: inscrição DRAFT/PENDING_PAYMENT + 2 fotos enviadas
   1. reuso: Payment PENDING não vencido do mesmo método → retorna a cobrança
      existente (evita duplicar PIX/boleto em reload). Cartão sempre cria nova.
-  2. ensureAsaasCustomer (cria customer com CPF se necessário)
+  2. ensureAsaasCustomer (cria customer com CPF + `notificationDisabled: true`, ou atualiza customer existente)
   3. asaas.createPayment (value em reais, externalReference = registrationId;
      cartão envia creditCard + holderInfo do guardian + remoteIp do request)
   4. PIX: busca QR Code (payload copia-e-cola + imagem base64)

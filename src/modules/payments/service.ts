@@ -54,6 +54,7 @@ export async function ensureAsaasCustomer(guardianId: string): Promise<string> {
   if (guardian.asaasCustomerId) {
     try {
       const customer = await asaas.getCustomer(guardian.asaasCustomerId);
+      await ensureAsaasCustomerNotificationsDisabled(customer);
       return customer.id;
     } catch (error) {
       if (!(error instanceof AsaasError)) throw error;
@@ -85,6 +86,7 @@ export async function ensureAsaasCustomer(guardianId: string): Promise<string> {
       email: guardian.user.email,
       cpfCnpj: guardian.cpf,
       mobilePhone: guardian.whatsapp ?? undefined,
+      notificationDisabled: true,
     });
   } catch (error) {
     console.error("[payments] failed to create Asaas customer", {
@@ -103,6 +105,22 @@ export async function ensureAsaasCustomer(guardianId: string): Promise<string> {
   });
 
   return customer.id;
+}
+
+/** O Asaas não aceita notificationDisabled em POST /payments — herda do customer. */
+async function ensureAsaasCustomerNotificationsDisabled(customer: AsaasCustomer): Promise<void> {
+  if (customer.notificationDisabled) return;
+
+  try {
+    await asaas.updateCustomer(customer.id, { notificationDisabled: true });
+  } catch (error) {
+    console.error("[payments] failed to disable Asaas customer notifications", {
+      customerId: customer.id,
+      asaasStatus: error instanceof AsaasError ? error.status : undefined,
+      asaasBody: error instanceof AsaasError ? error.body : undefined,
+    });
+    throw error;
+  }
 }
 
 function isInvalidAsaasCustomerError(error: AsaasError): boolean {

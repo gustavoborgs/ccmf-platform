@@ -7,12 +7,19 @@ export interface AsaasCustomerInput {
   email: string;
   cpfCnpj: string;
   mobilePhone?: string;
+  /** true desabilita e-mail/SMS/WhatsApp de cobrança enviados pelo Asaas */
+  notificationDisabled?: boolean;
+}
+
+export interface AsaasCustomerUpdateInput {
+  notificationDisabled?: boolean;
 }
 
 export interface AsaasCustomer {
   id: string;
   name: string;
   email: string;
+  notificationDisabled?: boolean;
 }
 
 export interface AsaasCreditCard {

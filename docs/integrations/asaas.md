@@ -15,9 +15,10 @@ API REST v3 do Asaas para cobranças PIX, Boleto e Cartão de Crédito.
 
 | Endpoint | Uso |
 | --- | --- |
-| `POST /customers` | Criar customer do responsável (1× por guardian, cache em `GuardianProfile.asaasCustomerId`) |
+| `POST /customers` | Criar customer do responsável (1× por guardian, cache em `GuardianProfile.asaasCustomerId`). Sempre com `notificationDisabled: true` para o Asaas não enviar e-mail/SMS/WhatsApp de cobrança |
 | `GET /customers/:id` | Validar se o customer salvo ainda existe no ambiente/conta atual antes de criar cobrança |
-| `POST /payments` | Criar cobrança (`billingType`: PIX/BOLETO/CREDIT_CARD, `externalReference` = registrationId). Cartão envia `creditCard` + `creditCardHolderInfo` + `remoteIp` (exigido pelo Asaas) |
+| `PUT /customers/:id` | Garantir `notificationDisabled: true` em customers já existentes (criados antes da regra ou em outro ambiente) |
+| `POST /payments` | Criar cobrança (`billingType`: PIX/BOLETO/CREDIT_CARD, `externalReference` = registrationId). Cartão envia `creditCard` + `creditCardHolderInfo` + `remoteIp` (exigido pelo Asaas). Notificações de cobrança são herdadas do customer — não há `notificationDisabled` neste endpoint |
 | `GET /payments/:id` | Conciliação ativa (polling do PIX/boleto via `syncPaymentStatus`) |
 | `GET /payments/:id/pixQrCode` | QR Code (imagem base64) + payload copia-e-cola |
 
@@ -44,3 +45,5 @@ API REST v3 do Asaas para cobranças PIX, Boleto e Cartão de Crédito.
 3. `externalReference` sempre preenchido com o `registrationId` para conciliação.
 4. Em sandbox, pagamentos PIX podem ser confirmados manualmente no painel.
 5. Cliente HTTP é o único ponto com `fetch` para o Asaas — erros viram `AsaasError`.
+6. Notificações de cobrança do Asaas ficam desabilitadas no customer (`notificationDisabled: true`).
+   A plataforma comunica o pagamento pela própria UI (PIX/boleto/cartão) e pelo webhook.

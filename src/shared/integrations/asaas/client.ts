@@ -3,6 +3,7 @@ import type {
   AsaasCreatePaymentInput,
   AsaasCustomer,
   AsaasCustomerInput,
+  AsaasCustomerUpdateInput,
   AsaasPayment,
   AsaasPixQrCode,
 } from "./types";
@@ -63,6 +64,13 @@ export const asaas = {
 
   getCustomer(customerId: string) {
     return request<AsaasCustomer>(`/customers/${customerId}`);
+  },
+
+  updateCustomer(customerId: string, input: AsaasCustomerUpdateInput) {
+    return request<AsaasCustomer>(`/customers/${customerId}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
   },
 
   createPayment(input: AsaasCreatePaymentInput) {
