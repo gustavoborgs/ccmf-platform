@@ -46,6 +46,9 @@ DRAFT → PENDING_PAYMENT → PAID → UNDER_REVIEW → APPROVED | REJECTED
 APPROVED → SEMIFINALIST → WINNER
 ```
 
+Admin pode sobrescrever manualmente `Registration.status` em `/admin/participantes`
+para corrigir operação, publicação ou resultado sem criar novos status.
+
 ### Payment.status (espelha Asaas)
 
 ```

@@ -50,10 +50,12 @@ browser → PUT direto no S3 (a imagem não passa pelo servidor Next)
 2. Tipos aceitos: `image/jpeg`, `image/png`, `image/webp`. Limite de 10 MB
    (validado no presign via `ContentLength` — pendente).
 3. O banco guarda apenas `storageKey`; URLs públicas via `getPublicUrl()`.
-4. Troca de foto: remove a antiga do S3 (`deleteObject`) e cria nova — só
-   permitida antes da aprovação.
+4. Responsável só envia fotos no fluxo de inscrição antes da finalização. Admin
+   pode adicionar/remover fotos em qualquer status da inscrição.
+5. Remoção de foto apaga o objeto no S3 (`deleteObject`), reordena as fotos
+   restantes e mantém a primeira foto como capa.
 
 ## Permissões
 
 - Upload de fotos: `GUARDIAN` dono da inscrição (status até `UNDER_REVIEW`).
-- Upload de moldura/logos: `ADMIN`.
+- Upload/remoção administrativa de fotos e upload de moldura/logos: `ADMIN`.

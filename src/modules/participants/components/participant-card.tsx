@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Heart, Sparkles, Trophy } from "lucide-react";
 import { cn } from "@/shared/ui";
+import { ParticipantPhotoImage } from "./participant-photo-image";
 
 export type ParticipantCardData = {
   year: number;
@@ -27,17 +27,12 @@ export function ParticipantCard({ participant }: { participant: ParticipantCardD
       className="group relative block overflow-hidden rounded-bubble bg-primary-50 shadow-brand transition hover:-translate-y-1 hover:shadow-brand-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600"
     >
       <div className="relative aspect-[3/4]">
-        {participant.photoUrl ? (
-          <Image
-            src={participant.photoUrl}
-            alt={`Foto de ${participant.name}`}
-            fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-            className="object-cover transition duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-5xl">📷</div>
-        )}
+        <ParticipantPhotoImage
+          src={participant.photoUrl}
+          alt={`Foto de ${participant.name}`}
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+          imageClassName="transition duration-300 group-hover:scale-105"
+        />
 
         <span className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
 

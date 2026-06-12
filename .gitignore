@@ -46,4 +46,6 @@ next-env.d.ts
 
 # dados legados temporários da importação (sensíveis — remover após migração)
 /data/legacy/*.sql
-#/data/legacy/*.json
+/data/legacy/*.json
+/docs
+/scripts

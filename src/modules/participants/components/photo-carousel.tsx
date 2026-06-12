@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { cn } from "@/shared/ui";
+import { ParticipantPhotoImage } from "./participant-photo-image";
 
 type CarouselPhoto = {
   id: string;
@@ -28,8 +29,12 @@ export function PhotoCarousel({
 
   if (photos.length === 0) {
     return (
-      <div className="flex aspect-[3/4] items-center justify-center rounded-bubble bg-primary-50 text-6xl shadow-brand">
-        📷
+      <div className="relative aspect-[3/4] overflow-hidden rounded-bubble bg-primary-50 shadow-brand">
+        <ParticipantPhotoImage
+          alt={alt}
+          sizes="(min-width: 1024px) 40vw, 100vw"
+          priority
+        />
       </div>
     );
   }
@@ -106,13 +111,11 @@ function FramedPhoto({
 }) {
   return (
     <>
-      <Image
+      <ParticipantPhotoImage
         src={photoUrl}
         alt={alt}
-        fill
         priority={priority}
         sizes="(min-width: 1024px) 40vw, 100vw"
-        className="object-cover"
       />
       {frameUrl && (
         <Image

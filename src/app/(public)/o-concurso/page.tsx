@@ -164,7 +164,7 @@ export default function AboutContestPage() {
         <Container className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="relative mx-auto w-full max-w-sm">
             <Image
-              src="/people/child-winner-sash.png"
+              src="/people/live-revelacao-selfie.jpg"
               alt="Criança sorrindo com coroa e a faixa de vencedora do Concurso Criança Mais Fotogênica"
               width={560}
               height={373}
@@ -199,19 +199,61 @@ export default function AboutContestPage() {
         </Container>
       </section>
 
+      <section className="bg-brand-gradient py-20 text-white">
+        <Container className="grid items-center gap-12 lg:grid-cols-[1fr_1.1fr]">
+          <div>
+            <p className="mb-3 inline-block rounded-full bg-white/15 px-4 py-1 font-display text-sm font-bold uppercase tracking-widest">
+              Live Revelação
+            </p>
+            <h2 className="text-balance text-3xl font-extrabold sm:text-4xl">
+              O resultado é anunciado ao vivo, com as famílias
+            </h2>
+            <p className="mt-4 text-lg text-white/90">
+              Cada edição termina na Live Revelação: uma transmissão pública em
+              que os destaques de cada categoria são anunciados ao vivo, com
+              crianças e responsáveis acompanhando juntos esse momento.
+            </p>
+            <p className="mt-3 text-lg text-white/90">
+              É a forma mais transparente de celebrar o resultado, e o encontro
+              das crianças com a fundadora vira memória para toda a família.
+            </p>
+          </div>
+
+          <div className="relative mx-auto w-full max-w-lg">
+            <Image
+              src="/people/fundadora-criancas-live.jpg"
+              alt="Claudia Cavalcante e crianças participantes tirando uma selfie durante a Live Revelação"
+              width={1024}
+              height={683}
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="rounded-bubble border-4 border-white/30 object-cover shadow-brand-lg"
+            />
+            <div className="absolute -bottom-6 left-1/2 w-[85%] -translate-x-1/2 rounded-3xl bg-white px-5 py-3 text-center shadow-brand-lg">
+              <p className="font-display text-sm font-bold uppercase tracking-widest text-accent-600">
+                Resultado ao vivo
+              </p>
+              <p className="mt-1 text-sm font-semibold text-ink-muted">
+                Transmissão pública, aberta para todas as famílias
+              </p>
+            </div>
+          </div>
+        </Container>
+      </section>
+
       <section className="bg-surface-muted py-20">
-        <Container className="grid items-center gap-12 lg:grid-cols-[0.8fr_1.2fr]">
-          <div className="relative mx-auto w-full max-w-sm">
+        <Container className="grid items-center gap-12 lg:grid-cols-[1fr_1fr]">
+          <div className="relative mx-auto w-full max-w-lg">
             <Image
               src="/people/organizadora.png"
-              alt="Organizadora do Concurso Criança Mais Fotogênica"
-              width={520}
-              height={693}
+              alt="Claudia Cavalcante com crianças participantes no palco da Live Revelação do Concurso Criança Mais Fotogênica"
+              width={1024}
+              height={605}
+              sizes="(min-width: 1024px) 48vw, 100vw"
               className="rounded-bubble object-cover shadow-brand-lg"
             />
-            <div className="absolute -bottom-5 -right-4 rounded-3xl bg-white px-5 py-3 shadow-brand-lg">
+            <div className="absolute -bottom-5 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded-3xl bg-white px-5 py-3 text-center shadow-brand-lg">
               <p className="font-display text-lg font-extrabold text-brand-gradient">
-                Comissão organizadora
+                Claudia Cavalcante · Fundadora
               </p>
             </div>
           </div>
@@ -220,8 +262,8 @@ export default function AboutContestPage() {
             <SectionHeading
               align="left"
               kicker="Quem organiza"
-              title="Gente de verdade cuidando de cada edição"
-              description="O concurso é conduzido por uma equipe dedicada, que acompanha as famílias da inscrição até a divulgação dos resultados."
+              title="Conduzido pela fotógrafa Claudia Cavalcante"
+              description="Fundadora do concurso, Claudia lidera uma equipe dedicada que acompanha as famílias da inscrição até a divulgação dos resultados."
             />
 
             <div className="mt-8 grid gap-4">
@@ -234,7 +276,7 @@ export default function AboutContestPage() {
                     Atendimento próximo
                   </h3>
                   <p className="mt-1 text-sm/6 text-ink-muted">
-                    A organizadora e sua equipe respondem responsáveis diretamente
+                    Claudia e sua equipe respondem responsáveis diretamente
                     pelos canais oficiais, do primeiro contato à premiação.
                   </p>
                 </div>

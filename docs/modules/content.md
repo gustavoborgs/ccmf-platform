@@ -33,8 +33,11 @@ contato. Blog foi separado em `docs/modules/blog.md`.
    800x400px (2:1) antes do upload.
 4. Formulário de contato é público (`createContactMessageAction`); admin marca
    como lida (`readAt`) — inbox fica para evolução futura.
-5. Imagens institucionais (crianças e organizadora) são assets estáticos em
-   `public/people/` — não passam pelo S3.
+5. Imagens institucionais (crianças e fundadora) são assets estáticos em
+   `public/people/` — não passam pelo S3. Fotos reais da Live Revelação:
+   `live-revelacao-selfie.jpg` (hero da home e seção "Live Revelação" em
+   `/o-concurso`) e `fundadora-criancas-live.jpg` (seção "Quem organiza" em
+   `/o-concurso`, com Claudia Cavalcante citada nominalmente).
 
 ## Rotas
 

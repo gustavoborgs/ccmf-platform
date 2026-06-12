@@ -45,5 +45,22 @@ export const adminParticipantFiltersSchema = z.object({
   pageSize: pageSizeParam,
 });
 
+export const adminParticipantStatusSchema = z.object({
+  registrationId: z.string().cuid(),
+  status: z.enum(ADMIN_REGISTRATION_STATUSES),
+});
+
+export const adminParticipantPhotoUploadSchema = z.object({
+  registrationId: z.string().cuid(),
+  fileName: z.string().min(1),
+  contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+  width: z.number().int().min(600, "Foto muito pequena (mínimo 600px de largura)"),
+  height: z.number().int().min(800),
+});
+
+export const adminParticipantPhotoSchema = z.object({
+  photoId: z.string().cuid(),
+});
+
 export type AdminParticipantFilters = z.infer<typeof adminParticipantFiltersSchema>;
 export type AdminRegistrationStatus = (typeof ADMIN_REGISTRATION_STATUSES)[number];

@@ -1,5 +1,8 @@
-import { PhotoReview, type ReviewPhoto } from "@/modules/registrations/components/photo-review";
 import { listContestFilterOptions } from "@/modules/contests/service";
+import {
+  AdminParticipantPhotoManager,
+  AdminParticipantStatusControl,
+} from "@/modules/participants/components/admin-participant-controls";
 import { listAdminParticipants } from "@/modules/participants/service";
 import {
   ADMIN_REGISTRATION_STATUSES,
@@ -34,6 +37,11 @@ import {
 
 type SearchParams = Record<string, string | string[] | undefined>;
 type AdminParticipantRow = Awaited<ReturnType<typeof listAdminParticipants>>["items"][number];
+
+const statusOptions = ADMIN_REGISTRATION_STATUSES.map((status) => ({
+  value: status,
+  label: registrationStatusLabel(status),
+}));
 
 const columns: DataTableColumn<AdminParticipantRow>[] = [
   {
@@ -122,10 +130,7 @@ export default async function AdminParticipantsPage({
     {
       id: "status",
       label: "Status",
-      options: ADMIN_REGISTRATION_STATUSES.map((status) => ({
-        value: status,
-        label: registrationStatusLabel(status),
-      })),
+      options: statusOptions,
     },
   ];
 
@@ -168,7 +173,7 @@ function genderLabel(gender: string | null) {
 function ParticipantDetailsDialog({ registration }: { registration: AdminParticipantRow }) {
   const guardian = registration.participant.guardian.user;
   const latestPayment = registration.payments[0];
-  const photos: ReviewPhoto[] = registration.photos.map((photo) => ({
+  const photos = registration.photos.map((photo) => ({
     id: photo.id,
     url: getPublicUrl(photo.storageKey),
     order: photo.order,
@@ -241,6 +246,13 @@ function ParticipantDetailsDialog({ registration }: { registration: AdminPartici
                 <StatusBadge tone="info">Likes: {registration.likesCount}</StatusBadge>
                 <StatusBadge tone="info">Votos: {registration._count.votes}</StatusBadge>
               </div>
+              <div className="mt-4">
+                <AdminParticipantStatusControl
+                  registrationId={registration.id}
+                  currentStatus={registration.status}
+                  options={statusOptions}
+                />
+              </div>
               <DetailGrid
                 className="mt-4"
                 items={[
@@ -257,7 +269,7 @@ function ParticipantDetailsDialog({ registration }: { registration: AdminPartici
           </div>
 
           <DetailSection title="Fotos enviadas">
-            {photos.length > 0 ? <PhotoReview photos={photos} /> : <p className="text-sm text-ink-muted">Sem fotos.</p>}
+            <AdminParticipantPhotoManager registrationId={registration.id} photos={photos} />
           </DetailSection>
         </div>
 

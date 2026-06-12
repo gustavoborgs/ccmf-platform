@@ -6,6 +6,7 @@ import {
   buildPartnerLogoKey,
   buildPhotoKey,
   createPresignedUploadUrl,
+  deleteObject,
   getPublicUrl,
 } from "@/shared/integrations/s3/storage";
 
@@ -42,7 +43,11 @@ export async function requestPhotoUpload(params: {
 
   const registration = await db.registration.findUniqueOrThrow({
     where: { id: params.registrationId },
-    include: { contest: true, _count: { select: { photos: true } } },
+    include: {
+      contest: true,
+      participant: { select: { slug: true } },
+      _count: { select: { photos: true } },
+    },
   });
 
   if (registration._count.photos >= MAX_PHOTOS_PER_REGISTRATION) {
@@ -68,7 +73,46 @@ export async function requestPhotoUpload(params: {
     },
   });
 
-  return { photo, uploadUrl };
+  return { photo, uploadUrl, registration };
+}
+
+/** Remove uma foto da inscrição e promove a próxima foto disponível para capa. */
+export async function removeRegistrationPhoto(photoId: string) {
+  const photo = await db.photo.findUnique({
+    where: { id: photoId },
+    include: {
+      registration: {
+        include: {
+          contest: { select: { year: true } },
+          participant: { select: { slug: true } },
+          photos: { orderBy: { order: "asc" } },
+        },
+      },
+    },
+  });
+  if (!photo) throw new Error("Foto não encontrada.");
+
+  const remainingPhotos = photo.registration.photos.filter((item) => item.id !== photo.id);
+
+  const [, ...updates] = await db.$transaction([
+    db.photo.delete({ where: { id: photo.id } }),
+    ...remainingPhotos.map((item, index) =>
+      db.photo.update({
+        where: { id: item.id },
+        data: { order: index, isCover: index === 0 },
+      }),
+    ),
+  ]);
+
+  await deleteObject(photo.storageKey);
+
+  return {
+    registrationId: photo.registrationId,
+    storageKey: photo.storageKey,
+    contestYear: photo.registration.contest.year,
+    participantSlug: photo.registration.participant.slug,
+    updatedPhotos: updates,
+  };
 }
 
 /** Gera URL de upload direto para a moldura PNG transparente da edição. */

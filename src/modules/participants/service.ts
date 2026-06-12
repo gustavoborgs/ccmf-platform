@@ -2,7 +2,11 @@ import { createHash } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/shared/db";
 import { resolvePagination } from "@/shared/list-params";
-import type { AdminParticipantFilters, PublicGalleryFilters } from "./validators";
+import type {
+  AdminParticipantFilters,
+  AdminRegistrationStatus,
+  PublicGalleryFilters,
+} from "./validators";
 
 /**
  * Módulo Participants: página pública do participante, likes e compartilhamento.
@@ -120,6 +124,42 @@ export async function listAdminParticipants(filters: AdminParticipantFilters) {
   });
 
   return { items, pagination };
+}
+
+/** Alteração administrativa livre do status da inscrição. */
+export async function updateAdminParticipantStatus(
+  registrationId: string,
+  status: AdminRegistrationStatus,
+) {
+  const registration = await db.registration.findUnique({
+    where: { id: registrationId },
+    select: {
+      id: true,
+      approvedAt: true,
+      participant: { select: { slug: true } },
+      contest: { select: { year: true } },
+    },
+  });
+  if (!registration) throw new Error("Inscrição não encontrada.");
+
+  const isPublicStatus = PUBLIC_STATUSES.includes(status as (typeof PUBLIC_STATUSES)[number]);
+
+  const updated = await db.registration.update({
+    where: { id: registration.id },
+    data: {
+      status,
+      approvedAt: isPublicStatus ? (registration.approvedAt ?? new Date()) : null,
+      rejectionReason: status === "REJECTED" ? undefined : null,
+    },
+    select: {
+      id: true,
+      status: true,
+      participant: { select: { slug: true } },
+      contest: { select: { year: true } },
+    },
+  });
+
+  return updated;
 }
 
 function buildAdminParticipantWhere(filters: AdminParticipantFilters): Prisma.RegistrationWhereInput {
