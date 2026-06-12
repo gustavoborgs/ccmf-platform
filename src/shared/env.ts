@@ -20,6 +20,9 @@ const envSchema = z.object({
   ASAAS_BASE_URL: z.string().url(),
   ASAAS_API_KEY: z.string().min(1),
   ASAAS_WEBHOOK_TOKEN: z.string().min(1),
+
+  RESEND_API_KEY: z.string().min(1).optional(),
+  EMAIL_FROM: z.string().email().default("no-reply@criancamaisfotogenica.com.br"),
 });
 
 type Env = z.infer<typeof envSchema>;

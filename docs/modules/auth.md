@@ -19,6 +19,11 @@ jurado (`JUDGE`) e administrador (`ADMIN`).
   existente (ver `registrations.md`).
 - `requiresPasswordSetup` marca responsáveis importados/convites que ainda não
   definiram a própria senha.
+- Recuperação de senha aceita e-mail ou CPF. A resposta pública é sempre
+  genérica para não revelar cadastro; se encontrar usuário, envia link por
+  e-mail com token opaco, armazenado apenas como hash e válido por 1 hora.
+- Ao definir a nova senha pelo link, tokens pendentes do usuário são invalidados,
+  `requiresPasswordSetup` é desmarcado e o usuário é autenticado em seguida.
 - Jurados e admins são criados pelo admin (sem signup público).
 
 ## API pública
@@ -33,6 +38,8 @@ jurado (`JUDGE`) e administrador (`ADMIN`).
 ## Rotas
 
 - `/entrar` — página de login (pública)
+- `/recuperar-senha` — solicita link por e-mail ou CPF
+- `/recuperar-senha/[token]` — define nova senha a partir do link
 - `/api/auth/[...nextauth]` — handlers do Auth.js
 
 ## Regras
@@ -41,8 +48,9 @@ jurado (`JUDGE`) e administrador (`ADMIN`).
 2. Senha mínima de 8 caracteres (`guardianSignupSchema`).
 3. Guards nos layouts dos grupos `(account)` e `(admin)`; actions sensíveis
    revalidam a role mesmo com guard no layout.
+4. Token de recuperação nunca é persistido em claro; somente `tokenHash`
+   (`sha256`) fica no banco.
 
 ## Pendências
 
-- Recuperação de senha por e-mail.
 - Verificação de e-mail (`emailVerifiedAt` já existe no schema).

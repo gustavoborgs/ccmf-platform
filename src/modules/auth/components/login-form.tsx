@@ -84,6 +84,12 @@ export function LoginForm({ callbackUrl = "/conta" }: { callbackUrl?: string }) 
         />
       </Field>
 
+      <div className="-mt-2 text-right text-sm">
+        <Link href="/recuperar-senha" className="font-bold text-accent-700 hover:underline">
+          Esqueci minha senha
+        </Link>
+      </div>
+
       {error && (
         <p className="rounded-2xl border border-accent-200 bg-accent-50 px-4 py-3 text-sm font-semibold text-accent-800">
           {error}
