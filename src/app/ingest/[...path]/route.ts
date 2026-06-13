@@ -1,5 +1,4 @@
 const POSTHOG_API_HOST = "us.i.posthog.com";
-const POSTHOG_ASSETS_HOST = "us-assets.i.posthog.com";
 
 type RouteContext = {
   params: Promise<{ path: string[] }>;
@@ -7,18 +6,14 @@ type RouteContext = {
 
 function buildPostHogUrl(request: Request, path: string[]): { hostname: string; url: URL } {
   const pathname = `/${path.join("/")}`;
-  const hostname =
-    pathname.startsWith("/static/") || pathname.startsWith("/array/")
-      ? POSTHOG_ASSETS_HOST
-      : POSTHOG_API_HOST;
   const url = new URL(request.url);
 
   url.protocol = "https";
-  url.hostname = hostname;
+  url.hostname = POSTHOG_API_HOST;
   url.port = "";
   url.pathname = pathname;
 
-  return { hostname, url };
+  return { hostname: POSTHOG_API_HOST, url };
 }
 
 function buildPostHogHeaders(request: Request, hostname: string): Headers {
