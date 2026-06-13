@@ -168,6 +168,8 @@ export default function AboutContestPage() {
               alt="Criança sorrindo com coroa e a faixa de vencedora do Concurso Criança Mais Fotogênica"
               width={560}
               height={373}
+              quality={75}
+              sizes="(min-width: 768px) 24rem, 100vw"
               className="rounded-bubble object-cover shadow-brand-lg"
             />
             <div className="absolute -bottom-6 left-1/2 w-[85%] -translate-x-1/2 rounded-3xl bg-brand-gradient px-5 py-4 text-white shadow-brand-lg">

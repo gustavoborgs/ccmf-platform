@@ -61,10 +61,11 @@ export default async function HomePage() {
             <Image
               src="/people/live-revelacao-selfie.jpg"
               alt="Claudia Cavalcante e crianças participantes tirando uma selfie durante a Live Revelação do concurso"
-              width={1024}
-              height={683}
+              width={896}
+              height={598}
               priority
-              sizes="(min-width: 1024px) 45vw, 100vw"
+              quality={75}
+              sizes="(min-width: 768px) 28rem, 100vw"
               className="rounded-bubble border-4 border-white/30 object-cover shadow-brand-lg"
             />
             <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 rounded-3xl bg-white px-5 py-4 shadow-brand-lg lg:-left-6 lg:translate-x-0">
