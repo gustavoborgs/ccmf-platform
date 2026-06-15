@@ -1,5 +1,4 @@
 import type { Prisma } from "@/generated/prisma/client";
-import { getActiveContest } from "@/modules/contests/service";
 import { db } from "@/shared/db";
 import { env } from "@/shared/env";
 import { formatNevoaManagerError, nevoaManager } from "@/shared/integrations/nevoa-manager/client";
@@ -34,29 +33,10 @@ export async function runRegistrationResumeWhatsappAutomation(
     };
   }
 
-  const contest = await getActiveContest();
-  if (!contest) {
-    return {
-      ok: true,
-      dryRun: false,
-      eligible: 0,
-      sent: 0,
-      skipped: 0,
-      failed: 0,
-      batchId: null,
-    };
-  }
-
   const { templateId, delayHours, batchLimit } = automation.config;
   const now = new Date();
   const limit = input.limit ?? batchLimit;
-  const candidates = await findResumeCandidates(
-    automation.id,
-    contest.id,
-    delayHours,
-    now,
-    limit,
-  );
+  const candidates = await findResumeCandidates(automation.id, delayHours, now, limit);
 
   if (input.dryRun) {
     return {
@@ -181,7 +161,6 @@ export async function runRegistrationResumeWhatsappAutomation(
 
 async function findResumeCandidates(
   automationId: string,
-  contestId: string,
   delayHours: number,
   now: Date,
   limit: number,
@@ -190,7 +169,6 @@ async function findResumeCandidates(
 
   return db.registration.findMany({
     where: {
-      contestId,
       status: { in: ["DRAFT", "PENDING_PAYMENT"] },
       deletedAt: null,
       createdAt: { lte: cutoff },

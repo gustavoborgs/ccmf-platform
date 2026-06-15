@@ -69,6 +69,25 @@ wizard mesmo quando o usuário volta sem query string.
 | `Registration PENDING_PAYMENT` | Tela de pagamento (reaproveita cobrança ativa) |
 | `Registration PAID+` | Página de status, sem CTA de recuperação |
 
+### Migração para o concurso ativo
+
+Abandonos (`DRAFT`/`PENDING_PAYMENT`) de edições encerradas migram
+automaticamente em `resolveResumeLink` antes do redirect:
+
+| Situação | Comportamento |
+| --- | --- |
+| Inscrição já é do concurso ativo | Retoma normalmente |
+| Mesma criança já tem inscrição na edição ativa | Arquiva a antiga e retoma a da edição ativa |
+| Sem inscrição na edição ativa + idade elegível | Cria nova inscrição `DRAFT` (novo protocolo/categoria), arquiva a antiga |
+| Sem concurso ativo ou idade fora de faixa | Link inerte → início do wizard |
+| `PAID+` em edição antiga | Sem migração — mostra status da inscrição original |
+
+Regras da migração simples:
+
+- **Não** copia fotos — o responsável reenvia no wizard.
+- **Não** reaproveita cobranças pendentes — cancela `Payment` locais e reinicia em `DRAFT`.
+- A inscrição antiga recebe soft delete (`deletedAt`).
+
 Regras de segurança do link:
 
 1. Nunca exibe CPF nem dados do cadastro existente — prefill apenas com o que

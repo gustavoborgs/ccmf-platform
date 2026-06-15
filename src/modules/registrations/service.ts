@@ -252,6 +252,17 @@ export async function resumeEnrollment(guardianId: string, contestId: string) {
 // Link de retomada (/inscricao/retomar/[id])
 // ─────────────────────────────────────────────
 
+const ABANDONED_REGISTRATION_STATUSES = ["DRAFT", "PENDING_PAYMENT"] as const;
+
+const registrationResumeInclude = {
+  participant: { select: { guardianId: true, birthDate: true } },
+  _count: { select: { photos: true } },
+} as const;
+
+type ResumeRegistration = Prisma.RegistrationGetPayload<{
+  include: typeof registrationResumeInclude;
+}>;
+
 export type ResumeLinkResult =
   /** abandonou antes de criar a conta → volta ao step 1 com prefill */
   | {
@@ -288,9 +299,89 @@ export async function resolveResumeLink(publicId: string): Promise<ResumeLinkRes
     };
   }
 
-  const registration = await findRegistrationForResume(publicId);
+  let registration = await findRegistrationForResume(publicId);
   if (!registration || registration.deletedAt) return null;
 
+  if (
+    ABANDONED_REGISTRATION_STATUSES.includes(
+      registration.status as (typeof ABANDONED_REGISTRATION_STATUSES)[number],
+    )
+  ) {
+    const resolved = await ensureRegistrationInActiveContest(registration);
+    if (!resolved) return null;
+    registration = resolved;
+  }
+
+  return toResumeLinkResult(registration);
+}
+
+/**
+ * Abandonos de edições encerradas migram para o concurso ativo antes da
+ * retomada. Abordagem simples: reutiliza inscrição aberta existente ou cria
+ * nova em DRAFT (sem copiar fotos nem cobranças pendentes).
+ */
+async function ensureRegistrationInActiveContest(
+  registration: ResumeRegistration,
+): Promise<ResumeRegistration | null> {
+  const activeContest = await getActiveContest();
+  if (!activeContest) return null;
+
+  if (registration.contestId === activeContest.id) {
+    return registration;
+  }
+
+  const activeRegistration = await db.registration.findFirst({
+    where: {
+      contestId: activeContest.id,
+      participantId: registration.participantId,
+      deletedAt: null,
+    },
+    include: registrationResumeInclude,
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (activeRegistration) {
+    if (activeRegistration.id !== registration.id) {
+      await archiveAbandonedRegistration(registration.id);
+    }
+    return activeRegistration;
+  }
+
+  const category = await findCategoryForBirthDate(
+    activeContest.id,
+    registration.participant.birthDate,
+  );
+  if (!category) {
+    await archiveAbandonedRegistration(registration.id);
+    return null;
+  }
+
+  return db.$transaction(async (tx) => {
+    await tx.payment.updateMany({
+      where: { registrationId: registration.id, status: "PENDING" },
+      data: { status: "CANCELED" },
+    });
+    await tx.registration.update({
+      where: { id: registration.id },
+      data: { deletedAt: new Date() },
+    });
+
+    const sequence = (await tx.registration.count({ where: { contestId: activeContest.id } })) + 1;
+
+    return tx.registration.create({
+      data: {
+        participantId: registration.participantId,
+        contestId: activeContest.id,
+        categoryId: category.id,
+        status: "DRAFT",
+        protocol: buildProtocol(activeContest.year, sequence),
+      },
+      include: registrationResumeInclude,
+    });
+  });
+}
+
+function toResumeLinkResult(registration: ResumeRegistration): ResumeLinkResult {
   if (registration.status === "DRAFT") {
     return {
       kind: "WIZARD",
@@ -311,11 +402,6 @@ export async function resolveResumeLink(publicId: string): Promise<ResumeLinkRes
   }
   return { kind: "COMPLETED", registrationId: registration.id, protocol: registration.protocol };
 }
-
-const registrationResumeInclude = {
-  participant: { select: { guardianId: true } },
-  _count: { select: { photos: true } },
-} as const;
 
 async function findRegistrationForResume(publicId: string) {
   const trimmed = publicId.trim();
@@ -468,7 +554,22 @@ export function listGuardianRegistrations(guardianId: string) {
   });
 }
 
-const CANCELABLE_STATUSES = ["DRAFT", "PENDING_PAYMENT"] as const;
+const CANCELABLE_STATUSES = ABANDONED_REGISTRATION_STATUSES;
+
+/** Soft delete de abandono + cancela cobranças locais pendentes. */
+async function archiveAbandonedRegistration(registrationId: string) {
+  return db.$transaction(async (tx) => {
+    await tx.payment.updateMany({
+      where: { registrationId, status: "PENDING" },
+      data: { status: "CANCELED" },
+    });
+
+    return tx.registration.update({
+      where: { id: registrationId },
+      data: { deletedAt: new Date() },
+    });
+  });
+}
 
 /**
  * Cancelamento pelo responsável — permitido apenas antes da confirmação do
@@ -495,17 +596,7 @@ export async function cancelGuardianRegistration(guardianId: string, registratio
     );
   }
 
-  return db.$transaction(async (tx) => {
-    await tx.payment.updateMany({
-      where: { registrationId: registration.id, status: "PENDING" },
-      data: { status: "CANCELED" },
-    });
-
-    return tx.registration.update({
-      where: { id: registration.id },
-      data: { deletedAt: new Date() },
-    });
-  });
+  return archiveAbandonedRegistration(registration.id);
 }
 
 // ─────────────────────────────────────────────
