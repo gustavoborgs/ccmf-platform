@@ -1,7 +1,12 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { resolveResumeLink } from "@/modules/registrations/service";
 import { WIZARD_REF_COOKIE, WIZARD_REF_MAX_AGE_SECONDS } from "@/modules/registrations/wizard-cookie";
 import { serializeWizardRef } from "@/modules/registrations/wizard-ref";
+import { env } from "@/shared/env";
+
+function appUrl(path: string): string {
+  return new URL(path, env.NEXT_PUBLIC_APP_URL).toString();
+}
 
 /**
  * Link permanente de retomada (WhatsApp/e-mail). Resolve o identificador
@@ -10,21 +15,20 @@ import { serializeWizardRef } from "@/modules/registrations/wizard-ref";
  * Spec: docs/modules/registrations.md
  */
 export async function GET(
-  request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const result = await resolveResumeLink(id);
-  const origin = request.nextUrl.origin;
 
   if (!result) {
-    const response = NextResponse.redirect(new URL("/inscricao", origin));
+    const response = NextResponse.redirect(appUrl("/inscricao"));
     response.cookies.delete(WIZARD_REF_COOKIE);
     return response;
   }
 
   if (result.kind === "PRE_ACCOUNT") {
-    return NextResponse.redirect(new URL(`/inscricao?lead=${result.leadId}`, origin));
+    return NextResponse.redirect(appUrl(`/inscricao?lead=${result.leadId}`));
   }
 
   if (result.kind === "WIZARD") {
@@ -32,9 +36,7 @@ export async function GET(
       guardianId: result.guardianId,
       registrationId: result.registrationId,
     });
-    const response = NextResponse.redirect(
-      new URL(`/inscricao?ref=${encodeURIComponent(ref)}`, origin),
-    );
+    const response = NextResponse.redirect(appUrl(`/inscricao?ref=${encodeURIComponent(ref)}`));
     response.cookies.set(WIZARD_REF_COOKIE, ref, {
       maxAge: WIZARD_REF_MAX_AGE_SECONDS,
       path: "/",
@@ -44,7 +46,7 @@ export async function GET(
   }
 
   const response = NextResponse.redirect(
-    new URL(`/inscricao/confirmada?protocolo=${encodeURIComponent(result.protocol)}`, origin),
+    appUrl(`/inscricao/confirmada?protocolo=${encodeURIComponent(result.protocol)}`),
   );
   response.cookies.delete(WIZARD_REF_COOKIE);
   return response;
