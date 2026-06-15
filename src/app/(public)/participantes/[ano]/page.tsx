@@ -153,11 +153,14 @@ export default async function ParticipantsGalleryPage({ params, searchParams }: 
         <Container>
           {cards.length > 0 ? (
             <>
-              <p className="mb-5 text-sm text-ink-muted">
+              {/* <p className="mb-5 text-sm text-ink-muted">
                 {cards.length === 1
                   ? "1 participante"
                   : `${cards.length.toLocaleString("pt-BR")} participantes`}
                 {hasFilters && " com os filtros aplicados"} · ordenados por curtidas
+              </p> */}
+              <p className="mb-5 text-sm text-ink-muted">
+                · Participantesordenados por curtidas
               </p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
                 {cards.map((card) => (

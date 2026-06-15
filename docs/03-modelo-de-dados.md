@@ -17,6 +17,8 @@ erDiagram
     Registration ||--o{ Payment : "cobranças"
     Registration ||--o{ Like : "likes públicos"
     Registration ||--o{ Vote : "votos dos jurados"
+    Registration ||--o{ AutomationLog : "automações"
+    Automation ||--o{ AutomationLog : "logs"
     User ||--o{ Vote : "jurado"
     Lead ||--o{ LeadEvent : "histórico"
 ```
@@ -32,6 +34,8 @@ erDiagram
 | `likesCount` desnormalizado em `Registration` | Leitura barata na galeria; fonte de verdade é a tabela `likes` (unique por fingerprint). |
 | `Payment` 1:N com `Registration` | Uma inscrição pode ter mais de uma tentativa de cobrança (ex.: boleto vencido → novo PIX). |
 | `WebhookEvent` com `externalId` único | Idempotência e auditoria dos webhooks do Asaas. |
+| `AutomationLog` genérico | Auditoria e idempotência de disparos automáticos (WhatsApp/e-mail futuros), sem duplicar estado de funil. |
+| `Automation` com `config` JSON tipado | Definição de cada automação (template, cadência, limites) persistida no banco. |
 | `Lead` cobre só o pré-conta | O funil pós-conta é **derivado** de `Registration` (fotos/checkout/pagamento) — evita duplicar estado. Lead captura abandono antes do cadastro, identificado por CPF ou e-mail. |
 | `Vote` com `round` | Rodada 1 elege os 80 semifinalistas, rodada 2 os 10 vencedores. |
 | `Registration.deletedAt` (soft delete) | Cancelamento pelo responsável antes do pagamento confirmado. Mantém histórico/auditoria; todas as listagens filtram `deletedAt: null`. |

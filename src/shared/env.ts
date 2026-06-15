@@ -23,6 +23,11 @@ const envSchema = z.object({
 
   RESEND_API_KEY: z.string().min(1).optional(),
   EMAIL_FROM: z.string().email().default("no-reply@criancamaisfotogenica.com.br"),
+
+  NEVOA_MANAGER_BASE_URL: z.string().url().optional(),
+  NEVOA_MANAGER_WEBHOOK_ID: z.string().min(1).optional(),
+  NEVOA_MANAGER_TOKEN: z.string().min(1).optional(),
+  AUTOMATION_WORKER_TOKEN: z.string().min(1).optional(),
 });
 
 type Env = z.infer<typeof envSchema>;

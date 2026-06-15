@@ -26,6 +26,7 @@ Specs da plataforma do **Concurso Criança Mais Fotogênica do Brasil**.
 | Participants | [modules/participants.md](./modules/participants.md) | `src/modules/participants` |
 | Payments | [modules/payments.md](./modules/payments.md) | `src/modules/payments` |
 | Leads (CRM) | [modules/leads.md](./modules/leads.md) | `src/modules/leads` |
+| Automations | [modules/automations.md](./modules/automations.md) | `src/modules/automations` |
 | Judging | [modules/judging.md](./modules/judging.md) | `src/modules/judging` |
 | Blog | [modules/blog.md](./modules/blog.md) | `src/modules/blog` |
 | Content | [modules/content.md](./modules/content.md) | `src/modules/content` |

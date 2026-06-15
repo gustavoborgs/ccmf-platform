@@ -38,6 +38,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         description: "Cobranças, conciliação Asaas e status.",
         status: "available",
       },
+      {
+        href: "/admin/automacoes",
+        label: "Automações",
+        description: "Logs de disparos WhatsApp e próximas rotinas.",
+        status: "available",
+      },
     ],
   },
   {

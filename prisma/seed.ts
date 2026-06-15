@@ -2,6 +2,11 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
+import {
+  DEFAULT_REGISTRATION_RESUME_WHATSAPP_CONFIG,
+  REGISTRATION_RESUME_WHATSAPP_META,
+  REGISTRATION_RESUME_WHATSAPP_TYPE,
+} from "../src/modules/automations/registration-resume-whatsapp/constants";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -60,7 +65,20 @@ async function main() {
     });
   }
 
-  console.log("Seed concluído: admin + concurso 2026 + categorias + parceiros.");
+  await prisma.automation.upsert({
+    where: { type: REGISTRATION_RESUME_WHATSAPP_TYPE },
+    update: {},
+    create: {
+      type: REGISTRATION_RESUME_WHATSAPP_TYPE,
+      name: REGISTRATION_RESUME_WHATSAPP_META.name,
+      description: REGISTRATION_RESUME_WHATSAPP_META.description,
+      channel: "WHATSAPP",
+      enabled: true,
+      config: DEFAULT_REGISTRATION_RESUME_WHATSAPP_CONFIG,
+    },
+  });
+
+  console.log("Seed concluído: admin + concurso 2026 + categorias + parceiros + automações.");
 }
 
 main()

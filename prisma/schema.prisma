@@ -187,13 +187,14 @@ model Registration {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
-  participant Participant @relation(fields: [participantId], references: [id])
-  contest     Contest     @relation(fields: [contestId], references: [id])
-  category    Category    @relation(fields: [categoryId], references: [id])
-  photos      Photo[]
-  payments    Payment[]
-  votes       Vote[]
-  likes       Like[]
+  participant    Participant     @relation(fields: [participantId], references: [id])
+  contest        Contest         @relation(fields: [contestId], references: [id])
+  category       Category        @relation(fields: [categoryId], references: [id])
+  photos         Photo[]
+  payments       Payment[]
+  votes          Vote[]
+  likes          Like[]
+  automationLogs AutomationLog[]
 
   @@unique([participantId, contestId])
   @@index([contestId, status])
@@ -272,6 +273,67 @@ model WebhookEvent {
   createdAt   DateTime  @default(now())
 
   @@map("webhook_events")
+}
+
+// ─────────────────────────────────────────────
+// Automações / Mensageria
+// ─────────────────────────────────────────────
+
+enum AutomationType {
+  REGISTRATION_RESUME_WHATSAPP
+}
+
+enum AutomationChannel {
+  WHATSAPP
+}
+
+enum AutomationStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+/// Definição de uma automação operacional (config tipada por `type` no código).
+model Automation {
+  id          String            @id @default(cuid())
+  type        AutomationType    @unique
+  name        String
+  description String?
+  channel     AutomationChannel
+  enabled     Boolean           @default(true)
+  /// Configuração específica do tipo — validada em `src/modules/automations/types.ts`.
+  config      Json
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  logs AutomationLog[]
+
+  @@map("automations")
+}
+
+model AutomationLog {
+  id              String           @id @default(cuid())
+  automationId    String
+  status          AutomationStatus @default(PENDING)
+  registrationId  String?
+  recipientName   String
+  recipientPhone  String
+  externalBatchId String?
+  externalJobId   String?
+  payload         Json?
+  error           String?
+  scheduledFor    DateTime?
+  sentAt          DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  automation   Automation    @relation(fields: [automationId], references: [id])
+  registration Registration? @relation(fields: [registrationId], references: [id])
+
+  @@unique([automationId, registrationId])
+  @@index([automationId, status, createdAt])
+  @@map("automation_logs")
 }
 
 // ─────────────────────────────────────────────
