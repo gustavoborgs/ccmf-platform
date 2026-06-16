@@ -133,7 +133,7 @@ Regras de segurança do link:
 | `resumeEnrollment(guardianId, contestId)` | Em qual step o responsável parou (derivado) | wizard, `/conta` |
 | `resolveResumeLink(publicId)` | Resolve o link permanente de retomada (lead ou inscrição) | `/inscricao/retomar/[id]` |
 | `getEnrollmentFunnel(contestId)` | Funil de vendas derivado de Registration | `/admin/leads`, dashboard |
-| `listGuardianRegistrations(guardianId)` | Inscrições do responsável (ignora canceladas) | `/conta` |
+| `listGuardianRegistrations(guardianId)` | Inscrições do responsável em edições ativas (ignora canceladas e arquivadas) | `/conta` |
 | `cancelGuardianRegistration(guardianId, registrationId)` | Cancela inscrição não paga (soft delete) | `/conta` |
 
 ## Regras de negócio

@@ -23,6 +23,7 @@ Gestão das edições anuais do concurso e suas categorias.
 | --- | --- | --- |
 | `getActiveContest()` | Edição com `REGISTRATION_OPEN` (no máx. uma) | wizard, home |
 | `getContestByYear(year)` | Edição por ano | páginas públicas, admin |
+| `getPublicContestByYear(year)` | Edição pública por ano (exclui rascunho/arquivada) | galeria `/participantes` |
 | `findCategoryForBirthDate(contestId, birthDate)` | Categoria pela idade em meses | `registrations` |
 | `listAdminContests(filters)` | Listagem paginada (busca + status) | `/admin/concursos` |
 | `getAdminContestById(id)` | Edição + categorias + contagens | `/admin/concursos/[id]` |

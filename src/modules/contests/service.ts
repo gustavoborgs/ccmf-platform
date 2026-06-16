@@ -2,7 +2,14 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/shared/db";
 import { resolvePagination } from "@/shared/list-params";
 import { ageInMonths, slugify } from "@/shared/utils";
-import type { AdminContestFilters, CategoryFormInput, ContestFormInput, ContestStatusValue } from "./validators";
+import type {
+  AdminContestFilters,
+  CategoryFormInput,
+  ContestFormInput,
+  ContestStatusValue,
+  PublicContestStatusValue,
+} from "./validators";
+import { PUBLIC_CONTEST_STATUSES } from "./validators";
 
 /**
  * Módulo Contests: concurso ativo, categorias e regras de elegibilidade.
@@ -36,6 +43,17 @@ export function listContestFilterOptions() {
 export function getContestByYear(year: number) {
   return db.contest.findUnique({
     where: { year },
+    include: { categories: { orderBy: { order: "asc" } } },
+  });
+}
+
+/** Edição pública por ano — retorna `null` para rascunho ou arquivada. */
+export function getPublicContestByYear(year: number) {
+  return db.contest.findFirst({
+    where: {
+      year,
+      status: { in: [...PUBLIC_CONTEST_STATUSES] satisfies PublicContestStatusValue[] },
+    },
     include: { categories: { orderBy: { order: "asc" } } },
   });
 }

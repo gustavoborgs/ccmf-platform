@@ -18,6 +18,16 @@ export const CONTEST_STATUSES = [
 
 export type ContestStatusValue = (typeof CONTEST_STATUSES)[number];
 
+/** Edições visíveis no site público e na área do responsável (≠ rascunho/arquivada). */
+export const PUBLIC_CONTEST_STATUSES = [
+  "REGISTRATION_OPEN",
+  "REGISTRATION_CLOSED",
+  "JUDGING",
+  "RESULTS_PUBLISHED",
+] as const satisfies readonly ContestStatusValue[];
+
+export type PublicContestStatusValue = (typeof PUBLIC_CONTEST_STATUSES)[number];
+
 // ── Listagem administrativa (searchParams) ───────────────────────────
 
 export const adminContestFiltersSchema = z.object({

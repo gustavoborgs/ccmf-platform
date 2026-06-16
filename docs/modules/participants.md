@@ -26,7 +26,7 @@ individual, likes e compartilhamento.
 
 | Função | Descrição |
 | --- | --- |
-| `listPublicYears()` | Anos com participantes públicos (recente primeiro) |
+| `listPublicYears()` | Anos ativos com participantes públicos (recente primeiro) |
 | `listPublicParticipants(year, filters?)` | Galeria do ano (filtros: `q`, `categorySlug`), ordenada por likes |
 | `getPublicParticipant(year, slug)` | Página individual (fotos com capa primeiro) |
 | `likeRegistration(registrationId, fingerprint)` | Like único por visitante |
@@ -51,7 +51,9 @@ individual, likes e compartilhamento.
 6. O admin pode alterar manualmente o `Registration.status` em qualquer etapa.
    Status públicos (`APPROVED`, `SEMIFINALIST`, `WINNER`) publicam o participante;
    os demais removem da galeria pública.
-7. O admin pode adicionar/remover fotos mesmo após publicação. O limite continua
+7. Somente edições **ativas** (`REGISTRATION_OPEN` … `RESULTS_PUBLISHED`) aparecem
+   na galeria — rascunhos e edições arquivadas ficam ocultas, mesmo com aprovados.
+8. O admin pode adicionar/remover fotos mesmo após publicação. O limite continua
    sendo 2 fotos por inscrição; ao remover a capa, a próxima foto vira capa.
 
 ## Permissões

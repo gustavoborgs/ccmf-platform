@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/shared/db";
 import { resolvePagination } from "@/shared/list-params";
+import { PUBLIC_CONTEST_STATUSES } from "@/modules/contests/validators";
 import type {
   AdminParticipantFilters,
   AdminRegistrationStatus,
@@ -16,10 +17,13 @@ import type {
 /** Status visíveis publicamente — nunca expor inscrições fora desta lista. */
 const PUBLIC_STATUSES = ["APPROVED", "SEMIFINALIST", "WINNER"] as const;
 
-/** Anos de edições com participantes públicos (mais recente primeiro). */
+/** Anos de edições ativas com participantes públicos (mais recente primeiro). */
 export async function listPublicYears(): Promise<number[]> {
   const contests = await db.contest.findMany({
-    where: { registrations: { some: { status: { in: [...PUBLIC_STATUSES] } } } },
+    where: {
+      status: { in: [...PUBLIC_CONTEST_STATUSES] },
+      registrations: { some: { status: { in: [...PUBLIC_STATUSES] } } },
+    },
     select: { year: true },
     orderBy: { year: "desc" },
   });
@@ -30,7 +34,7 @@ export async function listPublicYears(): Promise<number[]> {
 export function listPublicParticipants(year: number, filters: Partial<PublicGalleryFilters> = {}) {
   return db.registration.findMany({
     where: {
-      contest: { year },
+      contest: { year, status: { in: [...PUBLIC_CONTEST_STATUSES] } },
       status: { in: [...PUBLIC_STATUSES] },
       ...(filters.categorySlug ? { category: { slug: filters.categorySlug } } : {}),
       ...(filters.q
@@ -49,7 +53,7 @@ export function listPublicParticipants(year: number, filters: Partial<PublicGall
 export function getPublicParticipant(year: number, slug: string) {
   return db.registration.findFirst({
     where: {
-      contest: { year },
+      contest: { year, status: { in: [...PUBLIC_CONTEST_STATUSES] } },
       participant: { slug },
       status: { in: [...PUBLIC_STATUSES] },
     },

@@ -3,6 +3,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/shared/db";
 import { resolvePagination } from "@/shared/list-params";
 import { getActiveContest } from "@/modules/contests/service";
+import { PUBLIC_CONTEST_STATUSES } from "@/modules/contests/validators";
 import { buildProtocol, slugify } from "@/shared/utils";
 import { findCategoryForBirthDate } from "@/modules/contests/service";
 import type {
@@ -541,7 +542,11 @@ export async function getWizardStateFromRef(
 
 export function listGuardianRegistrations(guardianId: string) {
   return db.registration.findMany({
-    where: { participant: { guardianId }, deletedAt: null },
+    where: {
+      participant: { guardianId },
+      deletedAt: null,
+      contest: { status: { in: [...PUBLIC_CONTEST_STATUSES] } },
+    },
     include: {
       participant: true,
       category: true,

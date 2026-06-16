@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getContestByYear } from "@/modules/contests/service";
+import { getPublicContestByYear } from "@/modules/contests/service";
 import { GallerySearch } from "@/modules/participants/components/gallery-search";
 import {
   ParticipantCard,
@@ -46,7 +46,7 @@ export default async function ParticipantsGalleryPage({ params, searchParams }: 
   const year = parseYear(ano);
   if (!year) notFound();
 
-  const contest = await getContestByYear(year);
+  const contest = await getPublicContestByYear(year);
   if (!contest) notFound();
 
   const rawParams = await searchParams;
