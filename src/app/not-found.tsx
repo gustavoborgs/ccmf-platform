@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { SearchX } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import { Button, Card, Container } from "@/shared/ui";
 
 export const metadata: Metadata = {
@@ -16,9 +17,16 @@ export default function NotFound() {
       <Container>
         <Card className="mx-auto max-w-2xl overflow-hidden p-0 text-center">
           <div className="bg-brand-gradient px-6 py-10 text-white sm:px-10">
-            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/15">
-              <SearchX className="h-8 w-8" aria-hidden="true" />
-            </span>
+            <Link href="/" className="mx-auto inline-block">
+              <Image
+                src="/brand/logo-full.png"
+                alt="CCMF — Concurso Criança Mais Fotogênica"
+                width={340}
+                height={308}
+                priority
+                className="mx-auto h-auto w-full max-w-[220px] sm:max-w-xs"
+              />
+            </Link>
             <p className="mt-5 font-display text-sm font-extrabold uppercase tracking-widest text-white/80">
               Erro 404
             </p>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { buildWhatsAppUrl, CONTACT } from "@/shared/contact";
 import { Button, Container } from "@/shared/ui";
 import { MobileNav } from "./_components/mobile-nav";
+import { WhatsAppFloat } from "./_components/whatsapp-float";
 
 const NAV_LINKS = [
   { href: "/", label: "Inicial" },
@@ -125,6 +126,8 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
           © {COPYRIGHT_YEAR} Criança Mais Fotogênica. Todos os direitos reservados.
         </div>
       </footer>
+
+      <WhatsAppFloat />
     </div>
   );
 }
