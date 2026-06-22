@@ -1,4 +1,5 @@
 import { Button, Container } from "@/shared/ui";
+import { InscricaoConfirmadaTracker } from "./inscricao-confirmada-tracker";
 
 /** Destino do link de retomada quando a inscrição já está paga. */
 export default async function ConfirmedPage({
@@ -10,6 +11,7 @@ export default async function ConfirmedPage({
 
   return (
     <Container className="py-24 text-center">
+      {protocolo && <InscricaoConfirmadaTracker protocol={protocolo} />}
       <h1 className="text-3xl font-extrabold">
         <span className="text-brand-gradient">Inscrição confirmada!</span>
       </h1>

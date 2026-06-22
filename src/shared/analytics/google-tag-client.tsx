@@ -2,7 +2,6 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import { GA_MEASUREMENT_ID } from "./config";
 import { trackEvent, trackPageView } from "./events";
 
 function getLinkLabel(anchor: HTMLAnchorElement): string {
@@ -18,7 +17,7 @@ export function GoogleAnalyticsPageViews() {
     if (!pathname) return;
 
     const path = search ? `${pathname}?${search}` : pathname;
-    trackPageView(path, GA_MEASUREMENT_ID);
+    trackPageView(path);
   }, [pathname, search]);
 
   return null;

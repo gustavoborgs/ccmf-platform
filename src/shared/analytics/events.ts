@@ -1,3 +1,5 @@
+import { getGtagDestinationIds } from "./config";
+
 type AnalyticsValue =
   | string
   | number
@@ -41,10 +43,20 @@ export function registrationFeeItem(feeCents: number) {
   ];
 }
 
+function withGtagDestinations(params: AnalyticsParams): AnalyticsParams {
+  const destinations = getGtagDestinationIds();
+  if (destinations.length === 0) return params;
+
+  return {
+    ...params,
+    send_to: destinations.length === 1 ? destinations[0] : destinations,
+  };
+}
+
 export function trackEvent(eventName: string, params: AnalyticsParams = {}) {
   if (typeof window === "undefined") return;
 
-  const cleaned = cleanParams(params);
+  const cleaned = withGtagDestinations(cleanParams(params));
   if (window.gtag) {
     window.gtag("event", eventName, cleaned);
     return;
@@ -54,7 +66,7 @@ export function trackEvent(eventName: string, params: AnalyticsParams = {}) {
   window.dataLayer.push(["event", eventName, cleaned]);
 }
 
-export function trackPageView(path: string, measurementId: string) {
+export function trackPageView(path: string) {
   if (typeof window === "undefined") return;
 
   const params = {
@@ -63,13 +75,18 @@ export function trackPageView(path: string, measurementId: string) {
     page_title: document.title,
   };
 
+  const destinations = getGtagDestinationIds();
   if (window.gtag) {
-    window.gtag("config", measurementId, params);
+    for (const destinationId of destinations) {
+      window.gtag("config", destinationId, params);
+    }
     return;
   }
 
   window.dataLayer = window.dataLayer ?? [];
-  window.dataLayer.push(["config", measurementId, params]);
+  for (const destinationId of destinations) {
+    window.dataLayer.push(["config", destinationId, params]);
+  }
 }
 
 export function trackOnce(key: string, eventName: string, params: AnalyticsParams = {}) {
@@ -100,4 +117,27 @@ export function trackPurchaseOnce({
     payment_type: paymentMethod,
     items: registrationFeeItem(feeCents),
   });
+}
+
+/** Conversão Google Ads — dispara no pagamento confirmado e na página /inscricao/confirmada. */
+export function trackInscricaoConfirmadaOnce({
+  protocol,
+  feeCents,
+  paymentMethod,
+}: {
+  protocol: string;
+  feeCents?: number;
+  paymentMethod?: string;
+}) {
+  const params: AnalyticsParams = { transaction_id: protocol };
+
+  if (feeCents !== undefined) {
+    params.currency = "BRL";
+    params.value = centsToAnalyticsValue(feeCents);
+  }
+  if (paymentMethod) {
+    params.payment_type = paymentMethod;
+  }
+
+  trackOnce(`inscricao_confirmada_${protocol}`, "inscricao_confirmada", params);
 }

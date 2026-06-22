@@ -5,6 +5,7 @@ import {
   centsToAnalyticsValue,
   registrationFeeItem,
   trackEvent,
+  trackInscricaoConfirmadaOnce,
   trackPurchaseOnce,
 } from "@/shared/analytics/events";
 import { cn } from "@/shared/ui/cn";
@@ -71,6 +72,7 @@ export function Checkout({
   const markPaid = useCallback((paymentMethod?: Method) => {
     setPaid(true);
     trackPurchaseOnce({ protocol, feeCents, paymentMethod });
+    trackInscricaoConfirmadaOnce({ protocol, feeCents, paymentMethod });
     onPaidRef.current?.();
   }, [feeCents, protocol]);
 
