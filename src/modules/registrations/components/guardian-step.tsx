@@ -1,5 +1,6 @@
 "use client";
 
+import { Lock } from "lucide-react";
 import posthog from "posthog-js";
 import { useState, useTransition } from "react";
 import { trackEvent } from "@/shared/analytics/events";
@@ -14,8 +15,9 @@ import {
 import { fetchAddressByCep, formatCep } from "./address-by-cep";
 
 /**
- * Step 1 — Responsável (CPF-first).
- * CPF existente → vincula sem autenticar. CPF novo → cadastro + endereço via CEP.
+ * Step 1 — Responsável. Nome, e-mail, telefone e CPF ficam sempre visíveis
+ * (formulário acolhedor, não um CPF isolado). O endereço (+ senha) só aparece
+ * quando o CPF ainda não tem cadastro. CPF existente vincula sem autenticar.
  */
 
 type CpfStatus = "idle" | "exists" | "new";
@@ -39,6 +41,14 @@ function formatCpf(value: string): string {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
 
+function formatPhone(value: string): string {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 11)
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
 export function GuardianStep({
   prefill,
   onDone,
@@ -59,6 +69,14 @@ export function GuardianStep({
   const [cepHint, setCepHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const cpfDigits = cpf.replace(/\D/g, "");
+  const phoneDigits = form.phone.replace(/\D/g, "");
+  const contactReady =
+    form.name.trim().length >= 3 &&
+    /.+@.+\..+/.test(form.email) &&
+    phoneDigits.length >= 10 &&
+    cpfDigits.length === 11;
 
   async function lookupCep(rawCep: string) {
     const digits = rawCep.replace(/\D/g, "");
@@ -93,9 +111,14 @@ export function GuardianStep({
       if (!result.ok) return setError(result.error);
       setCpfStatus(result.data.exists ? "exists" : "new");
       trackEvent("registration_cpf_checked", { cpf_exists: result.data.exists });
+      void captureLeadAction({
+        cpf,
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+      });
       if (!result.data.exists) {
         trackEvent("generate_lead", { method: "enrollment_step_1" });
-        void captureLeadAction({ cpf, name: form.name });
       }
     });
   }
@@ -135,9 +158,66 @@ export function GuardianStep({
     });
   }
 
+  function captureContactLead() {
+    void captureLeadAction({
+      cpf,
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+    });
+  }
+
   return (
     <div className="space-y-5">
-      <Field label="CPF do responsável" hint="Usamos o CPF para localizar ou criar seu cadastro.">
+      <div>
+        <h2 className="font-display text-xl font-extrabold text-primary-700">
+          Dados do responsável
+        </h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Vamos começar por você. Leva menos de 1 minuto.
+        </p>
+      </div>
+
+      <Field label="Nome completo do responsável">
+        <TextInput
+          value={form.name}
+          onChange={(event) => setForm({ ...form, name: event.target.value })}
+          onBlur={captureContactLead}
+          autoComplete="name"
+          disabled={pending}
+        />
+      </Field>
+
+      <Field label="E-mail" hint={prefill?.emailMasked && `Você usou ${prefill.emailMasked}`}>
+        <TextInput
+          type="email"
+          value={form.email}
+          onChange={(event) => setForm({ ...form, email: event.target.value })}
+          onBlur={captureContactLead}
+          autoComplete="email"
+          disabled={pending}
+        />
+      </Field>
+
+      <Field
+        label="Telefone (WhatsApp)"
+        hint={prefill?.phoneMasked && `Você usou ${prefill.phoneMasked}`}
+      >
+        <TextInput
+          type="tel"
+          placeholder="(00) 00000-0000"
+          value={form.phone}
+          onChange={(event) => setForm({ ...form, phone: formatPhone(event.target.value) })}
+          onBlur={captureContactLead}
+          autoComplete="tel"
+          disabled={pending}
+        />
+      </Field>
+
+      <Field
+        label="CPF do responsável"
+        hint="Usamos o CPF apenas para localizar ou criar seu cadastro com segurança."
+      >
         <TextInput
           inputMode="numeric"
           placeholder="000.000.000-00"
@@ -150,8 +230,16 @@ export function GuardianStep({
         />
       </Field>
 
+      <p className="flex items-start gap-2 rounded-2xl bg-primary-50 px-4 py-3 text-xs text-ink-muted">
+        <Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary-600" />
+        <span>
+          Ambiente seguro. Seus dados são usados apenas para a inscrição e não são
+          compartilhados.
+        </span>
+      </p>
+
       {cpfStatus === "idle" && (
-        <Button onClick={checkCpf} disabled={pending || cpf.replace(/\D/g, "").length !== 11}>
+        <Button onClick={checkCpf} disabled={pending || !contactReady}>
           {pending ? "Verificando..." : "Continuar"}
         </Button>
       )}
@@ -172,42 +260,21 @@ export function GuardianStep({
 
       {cpfStatus === "new" && (
         <div className="space-y-4">
-          <Field label="Nome completo">
-            <TextInput
-              value={form.name}
-              onChange={(event) => setForm({ ...form, name: event.target.value })}
-              onBlur={() => void captureLeadAction({ cpf, name: form.name })}
-              autoComplete="name"
-            />
-          </Field>
-          <Field label="E-mail" hint={prefill?.emailMasked && `Você usou ${prefill.emailMasked}`}>
-            <TextInput
-              type="email"
-              value={form.email}
-              onChange={(event) => setForm({ ...form, email: event.target.value })}
-              onBlur={() => void captureLeadAction({ cpf, name: form.name, email: form.email })}
-              autoComplete="email"
-            />
-          </Field>
-          <Field label="Telefone (WhatsApp)" hint={prefill?.phoneMasked && `Você usou ${prefill.phoneMasked}`}>
-            <TextInput
-              type="tel"
-              placeholder="(00) 00000-0000"
-              value={form.phone}
-              onChange={(event) => setForm({ ...form, phone: event.target.value })}
-              onBlur={() =>
-                void captureLeadAction({ cpf, name: form.name, email: form.email, phone: form.phone })
-              }
-              autoComplete="tel"
-            />
-          </Field>
-
           <div className="border-t border-primary-100 pt-4">
-            <p className="mb-3 font-display text-sm font-bold text-primary-700">Endereço</p>
+            <p className="mb-1 font-display text-sm font-bold text-primary-700">
+              Endereço do responsável
+            </p>
+            <p className="mb-3 text-xs text-ink-muted">
+              Primeiro acesso? Confirme seu endereço para concluir o cadastro.
+            </p>
 
             <Field
               label="CEP"
-              hint={cepLoading ? "Buscando endereço..." : cepHint ?? "Preencha o CEP para localizar rua, bairro e cidade."}
+              hint={
+                cepLoading
+                  ? "Buscando endereço..."
+                  : (cepHint ?? "Preencha o CEP para localizar rua, bairro e cidade.")
+              }
             >
               <TextInput
                 inputMode="numeric"
@@ -278,7 +345,10 @@ export function GuardianStep({
             </div>
           </div>
 
-          <Field label="Crie uma senha" hint="Mínimo de 8 caracteres — para acompanhar a inscrição depois.">
+          <Field
+            label="Crie uma senha"
+            hint="Mínimo de 8 caracteres — para acompanhar a inscrição depois."
+          >
             <TextInput
               type="password"
               value={form.password}

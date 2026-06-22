@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { Award, Clock, Globe2, ShieldCheck, Sparkles } from "lucide-react";
 import { getActiveContest } from "@/modules/contests/service";
 import {
   getWizardStateFromRef,
@@ -103,15 +104,79 @@ export default async function RegistrationPage({
     }
   }
 
+  const packagePerks = [
+    {
+      icon: Sparkles,
+      title: "Foto profissional",
+      description: "Todos recebem uma foto profissional editada pela nossa IA, pronta para usar como portfólio.",
+    },
+    {
+      icon: Globe2,
+      title: "Página do participante",
+      description: "Portfólio digital da criança para curtir e compartilhar nas redes sociais.",
+    },
+    {
+      icon: Award,
+      title: "Concorra à faixa de vencedor",
+      description: "O título de Criança Mais Fotogênica Brasil, por categoria de idade.",
+    },
+  ];
+
   return (
     <Container className="py-14">
-      <div className="mx-auto mb-10 max-w-xl text-center">
+      <div className="mx-auto mb-8 max-w-2xl text-center">
         <h1 className="text-3xl font-extrabold sm:text-4xl">
           <span className="text-brand-gradient">Inscrição {contest.year}</span>
         </h1>
         <p className="mt-3 text-ink-muted">
-          Taxa de inscrição: <strong className="text-accent-700">{feeFormatted}</strong> · Envie 2
-          fotos no formato retrato e concorra na categoria da idade da sua criança.
+          Taxa única de <strong className="text-accent-700">{feeFormatted}</strong>. Você já garante
+          a foto profissional por IA e concorre na categoria da idade da sua criança.
+        </p>
+      </div>
+
+      {/* Painel de oferta + confiança antes do wizard */}
+      <div className="mx-auto mb-8 max-w-2xl rounded-bubble border border-primary-100 bg-surface-muted p-6 shadow-brand sm:p-8">
+        <p className="font-display text-sm font-bold uppercase tracking-widest text-accent-600">
+          O que sua criança recebe
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {packagePerks.map((perk) => {
+            const Icon = perk.icon;
+
+            return (
+              <div key={perk.title} className="flex gap-3 sm:flex-col">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-100 text-accent-700">
+                  <Icon aria-hidden="true" className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="font-display text-sm font-extrabold text-primary-700">
+                    {perk.title}
+                  </p>
+                  <p className="mt-0.5 text-xs/5 text-ink-muted">{perk.description}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-6 flex flex-col gap-3 border-t border-primary-100 pt-5 text-sm text-ink-muted sm:flex-row sm:items-center sm:justify-between">
+          <span className="inline-flex items-center gap-2">
+            <Clock aria-hidden="true" className="size-4 text-primary-600" />
+            Leva cerca de 5 minutos
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <ShieldCheck aria-hidden="true" className="size-4 text-primary-600" />
+            Ambiente seguro · 19ª edição nacional
+          </span>
+        </div>
+
+        <p className="mt-4 text-xs text-ink-muted">
+          Tenha em mãos: CPF do responsável, dados da criança e 2 fotos no formato retrato. A
+          categoria é definida automaticamente pela idade. Veja o{" "}
+          <a href="/regulamento" target="_blank" className="font-bold text-accent-700 underline">
+            regulamento
+          </a>
+          .
         </p>
       </div>
 

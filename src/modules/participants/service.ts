@@ -84,14 +84,18 @@ export async function likeRegistration(registrationId: string, fingerprint: stri
     return { liked: false, likesCount: current.likesCount };
   }
 
-  const [, updated] = await db.$transaction([
-    db.like.create({ data: { registrationId, fingerprint } }),
-    db.registration.update({
-      where: { id: registrationId },
-      data: { likesCount: { increment: 1 } },
-      select: { likesCount: true },
-    }),
-  ]);
+  // Incremento via SQL para não disparar @updatedAt (listagem admin ordena por updatedAt).
+  const updated = await db.$transaction(async (tx) => {
+    await tx.like.create({ data: { registrationId, fingerprint } });
+    const [row] = await tx.$queryRaw<{ likesCount: number }[]>`
+      UPDATE registrations
+      SET "likesCount" = "likesCount" + 1
+      WHERE id = ${registrationId}
+      RETURNING "likesCount"
+    `;
+    if (!row) throw new Error("Inscrição não encontrada.");
+    return row;
+  });
   return { liked: true, likesCount: updated.likesCount };
 }
 

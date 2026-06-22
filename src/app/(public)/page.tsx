@@ -109,7 +109,7 @@ const stats = [
  */
 export default async function HomePage() {
   const [partners, contest] = await Promise.all([listPartnersByType(), getActiveContest()]);
-  const priceLabel = formatCentsBRL(contest?.registrationFeeCents ?? 7400);
+  const priceLabel = formatCentsBRL(contest?.registrationFeeCents ?? 5400);
   const enrollCta = `Inscrever minha criança por ${priceLabel}`;
 
   return (

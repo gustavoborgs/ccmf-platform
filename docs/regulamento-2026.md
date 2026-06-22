@@ -33,7 +33,7 @@
    2. Preencher a ficha de inscrição, anexando duas fotos do participante, preferencialmente de rosto, com arquivo de até 10 MB. Não é necessário que a foto seja profissional.
    3. Pagar a taxa de inscrição no momento do cadastro, sob pena de a inscrição não ser considerada válida.
 
-3. A taxa de inscrição é de **R$ 74,00** (setenta e quatro reais).
+3. A taxa de inscrição é de **R$ 54,00** (cinquenta e quatro reais).
 
 4. Todos os demais custos que o participante tiver com transporte, alimentação e hospedagem correrão por sua conta exclusiva, sendo responsabilidade dos representantes legais arcar com eventuais despesas relacionadas à participação no concurso.
 

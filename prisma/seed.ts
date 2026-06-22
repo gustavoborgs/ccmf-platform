@@ -39,7 +39,7 @@ async function main() {
       year: 2026,
       name: "Criança Mais Fotogênica do Brasil 2026",
       status: "REGISTRATION_OPEN",
-      registrationFeeCents: 9900,
+      registrationFeeCents: 5400,
       revealAt: new Date("2026-11-29T15:00:00-03:00"),
     },
   });
