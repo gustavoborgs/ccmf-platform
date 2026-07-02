@@ -44,7 +44,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <Button href="/entrar" variant="ghost" size="sm" className="hidden lg:inline-flex">
+            <Button href="/entrar" variant="ghost" size="sm" className="hidden min-[360px]:inline-flex">
               Entrar
             </Button>
             <Button href="/inscricao" size="sm">
