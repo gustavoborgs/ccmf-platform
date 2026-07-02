@@ -35,8 +35,8 @@ export default async function AcademyChapterPage({ params }: PageProps) {
   }
 
   const modules = getModuleIndex();
-  const module = modules.find((item) => item.slug === chapter.moduleSlug);
-  const moduleTitle = module?.title ?? "Treinamento";
+  const trainingModule = modules.find((item) => item.slug === chapter.moduleSlug);
+  const moduleTitle = trainingModule?.title ?? "Treinamento";
 
   if (!isFreeChapter(slug)) {
     const { hasAccess, registrationFeeCents } = await getTrainingAccess(user.id);
