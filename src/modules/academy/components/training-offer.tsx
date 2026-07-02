@@ -47,9 +47,9 @@ export function TrainingOffer({
 
       <p className="mt-4 max-w-2xl text-white/85">
         O curso completo de gestão de carreira infantil, escrito pela fundadora Claudia
-        Cavalcante, é vendido por <strong className="text-white">R$ 350</strong>. Para quem
-        se inscreve no Concurso Criança Mais Fotogênica desta edição, ele fica gratuito após
-        a confirmação do pagamento. São {totalChapters} capítulos e mais de {readingHours}{" "}
+        Cavalcante, custa <strong className="text-white">R$ 350</strong>. Para quem se
+        inscreve no Concurso Criança Mais Fotogênica desta edição, ele fica gratuito após a
+        confirmação da inscrição. São {totalChapters} capítulos e mais de {readingHours}{" "}
         horas de conteúdo para você conduzir a jornada do seu filho com segurança.
       </p>
 
@@ -68,7 +68,7 @@ export function TrainingOffer({
           {registrationsOpen ? (
             <p className="mt-1 font-display text-2xl font-extrabold">
               {/* Grátis para quem se inscreve por {feeLabel} */}
-              Grátis para inscritos confirmados
+              Grátis para todos os participantes
             </p>
           ) : (
             <p className="mt-1 font-display text-xl font-extrabold">

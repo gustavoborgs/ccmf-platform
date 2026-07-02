@@ -82,8 +82,8 @@ const faqs = [
 ];
 
 /**
- * Landing pública do curso premium. Narrativa: curso escrito pela fundadora, vendido por
- * R$ 350, gratuito para inscritos confirmados nesta edição.
+ * Landing pública do curso premium. Narrativa: o curso custa R$ 350 e fica
+ * gratuito para inscritos confirmados nesta edição (mencionar preço com moderação).
  * CTA único: /inscricao. Plano: docs/academy-plano-conversao.md
  */
 export default async function CoursePage() {
@@ -103,16 +103,17 @@ export default async function CoursePage() {
           <div>
             <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 font-display text-sm font-bold uppercase tracking-widest">
               <GraduationCap aria-hidden className="h-4 w-4" />
-              Grátis para inscritos confirmados
+              Grátis para todos os inscritos
             </p>
             <h1 className="text-balance text-4xl font-extrabold leading-tight sm:text-5xl">
               {meta.title}
             </h1>
             <p className="mt-5 max-w-xl text-lg text-white/90">
               O curso completo de gestão de carreira infantil, escrito pela fundadora{" "}
-              <strong className="font-semibold">{meta.author}</strong>, é vendido por{" "}
-              <strong className="font-semibold">R$ 350</strong>. Nesta edição do Concurso
-              Criança Mais Fotogênica, ele fica gratuito para todos os inscritos confirmados.
+              <strong className="font-semibold">{meta.author}</strong>. Um curso que custa{" "}
+              <strong className="font-semibold">R$ 350</strong> e que, nesta edição do
+              Concurso Criança Mais Fotogênica, fica gratuito para todos os inscritos
+              confirmados.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               {registrationsOpen ? (
@@ -303,10 +304,9 @@ export default async function CoursePage() {
               Para os inscritos do concurso, é grátis
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-white/85">
-              Curso escrito pela fundadora Claudia Cavalcante, vendido por R$ 350. Nesta
-              edição, ele é o brinde oficial da inscrição: gratuito para todos os inscritos
-              confirmados. Você inscreve sua criança, garante o Pacote Participante Oficial e
-              recebe o curso completo assim que o pagamento é confirmado.
+              Nesta edição, o curso é o brinde oficial da inscrição: gratuito para todos os
+              inscritos confirmados. Você inscreve sua criança, garante o Pacote Participante
+              Oficial e recebe o curso completo assim que o pagamento é confirmado.
             </p>
 
             <div className="mx-auto mt-8 max-w-md rounded-bubble bg-white/10 p-6">

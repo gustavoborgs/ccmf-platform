@@ -221,10 +221,9 @@ export default async function HomePage() {
                 </h3>
                 <p className="mt-3 max-w-2xl text-white/85">
                   O curso completo de gestão de carreira infantil, escrito pela fundadora
-                  Claudia Cavalcante, é vendido por{" "}
-                  <strong className="text-white">R$ 350</strong> mas será liberado gratuito para todos
-                  os inscritos confirmados nesta edição. Método, valores reais de mercado e
-                  proteção da infância em 27 capítulos.
+                  Claudia Cavalcante, liberado gratuitamente para todos os inscritos
+                  confirmados desta edição. Método, valores reais de mercado e proteção da
+                  infância em 27 capítulos.
                 </p>
                 <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/80">
                   <span className="inline-flex items-center gap-1.5">
@@ -360,7 +359,7 @@ export default async function HomePage() {
               align="left"
               kicker="Brinde premium 2026"
               title="O curso que transforma pais em gestores de carreira"
-              description="Curso escrito pela fundadora Claudia Cavalcante, com quase vinte anos de experiência reunidos em 27 capítulos. É vendido por R$ 350 — e, nesta edição, fica gratuito para todas as famílias com inscrição confirmada."
+              description="Curso escrito pela fundadora Claudia Cavalcante, com mais de vinte anos de experiência reunidos em 27 capítulos. Um curso que custa R$ 350 e que, nesta edição, fica gratuito para todas as famílias com inscrição confirmada."
             />
             <ul className="mt-8 space-y-3">
               {courseBullets.map((bullet) => (
@@ -489,9 +488,8 @@ export default async function HomePage() {
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-white/90">
             Garanta a participação da sua criança antes do encerramento: foto profissional
-            editada por IA e, de brinde, o curso de gestão de carreira infantil escrito pela
-            fundadora Claudia Cavalcante — vendido por R$ 350, gratuito na confirmação. Tudo por
-            apenas {priceLabel}.
+            por IA e, de brinde, o curso de gestão de carreira infantil da fundadora
+            Claudia Cavalcante, gratuito para todos os inscritos.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Button

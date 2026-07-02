@@ -34,10 +34,9 @@ export function LockedChapter({
       </h1>
 
       <p className="mt-4 text-ink-muted">
-        Este capítulo faz parte do treinamento completo — curso de gestão de carreira infantil
-        escrito pela fundadora Claudia Cavalcante, vendido por{" "}
-        <strong className="text-primary-700">R$ 350</strong> e gratuito para inscritos
-        confirmados nesta edição do concurso.
+        Este capítulo faz parte do Curso de Gestão de Carreira Infantil, escrito pela
+        fundadora Claudia Cavalcante, gratuito para todos os participantes desta edição do
+        concurso.
       </p>
 
       {registrationsOpen ? (

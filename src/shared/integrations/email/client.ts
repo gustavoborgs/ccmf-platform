@@ -97,7 +97,7 @@ export async function sendPaymentConfirmedEmail(input: {
         </p>
         <h2 style="margin:8px 0 4px;color:#fff">Como Gerenciar a Carreira do Seu Filho</h2>
         <p style="margin:0 0 16px;color:rgba(255,255,255,0.9)">
-          O curso completo que da Claudia Cavalcante é seu
+          O curso completo da Claudia Cavalcante é seu
           de graça por participar do concurso. 27 capítulos de gestão de carreira infantil,
           com método e proteção da infância.
         </p>
