@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { Award, Clock, Globe2, GraduationCap, ShieldCheck, Sparkles } from "lucide-react";
@@ -21,6 +22,13 @@ import { formatCentsBRL, maskEmail, maskPhone } from "@/shared/utils";
  * Spec: docs/modules/registrations.md
  */
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Inscrição",
+  description:
+    "Inscreva sua criança no Concurso Criança Mais Fotogênica. Taxa única, foto profissional editada por IA e o curso de gestão de carreira infantil da Claudia Cavalcante grátis para todos os inscritos.",
+  alternates: { canonical: "/inscricao" },
+};
 
 export default async function RegistrationPage({
   searchParams,

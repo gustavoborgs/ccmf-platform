@@ -1,6 +1,5 @@
 import { BookOpen, CheckCircle2, Lock, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/shared/ui";
-import { formatCentsBRL } from "@/shared/utils";
 
 type TrainingOfferProps = {
   /** Taxa da edição ativa; null quando inscrições estão fechadas. */
@@ -28,7 +27,6 @@ export function TrainingOffer({
   totalReadingMinutes,
 }: TrainingOfferProps) {
   const registrationsOpen = registrationFeeCents !== null;
-  const feeLabel = registrationsOpen ? formatCentsBRL(registrationFeeCents) : null;
   const readingHours = Math.max(1, Math.round(totalReadingMinutes / 60));
 
   return (
@@ -67,7 +65,6 @@ export function TrainingOffer({
           <p className="text-sm text-white/70 line-through">Valor do curso R$ 350,00</p>
           {registrationsOpen ? (
             <p className="mt-1 font-display text-2xl font-extrabold">
-              {/* Grátis para quem se inscreve por {feeLabel} */}
               Grátis para todos os participantes
             </p>
           ) : (

@@ -33,6 +33,10 @@ export const metadata: Metadata = {
     "criança mais fotogênica",
     "modelo infantil",
     "fotografia infantil",
+    "carreira de modelo infantil",
+    "como gerenciar a carreira do meu filho",
+    "curso para pais de modelo infantil",
+    "gestão de carreira infantil",
   ],
   alternates: {
     canonical: "/",

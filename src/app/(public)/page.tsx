@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import {
   Award,
@@ -21,6 +22,20 @@ import { Button, Card, Container, SectionHeading } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/utils";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  description:
+    "Inscreva sua criança no maior concurso de fotografia infantil do Brasil. Toda criança inscrita recebe uma foto profissional editada por IA e ganha de brinde o curso Como Gerenciar a Carreira do Seu Filho, da fundadora Claudia Cavalcante.",
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "/",
+    siteName: "Concurso Criança Mais Fotogênica do Brasil",
+    title: "Concurso Criança Mais Fotogênica do Brasil",
+    description:
+      "Inscrição online, foto profissional por IA e o curso de gestão de carreira infantil da Claudia Cavalcante grátis para todos os inscritos.",
+  },
+};
 
 const highlights = [
   {

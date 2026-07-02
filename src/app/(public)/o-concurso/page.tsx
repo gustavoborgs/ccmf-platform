@@ -6,7 +6,8 @@ import { Button, Card, Container, SectionHeading } from "@/shared/ui";
 export const metadata: Metadata = {
   title: "O Concurso",
   description:
-    "Conheça o Concurso Criança Mais Fotogênica: como funciona a inscrição, a avaliação técnica e as categorias por faixa etária.",
+    "Conheça o Concurso Criança Mais Fotogênica: como funciona a inscrição, a avaliação técnica e as categorias por faixa etária. Todo inscrito ainda ganha de brinde o curso de gestão de carreira infantil da Claudia Cavalcante.",
+  alternates: { canonical: "/o-concurso" },
 };
 
 const processSteps = [
@@ -44,6 +45,7 @@ const benefits = [
   "Destaque nacional em uma vitrine dedicada à fotografia infantil.",
   "Categorias por faixa etária para uma disputa mais justa em cada fase da infância.",
   "Experiência organizada, acompanhada e segura para responsáveis e participantes.",
+  "O curso Como Gerenciar a Carreira do Seu Filho, da fundadora Claudia Cavalcante, gratuito para todos os inscritos.",
 ];
 
 const categories = [

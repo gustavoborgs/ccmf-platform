@@ -11,15 +11,55 @@ import {
 } from "lucide-react";
 import { getActiveContest } from "@/modules/contests/service";
 import { getModuleIndex, getTrainingMeta } from "@/modules/academy/service";
+import { absoluteUrl } from "@/modules/blog/seo";
 import { Button, Card, Container, SectionHeading } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/utils";
 
 export const dynamic = "force-dynamic";
 
+const COURSE_OG_IMAGE = "/academy/promo-phone.jpg";
+
 export const metadata: Metadata = {
-  title: "Curso Como Gerenciar a Carreira do Seu Filho | CCMF",
+  title: "Curso Como Gerenciar a Carreira do Seu Filho",
   description:
-    "Curso completo de gestão de carreira infantil por Claudia Cavalcante: mercado, cachês, contratos, golpes e proteção da infância. Incluso na inscrição do Concurso Criança Mais Fotogênica.",
+    "Curso completo de gestão de carreira infantil por Claudia Cavalcante: mercado, cachês, contratos, golpes e proteção da infância. Gratuito para todos os inscritos no Concurso Criança Mais Fotogênica.",
+  keywords: [
+    "como gerenciar a carreira do meu filho",
+    "carreira de modelo infantil",
+    "curso para pais de modelo infantil",
+    "gestão de carreira infantil",
+    "como colocar meu filho para ser modelo",
+    "agência de modelo infantil",
+    "cachê de modelo infantil",
+    "Claudia Cavalcante",
+    "curso de fotogenia infantil",
+    "proteção da infância no mercado artístico",
+  ],
+  alternates: { canonical: "/curso" },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "/curso",
+    siteName: "Concurso Criança Mais Fotogênica do Brasil",
+    title: "Curso Como Gerenciar a Carreira do Seu Filho",
+    description:
+      "Curso completo de gestão de carreira infantil por Claudia Cavalcante, gratuito para todos os inscritos no Concurso Criança Mais Fotogênica.",
+    images: [
+      {
+        url: COURSE_OG_IMAGE,
+        width: 1536,
+        height: 1024,
+        alt: "Curso Como Gerenciar a Carreira do Seu Filho, de Claudia Cavalcante",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Curso Como Gerenciar a Carreira do Seu Filho",
+    description:
+      "Curso de gestão de carreira infantil por Claudia Cavalcante, gratuito para inscritos no Concurso Criança Mais Fotogênica.",
+    images: [COURSE_OG_IMAGE],
+  },
 };
 
 /** Dores que o curso resolve — seção de identificação. */
@@ -95,8 +135,68 @@ export default async function CoursePage() {
   const feeLabel = contest ? formatCentsBRL(contest.registrationFeeCents) : null;
   const readingHours = Math.max(1, Math.round(meta.totalReadingMinutes / 60));
 
+  const courseJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: meta.title,
+    description: meta.description,
+    url: absoluteUrl("/curso"),
+    inLanguage: "pt-BR",
+    author: { "@type": "Person", name: meta.author },
+    provider: {
+      "@type": "Organization",
+      name: "Concurso Criança Mais Fotogênica do Brasil",
+      url: absoluteUrl("/"),
+    },
+    about: "Gestão de carreira infantil, mercado de modelos e proteção da infância",
+    teaches: [
+      "Como funciona o mercado infantil de modelos, castings e agências",
+      "Valores reais de mercado: cachês, comissões e custos por fase",
+      "Como identificar golpes e propostas que exploram famílias",
+      "Contratos e negociação na carreira infantil",
+      "Proteção da infância e equilíbrio com a rotina escolar",
+    ],
+    hasCourseInstance: {
+      "@type": "CourseInstance",
+      courseMode: "online",
+      courseWorkload: `PT${readingHours}H`,
+      inLanguage: "pt-BR",
+    },
+    offers: {
+      "@type": "Offer",
+      category: "Brinde de inscrição",
+      price: "0",
+      priceCurrency: "BRL",
+      availability: registrationsOpen
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      description:
+        "Gratuito para todos os inscritos confirmados no Concurso Criança Mais Fotogênica.",
+      url: absoluteUrl("/inscricao"),
+    },
+  };
+
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: { "@type": "Answer", text: faq.answer },
+    })),
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+
       {/* Hero */}
       <section className="bg-brand-gradient text-white">
         <Container className="grid items-center gap-12 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
