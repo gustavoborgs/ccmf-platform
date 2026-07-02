@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { HelpCircle, Mail, MessageCircle, Phone, Send } from "lucide-react";
-import { ContactForm } from "@/modules/content/components/contact-form";
+import { HelpCircle, Mail, MessageCircle, Phone } from "lucide-react";
 import { buildWhatsAppUrl, CONTACT } from "@/shared/contact";
 import { Button, Card, Container, SectionHeading } from "@/shared/ui";
 

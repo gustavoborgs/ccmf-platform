@@ -105,13 +105,6 @@ const courseBullets = [
   "Modelos prontos: dossiê do talento, plano 30/60/90 e checklists de proteção",
 ];
 
-const stats = [
-  { value: "19ª", label: "edição do concurso nacional" },
-  { value: "5", label: "categorias, do bebê ao teen" },
-  { value: "2 a 14", label: "anos — idades participantes" },
-  { value: "100%", label: "online, de qualquer cidade do Brasil" },
-];
-
 /**
  * Home pública. Hero + vídeo de apresentação da fundadora, Pacote Participante
  * Oficial (foto por IA como herói) e premiação focada na faixa nacional.

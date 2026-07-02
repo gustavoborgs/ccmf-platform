@@ -221,7 +221,7 @@ export default async function CoursePage() {
                 talento se desenvolve.
               </p>
               <blockquote className="border-l-4 border-accent-400 pl-4 font-display text-lg font-bold text-primary-700">
-                "Talento chama atenção, gestão com amor e critério constrói trajetória."
+                &ldquo;Talento chama atenção, gestão com amor e critério constrói trajetória.&rdquo;
               </blockquote>
             </div>
           </div>

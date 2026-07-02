@@ -4,7 +4,6 @@ import { env } from "@/shared/env";
 import { formatNevoaManagerError, nevoaManager } from "@/shared/integrations/nevoa-manager/client";
 import { getAutomation, normalizePhone } from "../lib";
 import {
-  DEFAULT_REGISTRATION_RESUME_WHATSAPP_CONFIG,
   REGISTRATION_RESUME_WHATSAPP_TYPE,
 } from "./constants";
 import type { RegistrationResumeWorkerResult } from "./types";
