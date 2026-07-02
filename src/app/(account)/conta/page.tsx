@@ -56,6 +56,9 @@ export default async function AccountPage({
           <Button href="/inscricao" variant="secondary">
             Nova inscrição
           </Button>
+          <Button href="/conta/formacao" variant="outline">
+            Treinamento premium
+          </Button>
           <form action={logoutAction}>
             <Button type="submit" variant="outline">
               Sair

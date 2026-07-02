@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Caso Real">
+  <circle cx="32" cy="32" r="30" fill="#2BC4F2" opacity="0.15"/>
+  <path d="M18 22h20a2 2 0 0 1 2 2v22a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V24a2 2 0 0 1 2-2z" fill="none" stroke="#2BC4F2" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M16 28h24" stroke="#2BC4F2" stroke-width="3"/>
+  <path d="M24 36h16M24 42h12" stroke="#2BC4F2" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M42 18l4 4-6 6-4-4z" fill="#2BC4F2"/>
+</svg>

@@ -59,6 +59,8 @@ export function Checkout({
   hasPendingPayment: boolean;
   onPaid?: () => void;
 }) {
+  const checkoutTopRef = useRef<HTMLDivElement>(null);
+  const didMountRef = useRef(false);
   const [method, setMethod] = useState<Method>("PIX");
   const [checkout, setCheckout] = useState<CheckoutData | null>(null);
   const [restoring, setRestoring] = useState(hasPendingPayment);
@@ -118,6 +120,17 @@ export function Checkout({
     return () => clearInterval(interval);
   }, [checkout, paid, wizardRef, markPaid]);
 
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      checkoutTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [checkout?.paymentId, paid]);
+
   async function startCheckout(input: { method: Method; creditCard?: CreditCardInput }) {
     setSubmitting(true);
     setError(null);
@@ -153,7 +166,7 @@ export function Checkout({
 
   if (paid) {
     return (
-      <div className="space-y-5 text-center">
+      <div ref={checkoutTopRef} className="space-y-5 scroll-mt-24 text-center">
         <div className="rounded-bubble bg-primary-50 p-6">
           <p className="font-display text-2xl font-extrabold text-primary-700">
             Pagamento confirmado!
@@ -176,7 +189,7 @@ export function Checkout({
   }
 
   return (
-    <div className="space-y-5">
+    <div ref={checkoutTopRef} className="space-y-5 scroll-mt-24">
       {/* Seleção do método */}
       {!checkout && (
         <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Forma de pagamento">

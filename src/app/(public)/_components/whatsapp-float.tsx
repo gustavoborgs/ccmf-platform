@@ -8,13 +8,23 @@ const WHATSAPP_MESSAGE =
   "Olá! Vim pelo site do CCMF e gostaria de falar com um especialista sobre a inscrição.";
 const LABEL_TEXT = "Falar com especialista";
 const LABEL_DELAY_MS = 4000;
+const OPEN_ANIMATION_MS = 500;
+const AUTO_CLOSE_DELAY_MS = 5000;
 
 export function WhatsAppFloat() {
   const [showLabel, setShowLabel] = useState(false);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setShowLabel(true), LABEL_DELAY_MS);
-    return () => window.clearTimeout(timer);
+    const openTimer = window.setTimeout(() => setShowLabel(true), LABEL_DELAY_MS);
+    const closeTimer = window.setTimeout(
+      () => setShowLabel(false),
+      LABEL_DELAY_MS + OPEN_ANIMATION_MS + AUTO_CLOSE_DELAY_MS,
+    );
+
+    return () => {
+      window.clearTimeout(openTimer);
+      window.clearTimeout(closeTimer);
+    };
   }, []);
 
   function handleDismiss(event: MouseEvent) {

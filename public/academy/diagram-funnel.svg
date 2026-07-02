@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-label="Funil talento a oportunidades">
+  <rect width="960" height="600" rx="24" fill="#FAF0F7"/>
+  <text x="48" y="56" font-family="sans-serif" font-size="24" font-weight="700" fill="#8E18B4">Do talento � oportunidade</text>
+  <polygon points="480,120 720,220 640,220 640,380 320,380 320,220 240,220" fill="#EC1380" opacity="0.25"/>
+  <rect x="340" y="140" width="280" height="60" rx="16" fill="#8E18B4"/>
+  <rect x="300" y="230" width="360" height="60" rx="16" fill="#C414A0"/>
+  <rect x="260" y="320" width="440" height="60" rx="16" fill="#EC1380"/>
+  <text x="410" y="178" font-family="sans-serif" font-size="16" fill="#fff">Talento</text>
+  <text x="390" y="268" font-family="sans-serif" font-size="16" fill="#fff">Exposi��o</text>
+  <text x="360" y="358" font-family="sans-serif" font-size="16" fill="#fff">Oportunidades</text>
+</svg>

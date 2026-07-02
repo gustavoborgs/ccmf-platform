@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-label="Linha do tempo por fases">
+  <rect width="960" height="600" rx="24" fill="#FAF0F7"/>
+  <text x="48" y="56" font-family="sans-serif" font-size="24" font-weight="700" fill="#8E18B4">Linha do tempo da gest�o</text>
+  <line x1="80" y1="300" x2="880" y2="300" stroke="#C414A0" stroke-width="4"/>
+  <circle cx="160" cy="300" r="16" fill="#8E18B4"/>
+  <circle cx="360" cy="300" r="16" fill="#C414A0"/>
+  <circle cx="560" cy="300" r="16" fill="#EC1380"/>
+  <circle cx="760" cy="300" r="16" fill="#2BC4F2"/>
+  <text x="120" y="360" font-family="sans-serif" font-size="14" fill="#2D1230">Beb�</text>
+  <text x="320" y="360" font-family="sans-serif" font-size="14" fill="#2D1230">Infantil</text>
+  <text x="520" y="360" font-family="sans-serif" font-size="14" fill="#2D1230">Juvenil</text>
+  <text x="720" y="360" font-family="sans-serif" font-size="14" fill="#2D1230">Teen</text>
+</svg>

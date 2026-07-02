@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/shared/analytics/events";
 import { cn } from "@/shared/ui/cn";
 import { WIZARD_REF_COOKIE, WIZARD_REF_MAX_AGE_SECONDS } from "../wizard-cookie";
@@ -44,6 +44,8 @@ function forgetRef() {
 }
 
 export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
+  const wizardTopRef = useRef<HTMLDivElement>(null);
+  const didMountRef = useRef(false);
   const [step, setStep] = useState<WizardUiStep>(initial.step);
   const [ref, setRef] = useState(initial.ref);
   const [registrationId, setRegistrationId] = useState(initial.registrationId);
@@ -69,6 +71,17 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
       registration_resumed: Boolean(initial.ref),
     });
   }, [currentIndex, initial.ref, step]);
+
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      wizardTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [step]);
 
   function advanceRef(nextRef: string) {
     setRef(nextRef);
@@ -114,7 +127,7 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
   }
 
   return (
-    <div className="mx-auto max-w-xl">
+    <div ref={wizardTopRef} className="mx-auto max-w-xl scroll-mt-24">
       {/* Indicador de progresso */}
       <ol className="mb-8 flex items-center justify-between gap-2">
         {STEPS.map((item, index) => (

@@ -64,6 +64,53 @@ export async function getGuardianByUserId(userId: string) {
   return db.guardianProfile.findUnique({ where: { userId }, select: { id: true } });
 }
 
+// ─────────────────────────────────────────────
+// Acesso ao treinamento premium (Academy)
+// ─────────────────────────────────────────────
+
+/** Status de inscrição que representam pagamento confirmado. */
+const PAID_REGISTRATION_STATUSES = [
+  "PAID",
+  "UNDER_REVIEW",
+  "APPROVED",
+  "SEMIFINALIST",
+  "WINNER",
+] as const;
+
+export type TrainingAccess = {
+  /** true = tem inscrição paga na edição ativa (libera o treinamento completo) */
+  hasAccess: boolean;
+  /** Taxa da edição ativa para o CTA de venda; null se inscrições fechadas */
+  registrationFeeCents: number | null;
+};
+
+/**
+ * O treinamento completo é liberado apenas para responsáveis com inscrição
+ * paga na edição ativa (status REGISTRATION_OPEN). Spec: docs/modules/academy.md
+ */
+export async function getTrainingAccess(userId: string): Promise<TrainingAccess> {
+  const contest = await getActiveContest();
+  if (!contest) {
+    return { hasAccess: false, registrationFeeCents: null };
+  }
+
+  const guardian = await getGuardianByUserId(userId);
+  if (!guardian) {
+    return { hasAccess: false, registrationFeeCents: contest.registrationFeeCents };
+  }
+
+  const paidCount = await db.registration.count({
+    where: {
+      contestId: contest.id,
+      deletedAt: null,
+      status: { in: [...PAID_REGISTRATION_STATUSES] },
+      participant: { guardianId: guardian.id },
+    },
+  });
+
+  return { hasAccess: paidCount > 0, registrationFeeCents: contest.registrationFeeCents };
+}
+
 /**
  * Step 1 do wizard:
  * - CPF existente → vincula a inscrição ao responsável existente, sem

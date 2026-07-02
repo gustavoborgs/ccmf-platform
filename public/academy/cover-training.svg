@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Capa do treinamento">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8E18B4"/>
+      <stop offset="50%" stop-color="#C414A0"/>
+      <stop offset="100%" stop-color="#EC1380"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#g)"/>
+  <circle cx="400" cy="380" r="120" fill="#fff" opacity="0.2"/>
+  <rect x="120" y="560" width="560" height="24" rx="12" fill="#fff" opacity="0.9"/>
+  <rect x="160" y="610" width="480" height="16" rx="8" fill="#fff" opacity="0.7"/>
+  <rect x="200" y="650" width="400" height="16" rx="8" fill="#fff" opacity="0.5"/>
+</svg>

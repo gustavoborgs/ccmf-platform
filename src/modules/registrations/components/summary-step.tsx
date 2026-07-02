@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Checkout } from "@/modules/payments/components/checkout";
 import {
   centsToAnalyticsValue,
@@ -30,10 +30,23 @@ export function SummaryStep({
   };
   paymentPending: boolean;
 }) {
+  const summaryTopRef = useRef<HTMLDivElement>(null);
+  const didMountRef = useRef(false);
   const [confirmed, setConfirmed] = useState(paymentPending);
 
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      summaryTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [confirmed]);
+
   return (
-    <div className="space-y-5">
+    <div ref={summaryTopRef} className="space-y-5 scroll-mt-24">
       <div className="rounded-bubble bg-primary-50 p-5">
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between">
