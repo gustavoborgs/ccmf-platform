@@ -2,8 +2,11 @@ import Image from "next/image";
 import {
   Award,
   BadgeCheck,
+  BookOpen,
   Camera,
+  CheckCircle2,
   Globe2,
+  GraduationCap,
   Heart,
   ImageIcon,
   Share2,
@@ -95,6 +98,13 @@ const prizes = [
   },
 ];
 
+/** Bullets da seção dedicada do curso premium (âncora de valor da inscrição). */
+const courseBullets = [
+  "27 capítulos práticos: mercado, cachês, contratos, golpes e negociação",
+  "Método POFIA da Claudia para decidir como gestor, sem impulso",
+  "Modelos prontos: dossiê do talento, plano 30/60/90 e checklists de proteção",
+];
+
 const stats = [
   { value: "19ª", label: "edição do concurso nacional" },
   { value: "5", label: "categorias, do bebê ao teen" },
@@ -148,7 +158,8 @@ export default async function HomePage() {
               </Button>
             </div>
             <p className="mt-4 text-sm text-white/80">
-              Leva cerca de 5 minutos. Você envia 2 fotos e garante a participação oficial.
+              Leva cerca de 5 minutos. Você envia 2 fotos e garante a participação oficial +
+              o curso de gestão de carreira de R$ 350, incluso.
             </p>
           </div>
 
@@ -203,7 +214,53 @@ export default async function HomePage() {
             title="Muito mais do que uma inscrição"
             description="Toda criança inscrita garante o Pacote Participante Oficial 2026 — com valor real desde o primeiro dia, mesmo antes de qualquer resultado."
           />
-          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {/* Curso premium — âncora de valor do pacote */}
+          <div className="mt-12 overflow-hidden rounded-bubble border border-accent-200 bg-gradient-to-br from-primary-700 to-primary-600 text-white shadow-brand-lg">
+            <div className="grid items-center gap-8 p-8 sm:p-10 lg:grid-cols-[1fr_auto]">
+              <div>
+                <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 font-display text-xs font-extrabold uppercase tracking-widest">
+                  <GraduationCap aria-hidden className="h-4 w-4" />
+                  Bônus exclusivo da inscrição
+                </p>
+                <h3 className="mt-4 font-display text-2xl font-extrabold leading-tight sm:text-3xl">
+                  Curso: Como Gerenciar a Carreira do Seu Filho
+                </h3>
+                <p className="mt-3 max-w-2xl text-white/85">
+                  Um curso completo de gestão de carreira infantil assinado por Claudia
+                  Cavalcante, avaliado em <strong className="text-white">R$ 350</strong> e
+                  incluso sem custo extra na sua inscrição. Método, valores reais de mercado e
+                  proteção da infância em 27 capítulos.
+                </p>
+                <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/80">
+                  <span className="inline-flex items-center gap-1.5">
+                    <BookOpen aria-hidden className="h-4 w-4" />
+                    27 capítulos práticos
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 aria-hidden className="h-4 w-4" />
+                    Acesso liberado após a confirmação
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col items-start gap-3 lg:items-end lg:text-right">
+                <p className="text-sm text-white/70">
+                  <span className="line-through">Curso avulso: R$ 350</span>
+                </p>
+                <p className="font-display text-xl font-extrabold">
+                  Incluso na inscrição por {priceLabel}
+                </p>
+                <Button
+                  href="/curso"
+                  variant="secondary"
+                  className="bg-white text-accent-700 hover:bg-accent-50"
+                >
+                  Conhecer o curso
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {packageItems.map((item) => {
               const Icon = item.icon;
 
@@ -284,8 +341,63 @@ export default async function HomePage() {
         </Container>
       </section>
 
+      {/* Curso premium — seção dedicada de percepção de valor */}
+      <section id="curso" className="scroll-mt-24 bg-surface-muted py-20">
+        <Container className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="relative mx-auto w-full max-w-md">
+            <Image
+              src="/academy/promo-phone.jpg"
+              alt="Celular exibindo o curso Como Gerenciar a Carreira do Seu Filho, de Claudia Cavalcante"
+              width={1536}
+              height={1024}
+              quality={80}
+              sizes="(min-width: 1024px) 28rem, 100vw"
+              className="rounded-bubble object-cover shadow-brand-lg"
+            />
+            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-3xl bg-white px-5 py-3 shadow-brand-lg">
+              <p className="font-display text-lg font-extrabold text-brand-gradient">
+                R$ 350 de bônus
+              </p>
+              <p className="text-xs font-semibold text-ink-muted">incluso na inscrição</p>
+            </div>
+          </div>
+
+          <div>
+            <SectionHeading
+              align="left"
+              kicker="Bônus premium 2026"
+              title="O curso que transforma pais em gestores de carreira"
+              description="Claudia Cavalcante, idealizadora do concurso, reuniu quase vinte anos de experiência em um curso completo de gestão de carreira infantil. Toda família com inscrição confirmada recebe acesso integral, sem pagar nada a mais."
+            />
+            <ul className="mt-8 space-y-3">
+              {courseBullets.map((bullet) => (
+                <li key={bullet} className="flex items-start gap-3">
+                  <CheckCircle2
+                    aria-hidden
+                    className="mt-0.5 h-5 w-5 shrink-0 text-accent-600"
+                  />
+                  <span className="text-sm/6 text-ink-muted">{bullet}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-6 text-sm text-ink-muted">
+              Sem promessa de fama ou contrato garantido: método, critério e proteção da
+              infância, no ritmo da sua família.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Button href="/inscricao" size="lg">
+                Inscrever e destravar o curso
+              </Button>
+              <Button href="/curso" variant="outline" size="lg">
+                Ver o conteúdo completo
+              </Button>
+            </div>
+          </div>
+        </Container>
+      </section>
+
       {/* Diferenciais */}
-      <section className="bg-surface-muted py-20">
+      <section className="py-20">
         <Container>
           <SectionHeading
             kicker="Por que o CCMF"
@@ -313,7 +425,7 @@ export default async function HomePage() {
       </section>
 
       {/* Categorias */}
-      <section className="py-20">
+      <section className="bg-surface-muted py-20">
         <Container>
           <SectionHeading
             kicker="Categorias"
@@ -383,8 +495,9 @@ export default async function HomePage() {
             As inscrições da 19ª edição estão abertas
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-white/90">
-            Garanta a participação da sua criança antes do encerramento e saia já com a
-            foto profissional editada por IA. Por apenas {priceLabel}.
+            Garanta a participação da sua criança antes do encerramento: foto profissional
+            editada por IA e o curso de gestão de carreira de R$ 350 inclusos. Tudo por
+            apenas {priceLabel}.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Button

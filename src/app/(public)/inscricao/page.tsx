@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
-import { Award, Clock, Globe2, ShieldCheck, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Award, Clock, Globe2, GraduationCap, ShieldCheck, Sparkles } from "lucide-react";
 import { getActiveContest } from "@/modules/contests/service";
 import {
   getWizardStateFromRef,
@@ -122,6 +123,8 @@ export default async function RegistrationPage({
     },
   ];
 
+  const totalValueLabel = formatCentsBRL(contest.registrationFeeCents + 35000);
+
   return (
     <Container className="py-14">
       <div className="mx-auto mb-8 max-w-2xl text-center">
@@ -139,6 +142,31 @@ export default async function RegistrationPage({
         <p className="font-display text-sm font-bold uppercase tracking-widest text-accent-600">
           O que sua criança recebe
         </p>
+
+        {/* Curso premium — âncora de valor da oferta */}
+        <Link
+          href="/curso"
+          className="mt-4 flex gap-3 rounded-bubble border border-accent-200 bg-gradient-to-r from-primary-700 to-primary-600 p-4 text-white shadow-brand transition hover:brightness-110"
+        >
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15">
+            <GraduationCap aria-hidden="true" className="h-5 w-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="font-display text-sm font-extrabold">
+                Curso: Como Gerenciar a Carreira do Seu Filho
+              </span>
+              <span className="rounded-full bg-accent-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
+                R$ 350 incluso
+              </span>
+            </span>
+            <span className="mt-0.5 block text-xs/5 text-white/80">
+              27 capítulos de gestão de carreira infantil por Claudia Cavalcante. Acesso liberado
+              na confirmação do pagamento.
+            </span>
+          </span>
+        </Link>
+
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {packagePerks.map((perk) => {
             const Icon = perk.icon;
@@ -159,7 +187,13 @@ export default async function RegistrationPage({
           })}
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 border-t border-primary-100 pt-5 text-sm text-ink-muted sm:flex-row sm:items-center sm:justify-between">
+        <p className="mt-5 rounded-2xl bg-accent-50 px-4 py-3 text-center text-sm text-primary-700">
+          Somando o curso, são mais de{" "}
+          <strong className="text-accent-700">{totalValueLabel} em valor</strong> pela taxa única
+          de <strong className="text-accent-700">{feeFormatted}</strong>.
+        </p>
+
+        <div className="mt-5 flex flex-col gap-3 border-t border-primary-100 pt-5 text-sm text-ink-muted sm:flex-row sm:items-center sm:justify-between">
           <span className="inline-flex items-center gap-2">
             <Clock aria-hidden="true" className="size-4 text-primary-600" />
             Leva cerca de 5 minutos

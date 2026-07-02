@@ -62,6 +62,15 @@ export function SummaryStep({
             <dd className="font-bold">{summary.categoryName}</dd>
           </div>
           <div className="flex justify-between">
+            <dt className="text-ink-muted">Curso de gestão de carreira</dt>
+            <dd className="font-bold text-primary-700">
+              <span className="mr-1.5 text-xs font-semibold text-ink-muted line-through">
+                R$ 350
+              </span>
+              Incluso
+            </dd>
+          </div>
+          <div className="flex justify-between border-t border-primary-100 pt-2">
             <dt className="text-ink-muted">Taxa de inscrição</dt>
             <dd className="font-bold text-accent-700">{summary.feeFormatted}</dd>
           </div>

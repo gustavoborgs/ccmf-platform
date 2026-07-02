@@ -48,6 +48,74 @@ async function sendEmail(input: EmailInput): Promise<void> {
   }
 }
 
+/**
+ * Boas-vindas pós-pagamento: confirma a inscrição e entrega o bônus (curso
+ * premium) imediatamente, aumentando o valor percebido da compra.
+ * Plano: docs/academy-plano-conversao.md (fase 3)
+ */
+export async function sendPaymentConfirmedEmail(input: {
+  to: string;
+  name: string;
+  participantName: string;
+  protocol: string;
+  courseUrl: string;
+}): Promise<void> {
+  const subject = "Inscrição confirmada! Seu curso de R$ 350 já está liberado";
+  const escapedName = escapeHtml(input.name);
+  const escapedParticipant = escapeHtml(input.participantName);
+  const escapedProtocol = escapeHtml(input.protocol);
+  const escapedCourseUrl = escapeHtml(input.courseUrl);
+
+  const text = [
+    `Olá, ${input.name}!`,
+    "",
+    `A inscrição de ${input.participantName} no Concurso Criança Mais Fotogênica foi confirmada. Protocolo: ${input.protocol}.`,
+    "",
+    "E tem mais: seu bônus premium já está liberado.",
+    "O curso \"Como Gerenciar a Carreira do Seu Filho\", da Claudia Cavalcante (avaliado em R$ 350), está disponível na sua conta, sem custo extra.",
+    "",
+    `Comece agora pela carta da Claudia (leva menos de 10 minutos): ${input.courseUrl}`,
+    "",
+    "Acompanhe o status da avaliação das fotos pela sua conta.",
+    "",
+    "Com carinho,",
+    "Equipe CCMF",
+  ].join("\n");
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#1f2937;line-height:1.6">
+      <h1 style="color:#8e18b4">Inscrição confirmada!</h1>
+      <p>Olá, ${escapedName}!</p>
+      <p>
+        A inscrição de <strong>${escapedParticipant}</strong> no Concurso Criança Mais
+        Fotogênica foi confirmada. Protocolo:
+        <strong style="font-family:monospace">${escapedProtocol}</strong>.
+      </p>
+      <div style="margin:24px 0;border-radius:16px;background:linear-gradient(135deg,#8e18b4,#ec1380);padding:24px;color:#fff">
+        <p style="margin:0;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">
+          Seu bônus premium já está liberado
+        </p>
+        <h2 style="margin:8px 0 4px;color:#fff">Como Gerenciar a Carreira do Seu Filho</h2>
+        <p style="margin:0 0 16px;color:rgba(255,255,255,0.9)">
+          O curso completo da Claudia Cavalcante, avaliado em
+          <strong>R$ 350</strong>, incluso na sua inscrição. 27 capítulos de gestão de
+          carreira infantil, com método e proteção da infância.
+        </p>
+        <a href="${escapedCourseUrl}" style="display:inline-block;border-radius:999px;background:#fff;color:#c2055f;padding:12px 20px;text-decoration:none;font-weight:700">
+          Começar o curso agora
+        </a>
+      </div>
+      <p>
+        A carta de abertura da Claudia leva menos de 10 minutos. Depois, acompanhe o status
+        da avaliação das fotos pela sua conta.
+      </p>
+      <p>Com carinho,<br/>Equipe CCMF</p>
+    </div>
+  `;
+
+  await sendEmail({ to: input.to, subject, html, text });
+}
+
 export async function sendPasswordResetEmail(input: {
   to: string;
   name: string;

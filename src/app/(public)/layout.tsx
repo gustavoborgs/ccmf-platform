@@ -9,6 +9,7 @@ import { WhatsAppFloat } from "./_components/whatsapp-float";
 const NAV_LINKS = [
   { href: "/", label: "Inicial" },
   { href: "/o-concurso", label: "O Concurso" },
+  { href: "/curso", label: "Curso" },
   { href: "/regulamento", label: "Regulamento" },
   { href: "/videos", label: "Vídeos" },
   { href: "/participantes", label: "Participantes" },

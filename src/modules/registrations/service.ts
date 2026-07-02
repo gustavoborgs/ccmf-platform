@@ -12,6 +12,8 @@ import type {
   ParticipantInput,
 } from "./validators";
 import { convertLead } from "@/modules/leads/service";
+import { sendPaymentConfirmedEmail } from "@/shared/integrations/email/client";
+import { env } from "@/shared/env";
 
 import { parseWizardRef } from "./wizard-ref";
 
@@ -661,17 +663,46 @@ const REVIEWABLE_STATUSES = ["PAID", "UNDER_REVIEW"] as const;
 export async function sendRegistrationToReview(registrationId: string) {
   const registration = await db.registration.findUnique({
     where: { id: registrationId },
-    select: { id: true, status: true, deletedAt: true },
+    select: {
+      id: true,
+      status: true,
+      deletedAt: true,
+      protocol: true,
+      participant: {
+        select: {
+          name: true,
+          guardian: { select: { user: { select: { name: true, email: true } } } },
+        },
+      },
+    },
   });
   if (!registration) throw new Error("Inscrição não encontrada.");
   // cancelada pelo responsável: não ressuscitar via webhook tardio
   if (registration.deletedAt) return registration;
   if (!["PENDING_PAYMENT", "PAID"].includes(registration.status)) return registration;
 
-  return db.registration.update({
+  const updated = await db.registration.update({
     where: { id: registrationId },
     data: { status: "UNDER_REVIEW" },
   });
+
+  // Boas-vindas + entrega do bônus (curso). Falha de e-mail nunca quebra o webhook.
+  const guardianUser = registration.participant.guardian.user;
+  if (guardianUser.email) {
+    try {
+      await sendPaymentConfirmedEmail({
+        to: guardianUser.email,
+        name: guardianUser.name ?? "família",
+        participantName: registration.participant.name,
+        protocol: registration.protocol,
+        courseUrl: `${env.NEXT_PUBLIC_APP_URL}/conta/formacao`,
+      });
+    } catch (error) {
+      console.error("[registrations] Falha ao enviar e-mail de confirmação:", error);
+    }
+  }
+
+  return updated;
 }
 
 /** Aprova e publica a inscrição na galeria pública. */
