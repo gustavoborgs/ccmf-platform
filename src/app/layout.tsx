@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Baloo_2, Nunito } from "next/font/google";
 import { GoogleTag } from "@/shared/analytics/google-tag";
+import { NevoaTracking } from "@/shared/analytics/nevoa-tracking";
 import "./globals.css";
 
 const siteUrl = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://criancamaisfotogenica.com.br");
@@ -85,6 +86,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${baloo.variable} ${nunito.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <GoogleTag />
+        <NevoaTracking />
         {children}
       </body>
     </html>

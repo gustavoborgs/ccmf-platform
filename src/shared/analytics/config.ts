@@ -14,3 +14,10 @@ export function getGtagDestinationIds(): string[] {
 export function getGtagPrimaryId(): string | null {
   return GA_MEASUREMENT_ID || GOOGLE_ADS_ID || null;
 }
+
+export const NEVOA_TRACKING_TENANT =
+  process.env.NEXT_PUBLIC_NEVOA_TRACKING_TENANT ?? "1234";
+
+export const NEVOA_TRACKING_SNIPPET_URL =
+  process.env.NEXT_PUBLIC_NEVOA_TRACKING_SNIPPET_URL ??
+  "https://nevoa-manager-backend-9e27f965f73e.herokuapp.com/api/public/tracking/snippet.js";
