@@ -160,7 +160,7 @@ export default async function RegistrationPage({
               </span>
             </span>
             <span className="mt-0.5 block text-xs/5 text-white/80">
-              O curso que a Claudia vende por R$ 350 sai de graça para todos os inscritos.
+              O curso de R$ 350,00 sai de graça para todos os inscritos.
               Acesso liberado na confirmação do pagamento.
             </span>
           </span>

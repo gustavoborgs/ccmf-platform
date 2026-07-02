@@ -46,11 +46,11 @@ export function TrainingOffer({
       </h2>
 
       <p className="mt-4 max-w-2xl text-white/85">
-        A Claudia vende este curso completo de gestão de carreira infantil por{" "}
-        <strong className="text-white">R$ 350</strong>. Para quem se inscreve no Concurso
-        Criança Mais Fotogênica desta edição, ele é um brinde: sai de graça. São{" "}
-        {totalChapters} capítulos e mais de {readingHours} horas de conteúdo para você conduzir
-        a jornada do seu filho com segurança.
+        O curso completo de gestão de carreira infantil, escrito pela fundadora Claudia
+        Cavalcante, é vendido por <strong className="text-white">R$ 350</strong>. Para quem
+        se inscreve no Concurso Criança Mais Fotogênica desta edição, ele fica gratuito após
+        a confirmação do pagamento. São {totalChapters} capítulos e mais de {readingHours}{" "}
+        horas de conteúdo para você conduzir a jornada do seu filho com segurança.
       </p>
 
       <ul className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-2">
@@ -64,10 +64,11 @@ export function TrainingOffer({
 
       <div className="mt-10 flex flex-col items-start gap-6 rounded-bubble bg-white/10 p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-white/70">Curso vendido pela Claudia por R$ 350</p>
+          <p className="text-sm text-white/70 line-through">Valor do curso R$ 350,00</p>
           {registrationsOpen ? (
             <p className="mt-1 font-display text-2xl font-extrabold">
-              Grátis para quem se inscreve por {feeLabel}
+              {/* Grátis para quem se inscreve por {feeLabel} */}
+              Grátis para inscritos confirmados
             </p>
           ) : (
             <p className="mt-1 font-display text-xl font-extrabold">

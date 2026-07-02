@@ -152,7 +152,8 @@ export default async function HomePage() {
             </div>
             <p className="mt-4 text-sm text-white/80">
               Leva cerca de 5 minutos. Você envia 2 fotos, garante a participação oficial e
-              ainda ganha de brinde o curso de gestão de carreira da Claudia.
+              ainda ganha de brinde o curso de gestão de carreira infantil escrito pela
+              fundadora Claudia Cavalcante.
             </p>
           </div>
 
@@ -219,10 +220,11 @@ export default async function HomePage() {
                   Curso: Como Gerenciar a Carreira do Seu Filho
                 </h3>
                 <p className="mt-3 max-w-2xl text-white/85">
-                  O curso completo de gestão de carreira infantil que Claudia Cavalcante vende
-                  por <strong className="text-white">R$ 350</strong> sai de graça para toda
-                  criança inscrita nesta edição. Método, valores reais de mercado e proteção da
-                  infância em 27 capítulos.
+                  O curso completo de gestão de carreira infantil, escrito pela fundadora
+                  Claudia Cavalcante, é vendido por{" "}
+                  <strong className="text-white">R$ 350</strong> mas será liberado gratuito para todos
+                  os inscritos confirmados nesta edição. Método, valores reais de mercado e
+                  proteção da infância em 27 capítulos.
                 </p>
                 <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/80">
                   <span className="inline-flex items-center gap-1.5">
@@ -236,9 +238,9 @@ export default async function HomePage() {
                 </div>
               </div>
               <div className="flex flex-col items-start gap-3 lg:items-end lg:text-right">
-                <p className="text-sm text-white/70">Vendido pela Claudia por R$ 350</p>
+                <p className="text-sm text-white/70 line-through">Valor do curso R$ 350,00</p>
                 <p className="font-display text-xl font-extrabold">
-                  Grátis para quem se inscreve
+                  Grátis para todos os inscritos
                 </p>
                 <Button
                   href="/curso"
@@ -347,7 +349,7 @@ export default async function HomePage() {
             />
             <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-3xl bg-white px-5 py-3 shadow-brand-lg">
               <p className="font-display text-lg font-extrabold text-brand-gradient">
-                Grátis para inscritos
+                Grátis para inscritos confirmados
               </p>
               <p className="text-xs font-semibold text-ink-muted">brinde desta edição</p>
             </div>
@@ -358,7 +360,7 @@ export default async function HomePage() {
               align="left"
               kicker="Brinde premium 2026"
               title="O curso que transforma pais em gestores de carreira"
-              description="Claudia Cavalcante, idealizadora do concurso, reuniu quase vinte anos de experiência em um curso que ela vende por R$ 350. Nesta edição, toda família com inscrição confirmada recebe o acesso integral de graça, como brinde."
+              description="Curso escrito pela fundadora Claudia Cavalcante, com quase vinte anos de experiência reunidos em 27 capítulos. É vendido por R$ 350 — e, nesta edição, fica gratuito para todas as famílias com inscrição confirmada."
             />
             <ul className="mt-8 space-y-3">
               {courseBullets.map((bullet) => (
@@ -487,7 +489,8 @@ export default async function HomePage() {
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-white/90">
             Garanta a participação da sua criança antes do encerramento: foto profissional
-            editada por IA e, de brinde, o curso de gestão de carreira da Claudia. Tudo por
+            editada por IA e, de brinde, o curso de gestão de carreira infantil escrito pela
+            fundadora Claudia Cavalcante — vendido por R$ 350, gratuito na confirmação. Tudo por
             apenas {priceLabel}.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">

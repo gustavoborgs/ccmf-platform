@@ -34,8 +34,8 @@ export default async function ConfirmedPage({
           Seu brinde já está liberado
         </h2>
         <p className="mt-2 text-sm text-white/85">
-          O curso <strong>Como Gerenciar a Carreira do Seu Filho</strong>, que a Claudia
-          Cavalcante vende por R$ 350, é seu de graça por ser inscrito. Comece hoje pelo
+          O curso <strong>Como Gerenciar a Carreira do Seu Filho</strong>, escrito pela fundadora
+          Claudia Cavalcante, é seu de graça por ser inscrito. Comece hoje pelo
           capítulo 1: a carta da Claudia leva menos de 10 minutos.
         </p>
         <Button

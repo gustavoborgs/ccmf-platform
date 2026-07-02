@@ -62,8 +62,8 @@ export function SummaryStep({
             <dd className="font-bold">{summary.categoryName}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-ink-muted">Curso da Claudia (brinde de inscrição)</dt>
-            <dd className="font-bold text-primary-700">Grátis</dd>
+            <dt className="text-ink-muted">Curso: Como Gerenciar a Carreira Infantil</dt>
+            <dd className="font-bold text-primary-700">Brinde grátis</dd>
           </div>
           <div className="flex justify-between border-t border-primary-100 pt-2">
             <dt className="text-ink-muted">Taxa de inscrição</dt>
