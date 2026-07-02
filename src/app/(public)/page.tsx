@@ -151,8 +151,8 @@ export default async function HomePage() {
               </Button>
             </div>
             <p className="mt-4 text-sm text-white/80">
-              Leva cerca de 5 minutos. Você envia 2 fotos e garante a participação oficial +
-              o curso de gestão de carreira de R$ 350, incluso.
+              Leva cerca de 5 minutos. Você envia 2 fotos, garante a participação oficial e
+              ainda ganha de brinde o curso de gestão de carreira da Claudia.
             </p>
           </div>
 
@@ -213,16 +213,16 @@ export default async function HomePage() {
               <div>
                 <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 font-display text-xs font-extrabold uppercase tracking-widest">
                   <GraduationCap aria-hidden className="h-4 w-4" />
-                  Bônus exclusivo da inscrição
+                  Brinde para todos os inscritos
                 </p>
                 <h3 className="mt-4 font-display text-2xl font-extrabold leading-tight sm:text-3xl">
                   Curso: Como Gerenciar a Carreira do Seu Filho
                 </h3>
                 <p className="mt-3 max-w-2xl text-white/85">
-                  Um curso completo de gestão de carreira infantil assinado por Claudia
-                  Cavalcante, avaliado em <strong className="text-white">R$ 350</strong> e
-                  incluso sem custo extra na sua inscrição. Método, valores reais de mercado e
-                  proteção da infância em 27 capítulos.
+                  O curso completo de gestão de carreira infantil que Claudia Cavalcante vende
+                  por <strong className="text-white">R$ 350</strong> sai de graça para toda
+                  criança inscrita nesta edição. Método, valores reais de mercado e proteção da
+                  infância em 27 capítulos.
                 </p>
                 <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/80">
                   <span className="inline-flex items-center gap-1.5">
@@ -236,11 +236,9 @@ export default async function HomePage() {
                 </div>
               </div>
               <div className="flex flex-col items-start gap-3 lg:items-end lg:text-right">
-                <p className="text-sm text-white/70">
-                  <span className="line-through">Curso avulso: R$ 350</span>
-                </p>
+                <p className="text-sm text-white/70">Vendido pela Claudia por R$ 350</p>
                 <p className="font-display text-xl font-extrabold">
-                  Incluso na inscrição por {priceLabel}
+                  Grátis para quem se inscreve
                 </p>
                 <Button
                   href="/curso"
@@ -349,18 +347,18 @@ export default async function HomePage() {
             />
             <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-3xl bg-white px-5 py-3 shadow-brand-lg">
               <p className="font-display text-lg font-extrabold text-brand-gradient">
-                R$ 350 de bônus
+                Grátis para inscritos
               </p>
-              <p className="text-xs font-semibold text-ink-muted">incluso na inscrição</p>
+              <p className="text-xs font-semibold text-ink-muted">brinde desta edição</p>
             </div>
           </div>
 
           <div>
             <SectionHeading
               align="left"
-              kicker="Bônus premium 2026"
+              kicker="Brinde premium 2026"
               title="O curso que transforma pais em gestores de carreira"
-              description="Claudia Cavalcante, idealizadora do concurso, reuniu quase vinte anos de experiência em um curso completo de gestão de carreira infantil. Toda família com inscrição confirmada recebe acesso integral, sem pagar nada a mais."
+              description="Claudia Cavalcante, idealizadora do concurso, reuniu quase vinte anos de experiência em um curso que ela vende por R$ 350. Nesta edição, toda família com inscrição confirmada recebe o acesso integral de graça, como brinde."
             />
             <ul className="mt-8 space-y-3">
               {courseBullets.map((bullet) => (
@@ -489,7 +487,7 @@ export default async function HomePage() {
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-white/90">
             Garanta a participação da sua criança antes do encerramento: foto profissional
-            editada por IA e o curso de gestão de carreira de R$ 350 inclusos. Tudo por
+            editada por IA e, de brinde, o curso de gestão de carreira da Claudia. Tudo por
             apenas {priceLabel}.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">

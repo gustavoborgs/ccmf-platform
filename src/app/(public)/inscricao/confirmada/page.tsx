@@ -31,12 +31,12 @@ export default async function ConfirmedPage({
           <GraduationCap aria-hidden className="h-6 w-6" />
         </span>
         <h2 className="mt-4 font-display text-xl font-extrabold">
-          Seu bônus de R$ 350 já está liberado
+          Seu brinde já está liberado
         </h2>
         <p className="mt-2 text-sm text-white/85">
-          O curso <strong>Como Gerenciar a Carreira do Seu Filho</strong>, de Claudia
-          Cavalcante, está disponível na sua conta. Comece hoje pelo capítulo 1: a carta da
-          Claudia leva menos de 10 minutos.
+          O curso <strong>Como Gerenciar a Carreira do Seu Filho</strong>, que a Claudia
+          Cavalcante vende por R$ 350, é seu de graça por ser inscrito. Comece hoje pelo
+          capítulo 1: a carta da Claudia leva menos de 10 minutos.
         </p>
         <Button
           href="/conta/formacao"

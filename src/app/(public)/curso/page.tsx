@@ -62,7 +62,7 @@ const faqs = [
   {
     question: "Como recebo o acesso ao curso?",
     answer:
-      "O acesso é liberado automaticamente na sua conta assim que o pagamento da inscrição é confirmado. Não há custo extra: o curso é um bônus da inscrição da edição atual.",
+      "O acesso é liberado automaticamente na sua conta assim que o pagamento da inscrição é confirmado. Você não paga nada a mais: o curso é um brinde para todos os inscritos da edição atual.",
   },
   {
     question: "Preciso de algum conhecimento prévio?",
@@ -82,9 +82,9 @@ const faqs = [
 ];
 
 /**
- * Landing pública do curso premium. O curso é vendido como bônus âncora da
- * inscrição (R$ 350 incluso) — CTA único: /inscricao.
- * Plano: docs/academy-plano-conversao.md
+ * Landing pública do curso premium. Narrativa: a Claudia vende o curso por
+ * R$ 350, mas ele sai grátis, como brinde, para todo inscrito da edição ativa.
+ * CTA único: /inscricao. Plano: docs/academy-plano-conversao.md
  */
 export default async function CoursePage() {
   const contest = await getActiveContest();
@@ -103,7 +103,7 @@ export default async function CoursePage() {
           <div>
             <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 font-display text-sm font-bold uppercase tracking-widest">
               <GraduationCap aria-hidden className="h-4 w-4" />
-              Bônus incluso na inscrição
+              Grátis para todos os inscritos
             </p>
             <h1 className="text-balance text-4xl font-extrabold leading-tight sm:text-5xl">
               {meta.title}
@@ -111,9 +111,9 @@ export default async function CoursePage() {
             <p className="mt-5 max-w-xl text-lg text-white/90">
               O curso completo de gestão de carreira infantil assinado por{" "}
               <strong className="font-semibold">{meta.author}</strong>, idealizadora do
-              Concurso Criança Mais Fotogênica. Avaliado em{" "}
-              <strong className="font-semibold">R$ 350</strong> e liberado sem custo extra
-              para toda família com inscrição confirmada.
+              Concurso Criança Mais Fotogênica. A Claudia vende este curso por{" "}
+              <strong className="font-semibold">R$ 350</strong>, mas nesta edição ele é um
+              brinde: sai de graça para toda família com inscrição confirmada.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               {registrationsOpen ? (
@@ -301,22 +301,20 @@ export default async function CoursePage() {
               Como ter acesso
             </p>
             <h2 className="mt-6 text-balance font-display text-3xl font-extrabold sm:text-4xl">
-              O curso não é vendido separadamente
+              Para os inscritos do concurso, é grátis
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-white/85">
-              Ele é o bônus premium da inscrição no Concurso Criança Mais Fotogênica. Você
-              inscreve sua criança, garante o Pacote Participante Oficial e destrava o curso
-              completo assim que o pagamento é confirmado.
+              A Claudia vende este curso por R$ 350, mas nesta edição ele é o brinde oficial
+              da inscrição. Você inscreve sua criança, garante o Pacote Participante Oficial e
+              recebe o curso completo de graça assim que o pagamento é confirmado.
             </p>
 
             <div className="mx-auto mt-8 max-w-md rounded-bubble bg-white/10 p-6">
-              <p className="text-sm text-white/70">
-                <span className="line-through">Valor do curso: R$ 350</span>
-              </p>
+              <p className="text-sm text-white/70">Curso vendido pela Claudia por R$ 350</p>
               {registrationsOpen ? (
                 <>
                   <p className="mt-1 font-display text-2xl font-extrabold">
-                    Incluso na inscrição por {feeLabel}
+                    Grátis para quem se inscreve por {feeLabel}
                   </p>
                   <p className="mt-2 text-sm text-white/70">
                     Junto com a foto profissional por IA, página pública, certificado e a

@@ -123,7 +123,6 @@ export default async function RegistrationPage({
     },
   ];
 
-  const totalValueLabel = formatCentsBRL(contest.registrationFeeCents + 35000);
 
   return (
     <Container className="py-14">
@@ -157,12 +156,12 @@ export default async function RegistrationPage({
                 Curso: Como Gerenciar a Carreira do Seu Filho
               </span>
               <span className="rounded-full bg-accent-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
-                R$ 350 incluso
+                Brinde grátis
               </span>
             </span>
             <span className="mt-0.5 block text-xs/5 text-white/80">
-              27 capítulos de gestão de carreira infantil por Claudia Cavalcante. Acesso liberado
-              na confirmação do pagamento.
+              O curso que a Claudia vende por R$ 350 sai de graça para todos os inscritos.
+              Acesso liberado na confirmação do pagamento.
             </span>
           </span>
         </Link>
@@ -186,12 +185,6 @@ export default async function RegistrationPage({
             );
           })}
         </div>
-
-        <p className="mt-5 rounded-2xl bg-accent-50 px-4 py-3 text-center text-sm text-primary-700">
-          Somando o curso, são mais de{" "}
-          <strong className="text-accent-700">{totalValueLabel} em valor</strong> pela taxa única
-          de <strong className="text-accent-700">{feeFormatted}</strong>.
-        </p>
 
         <div className="mt-5 flex flex-col gap-3 border-t border-primary-100 pt-5 text-sm text-ink-muted sm:flex-row sm:items-center sm:justify-between">
           <span className="inline-flex items-center gap-2">

@@ -60,7 +60,7 @@ export async function sendPaymentConfirmedEmail(input: {
   protocol: string;
   courseUrl: string;
 }): Promise<void> {
-  const subject = "Inscrição confirmada! Seu curso de R$ 350 já está liberado";
+  const subject = "Inscrição confirmada! Seu brinde já está liberado";
   const escapedName = escapeHtml(input.name);
   const escapedParticipant = escapeHtml(input.participantName);
   const escapedProtocol = escapeHtml(input.protocol);
@@ -71,8 +71,8 @@ export async function sendPaymentConfirmedEmail(input: {
     "",
     `A inscrição de ${input.participantName} no Concurso Criança Mais Fotogênica foi confirmada. Protocolo: ${input.protocol}.`,
     "",
-    "E tem mais: seu bônus premium já está liberado.",
-    "O curso \"Como Gerenciar a Carreira do Seu Filho\", da Claudia Cavalcante (avaliado em R$ 350), está disponível na sua conta, sem custo extra.",
+    "E tem mais: seu brinde de inscrição já está liberado.",
+    "O curso \"Como Gerenciar a Carreira do Seu Filho\", que a Claudia Cavalcante vende por R$ 350, é seu de graça e já está disponível na sua conta.",
     "",
     `Comece agora pela carta da Claudia (leva menos de 10 minutos): ${input.courseUrl}`,
     "",
@@ -93,13 +93,13 @@ export async function sendPaymentConfirmedEmail(input: {
       </p>
       <div style="margin:24px 0;border-radius:16px;background:linear-gradient(135deg,#8e18b4,#ec1380);padding:24px;color:#fff">
         <p style="margin:0;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">
-          Seu bônus premium já está liberado
+          Seu brinde de inscrição já está liberado
         </p>
         <h2 style="margin:8px 0 4px;color:#fff">Como Gerenciar a Carreira do Seu Filho</h2>
         <p style="margin:0 0 16px;color:rgba(255,255,255,0.9)">
-          O curso completo da Claudia Cavalcante, avaliado em
-          <strong>R$ 350</strong>, incluso na sua inscrição. 27 capítulos de gestão de
-          carreira infantil, com método e proteção da infância.
+          O curso completo que a Claudia Cavalcante vende por <strong>R$ 350</strong> é seu
+          de graça por participar do concurso. 27 capítulos de gestão de carreira infantil,
+          com método e proteção da infância.
         </p>
         <a href="${escapedCourseUrl}" style="display:inline-block;border-radius:999px;background:#fff;color:#c2055f;padding:12px 20px;text-decoration:none;font-weight:700">
           Começar o curso agora
