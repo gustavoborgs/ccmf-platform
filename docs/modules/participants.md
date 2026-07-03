@@ -53,7 +53,11 @@ individual, likes e compartilhamento.
    os demais removem da galeria pública.
 7. Somente edições **ativas** (`REGISTRATION_OPEN` … `RESULTS_PUBLISHED`) aparecem
    na galeria — rascunhos e edições arquivadas ficam ocultas, mesmo com aprovados.
-8. O admin pode adicionar/remover fotos mesmo após publicação. O limite continua
+8. Com a edição em `RESULTS_PUBLISHED`, a **listagem** da galeria exibe somente
+   inscrições `WINNER` (vencedores). Antes disso, aparecem `APPROVED`, `SEMIFINALIST`
+   e `WINNER`. A página individual de um participante continua acessível por URL
+   direta enquanto a inscrição estiver em status público.
+9. O admin pode adicionar/remover fotos mesmo após publicação. O limite continua
    sendo 2 fotos por inscrição; ao remover a capa, a próxima foto vira capa.
 
 ## Permissões
