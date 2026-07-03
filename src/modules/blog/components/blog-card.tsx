@@ -1,6 +1,7 @@
 import { CalendarDays, Clock3 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { formatPostDateBR } from "@/shared/datetime";
 import { cn } from "@/shared/ui";
 
 export type BlogCardData = {
@@ -91,9 +92,5 @@ function PostMeta({ post }: { post: BlogCardData }) {
 }
 
 export function formatPostDate(date: Date) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
+  return formatPostDateBR(date);
 }

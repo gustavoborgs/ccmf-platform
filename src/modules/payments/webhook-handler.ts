@@ -1,6 +1,5 @@
 import { db } from "@/shared/db";
 import { sendRegistrationToReview } from "@/modules/registrations/service";
-import { dispatchAutomationEvent } from "@/modules/automations/service";
 import { getPostHogClient } from "@/shared/posthog-server";
 import type { AsaasWebhookEvent } from "@/shared/integrations/asaas/types";
 
@@ -76,14 +75,6 @@ async function applyEvent(event: AsaasWebhookEvent) {
   // O funil do CRM é derivado de Registration.status — nada a atualizar em Lead.
   if (isPaid && payment.registration.status === "PENDING_PAYMENT") {
     await sendRegistrationToReview(payment.registrationId);
-
-    try {
-      await dispatchAutomationEvent("PAYMENT_CONFIRMED", {
-        registrationId: payment.registrationId,
-      });
-    } catch (error) {
-      console.error("[automations] Falha ao disparar PAYMENT_CONFIRMED:", error);
-    }
 
     const posthog = getPostHogClient();
     posthog.capture({

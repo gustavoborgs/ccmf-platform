@@ -728,6 +728,36 @@ export async function cancelGuardianRegistration(guardianId: string, registratio
 
 const REVIEWABLE_STATUSES = ["PAID", "UNDER_REVIEW"] as const;
 
+// Side effects de ciclo de vida (automations, referrals, e-mail)
+//
+// PAYMENT_CONFIRMED     → handlePaymentConfirmedSideEffects ← sendRegistrationToReview
+// REGISTRATION_APPROVED → handleRegistrationApprovedSideEffects ← approveRegistration
+//                                                      ou updateAdminParticipantStatus
+
+/** Efeitos colaterais idempotentes ao confirmar pagamento da inscrição. */
+export async function handlePaymentConfirmedSideEffects(registrationId: string) {
+  try {
+    await dispatchAutomationEvent("PAYMENT_CONFIRMED", { registrationId });
+  } catch (error) {
+    console.error("[automations] Falha ao disparar PAYMENT_CONFIRMED:", error);
+  }
+}
+
+/** Efeitos colaterais idempotentes ao aprovar/publicar uma inscrição. */
+export async function handleRegistrationApprovedSideEffects(registrationId: string) {
+  try {
+    await fulfillRewardOnApproval(registrationId);
+  } catch (error) {
+    console.error("[referrals] Falha ao conceder prêmio de indicação:", error);
+  }
+
+  try {
+    await dispatchAutomationEvent("REGISTRATION_APPROVED", { registrationId });
+  } catch (error) {
+    console.error("[automations] Falha ao disparar REGISTRATION_APPROVED:", error);
+  }
+}
+
 /** Inscrição com pagamento confirmado entra na fila de conferência operacional do admin. */
 export async function sendRegistrationToReview(registrationId: string) {
   const registration = await db.registration.findUnique({
@@ -771,6 +801,8 @@ export async function sendRegistrationToReview(registrationId: string) {
     }
   }
 
+  await handlePaymentConfirmedSideEffects(registrationId);
+
   return updated;
 }
 
@@ -797,17 +829,7 @@ export async function approveRegistration(registrationId: string) {
     },
   });
 
-  try {
-    await fulfillRewardOnApproval(registrationId);
-  } catch (error) {
-    console.error("[referrals] Falha ao conceder prêmio de indicação:", error);
-  }
-
-  try {
-    await dispatchAutomationEvent("REGISTRATION_APPROVED", { registrationId });
-  } catch (error) {
-    console.error("[automations] Falha ao disparar REGISTRATION_APPROVED:", error);
-  }
+  await handleRegistrationApprovedSideEffects(registrationId);
 
   return updated;
 }

@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { requireRole } from "@/modules/auth/guards";
 import { removeRegistrationPhoto, requestPhotoUpload } from "@/modules/media/service";
-import { fulfillRewardOnApproval } from "@/modules/referrals/service";
 import {
   buildLikeFingerprint,
   getAdminParticipantRegistration,
@@ -94,13 +93,6 @@ export async function updateAdminParticipantStatusAction(
       parsed.data.registrationId,
       parsed.data.status,
     );
-    if (parsed.data.status === "APPROVED") {
-      try {
-        await fulfillRewardOnApproval(parsed.data.registrationId);
-      } catch (error) {
-        console.error("[referrals] Falha ao conceder prêmio de indicação:", error);
-      }
-    }
     revalidateParticipantViews(registration.contest.year, registration.participant.slug);
     return { ok: true, data: { status: registration.status } };
   } catch (error) {

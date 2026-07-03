@@ -52,14 +52,14 @@ function normalizeTemplateBindings(
 
 const automationConfigBaseSchema = z.object({
   templateId: z.string().uuid("templateId deve ser um UUID válido."),
-  batchLimit: z.number().int().min(1).max(100).default(50),
   templateBindings: z.array(automationTemplateBindingSchema).min(1),
-  delayHours: z.number().min(0.25).max(168),
 });
 
 export const automationScheduledConfigSchema = automationConfigBaseSchema
   .extend({
     trigger: z.literal("SCHEDULED"),
+    batchLimit: z.number().int().min(1).max(100).default(50),
+    delayHours: z.number().min(0.25).max(168),
     delayAnchor: z.enum(AUTOMATION_DELAY_ANCHORS),
     funnelStep: z.enum(AUTOMATION_FUNNEL_STEPS),
   })
@@ -70,6 +70,7 @@ export const automationScheduledConfigSchema = automationConfigBaseSchema
 export const automationEventConfigSchema = automationConfigBaseSchema
   .extend({
     trigger: z.literal("EVENT"),
+    delayHours: z.number().min(0).max(168),
     event: z.enum(AUTOMATION_EVENTS),
     delayAnchor: z.enum(AUTOMATION_DELAY_ANCHORS).default("ENTITY_CREATED"),
     batchLimit: z.number().int().min(1).max(100).optional(),

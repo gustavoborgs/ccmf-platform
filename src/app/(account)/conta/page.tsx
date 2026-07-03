@@ -15,6 +15,7 @@ import {
 } from "@/modules/registrations/components/account-registration-actions";
 import { PhotoReview, type ReviewPhoto } from "@/modules/registrations/components/photo-review";
 import { getPublicUrl } from "@/shared/integrations/s3/storage";
+import { formatDateBR } from "@/shared/datetime";
 import { Button, Card, Container, cn } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/utils";
 
@@ -174,7 +175,7 @@ export default async function AccountPage({
                           </p>
                           {latestPayment.status === "PENDING" && latestPayment.dueDate && (
                             <p className="mt-1 text-xs text-ink-muted">
-                              Vencimento: {formatDate(latestPayment.dueDate)}
+                              Vencimento: {formatDateBR(latestPayment.dueDate)}
                             </p>
                           )}
                         </div>
@@ -198,7 +199,7 @@ export default async function AccountPage({
                         />
                         <AccountDetail
                           label="Data de nascimento"
-                          value={formatDate(registration.participant.birthDate)}
+                          value={formatDateBR(registration.participant.birthDate)}
                         />
                         <AccountDetail
                           label="Consentimento de imagem"
@@ -329,11 +330,6 @@ function AccountDetail({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
-}
-
 type AccountStatus = {
   label: string;
   description: string;

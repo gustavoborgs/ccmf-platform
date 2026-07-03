@@ -269,8 +269,12 @@ export async function createCheckout(params: {
 
   await db.registration.update({
     where: { id: registration.id },
-    data: { status: paidNow ? "UNDER_REVIEW" : "PENDING_PAYMENT" },
+    data: { status: "PENDING_PAYMENT" },
   });
+
+  if (paidNow) {
+    await sendRegistrationToReview(registration.id);
+  }
 
   return toCheckoutResult(payment, pix?.encodedImage ?? null);
 }

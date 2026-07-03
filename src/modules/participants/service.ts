@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
+import { handleRegistrationApprovedSideEffects } from "@/modules/registrations/service";
 import {
   getReferralStatsForParticipant,
   getReferralsMadeCounts,
@@ -236,6 +237,7 @@ export async function updateAdminParticipantStatus(
     where: { id: registrationId },
     select: {
       id: true,
+      status: true,
       approvedAt: true,
       participant: { select: { slug: true } },
       contest: { select: { year: true } },
@@ -243,6 +245,7 @@ export async function updateAdminParticipantStatus(
   });
   if (!registration) throw new Error("Inscrição não encontrada.");
 
+  const previousStatus = registration.status;
   const isPublicStatus = PUBLIC_STATUSES.includes(status as (typeof PUBLIC_STATUSES)[number]);
 
   const updated = await db.registration.update({
@@ -259,6 +262,10 @@ export async function updateAdminParticipantStatus(
       contest: { select: { year: true } },
     },
   });
+
+  if (status === "APPROVED" && previousStatus !== "APPROVED") {
+    await handleRegistrationApprovedSideEffects(registrationId);
+  }
 
   return updated;
 }

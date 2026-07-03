@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { formatDateBR, formatDateTimeBR } from "@/shared/datetime";
 import { cn } from "@/shared/ui";
 
 export function StatusBadge({
@@ -29,16 +30,11 @@ export function StatusBadge({
 }
 
 export function formatDateTime(date: Date | null | undefined): string {
-  if (!date) return "-";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
+  return formatDateTimeBR(date);
 }
 
 export function formatDate(date: Date | null | undefined): string {
-  if (!date) return "-";
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
+  return formatDateBR(date);
 }
 
 /** Bloco de seção dos modais de detalhe das listagens administrativas. */

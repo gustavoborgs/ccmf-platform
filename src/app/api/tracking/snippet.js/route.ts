@@ -1,62 +1,68 @@
-import { NextResponse } from "next/server";
-
 const DEFAULT_UPSTREAM =
   "https://nevoa-manager-backend-9e27f965f73e.herokuapp.com/api/public/tracking/snippet.js";
 
-const CACHE_SECONDS = 300;
+function resolveUpstreamSnippetUrl(): URL {
+  const raw =
+    process.env.NEVOA_TRACKING_SNIPPET_UPSTREAM_URL ??
+    process.env.NEXT_PUBLIC_NEVOA_TRACKING_SNIPPET_URL ??
+    (process.env.NEVOA_MANAGER_BASE_URL
+      ? `${process.env.NEVOA_MANAGER_BASE_URL.replace(/\/$/, "")}/public/tracking/snippet.js`
+      : DEFAULT_UPSTREAM);
 
-function resolveUpstreamSnippetUrl(): string {
-  if (process.env.NEVOA_TRACKING_SNIPPET_UPSTREAM_URL) {
-    return process.env.NEVOA_TRACKING_SNIPPET_UPSTREAM_URL;
-  }
-
-  if (process.env.NEXT_PUBLIC_NEVOA_TRACKING_SNIPPET_URL) {
-    return process.env.NEXT_PUBLIC_NEVOA_TRACKING_SNIPPET_URL;
-  }
-
-  const baseUrl = process.env.NEVOA_MANAGER_BASE_URL;
-  if (baseUrl) {
-    return `${baseUrl.replace(/\/$/, "")}/public/tracking/snippet.js`;
-  }
-
-  return DEFAULT_UPSTREAM;
+  return new URL(raw);
 }
 
-/**
- * Proxy first-party do snippet de tracking Nevoa.
- * O browser carrega `/api/tracking/snippet.js` no nosso domínio; o servidor busca o JS upstream.
- */
-export async function GET() {
-  const upstream = resolveUpstreamSnippetUrl();
+function buildUpstreamHeaders(request: Request, upstream: URL): Headers {
+  const headers = new Headers(request.headers);
+  const clientIp = headers.get("cf-connecting-ip") ?? headers.get("x-forwarded-for");
 
-  try {
-    const response = await fetch(upstream, {
-      next: { revalidate: CACHE_SECONDS },
-      headers: { Accept: "application/javascript, text/javascript, */*" },
-    });
+  headers.set("host", upstream.host);
+  headers.delete("cookie");
+  headers.delete("content-length");
+  headers.delete("connection");
 
-    if (!response.ok) {
-      console.error("[tracking/snippet] upstream error", upstream, response.status);
-      return new NextResponse("// tracking snippet unavailable\n", {
-        status: 502,
-        headers: { "Content-Type": "application/javascript; charset=utf-8" },
-      });
-    }
-
-    const body = await response.text();
-
-    return new NextResponse(body, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/javascript; charset=utf-8",
-        "Cache-Control": `public, max-age=${CACHE_SECONDS}, s-maxage=${CACHE_SECONDS}`,
-      },
-    });
-  } catch (error) {
-    console.error("[tracking/snippet] fetch failed", upstream, error);
-    return new NextResponse("// tracking snippet unavailable\n", {
-      status: 502,
-      headers: { "Content-Type": "application/javascript; charset=utf-8" },
-    });
+  if (clientIp) {
+    headers.set("x-forwarded-for", clientIp);
   }
+
+  return headers;
+}
+
+function buildProxyResponseHeaders(response: Response): Headers {
+  const headers = new Headers(response.headers);
+
+  // fetch descomprime o body — estes headers do upstream não batem mais com o stream.
+  headers.delete("content-encoding");
+  headers.delete("content-length");
+  headers.delete("transfer-encoding");
+
+  return headers;
+}
+
+async function proxySnippetRequest(request: Request) {
+  const upstream = resolveUpstreamSnippetUrl();
+  const body =
+    request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
+
+  const response = await fetch(upstream, {
+    method: request.method,
+    headers: buildUpstreamHeaders(request, upstream),
+    body,
+    redirect: "manual",
+  });
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: buildProxyResponseHeaders(response),
+  });
+}
+
+/** Proxy transparente do snippet Nevoa — repassa status, headers e body do upstream. */
+export async function GET(request: Request) {
+  return proxySnippetRequest(request);
+}
+
+export async function HEAD(request: Request) {
+  return proxySnippetRequest(request);
 }

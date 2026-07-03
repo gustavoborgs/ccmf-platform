@@ -111,8 +111,13 @@ export function AutomationForm({ initial, mode }: { initial?: AutomationFormInit
     const parsedBatchLimit = Number(batchLimit);
     const bindings = sortTemplateBindings(templateBindings);
 
-    if (!Number.isFinite(parsedDelayHours) || parsedDelayHours < 0.25) {
-      setError("Atraso inválido. Mínimo 0.25h (15 minutos).");
+    const minDelayHours = trigger === "EVENT" ? 0 : 0.25;
+    if (!Number.isFinite(parsedDelayHours) || parsedDelayHours < minDelayHours) {
+      setError(
+        trigger === "EVENT"
+          ? "Atraso inválido. Use 0 para disparo imediato ou até 168h."
+          : "Atraso inválido. Mínimo 0.25h (15 minutos).",
+      );
       return null;
     }
     if (!Number.isFinite(parsedBatchLimit) || parsedBatchLimit < 1) {
@@ -316,11 +321,18 @@ export function AutomationForm({ initial, mode }: { initial?: AutomationFormInit
         </Field>
       )}
 
-      <Field label="Atraso (horas)" hint="Mínimo 0.25 (15 min). Para eventos, 0 = imediato.">
+      <Field
+        label="Atraso (horas)"
+        hint={
+          trigger === "EVENT"
+            ? "0 = disparo imediato no evento. Valores > 0 exigem o worker (/api/workers/automations/run)."
+            : "Mínimo 0.25 (15 min) desde a referência de tempo escolhida."
+        }
+      >
         <TextInput
           required
           type="number"
-          min={0}
+          min={trigger === "EVENT" ? 0 : 0.25}
           max={168}
           step={0.25}
           value={delayHours}
