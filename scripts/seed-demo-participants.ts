@@ -3,6 +3,7 @@ import { deflateSync } from "node:zlib";
 import bcrypt from "bcryptjs";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { db } from "../src/shared/db";
+import { buildReferralCode } from "../src/modules/guardians/referral";
 import { buildProtocol, slugify } from "../src/shared/utils";
 
 /**
@@ -223,7 +224,7 @@ async function main() {
       email: DEMO_EMAIL,
       passwordHash: await bcrypt.hash("demo1234", 10),
       role: "GUARDIAN",
-      guardianProfile: { create: { city: "Londrina", state: "PR" } },
+      guardianProfile: { create: { city: "Londrina", state: "PR", referralCode: buildReferralCode() } },
     },
     include: { guardianProfile: true },
   });

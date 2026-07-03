@@ -71,6 +71,8 @@ model GuardianProfile {
   state           String? @db.VarChar(2)
   /// id do customer no Asaas (criado no primeiro checkout)
   asaasCustomerId String? @unique
+  /// código de indicação para link /inscricao?indicacao=
+  referralCode    String  @unique
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   participants Participant[]
@@ -281,10 +283,16 @@ model WebhookEvent {
 
 enum AutomationType {
   REGISTRATION_RESUME_WHATSAPP
+  WHATSAPP
 }
 
 enum AutomationChannel {
   WHATSAPP
+}
+
+enum AutomationSubjectType {
+  LEAD
+  REGISTRATION
 }
 
 enum AutomationStatus {
@@ -294,15 +302,15 @@ enum AutomationStatus {
   SKIPPED
 }
 
-/// Definição de uma automação operacional (config tipada por `type` no código).
+/// Definição de uma automação operacional (config tipada no código).
 model Automation {
   id          String            @id @default(cuid())
-  type        AutomationType    @unique
+  type        AutomationType      @default(WHATSAPP)
   name        String
   description String?
   channel     AutomationChannel
   enabled     Boolean           @default(true)
-  /// Configuração específica do tipo — validada em `src/modules/automations/types.ts`.
+  /// Configuração — validada em `src/modules/automations/validators.ts`.
   config      Json
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
@@ -313,10 +321,13 @@ model Automation {
 }
 
 model AutomationLog {
-  id              String           @id @default(cuid())
+  id              String                @id @default(cuid())
   automationId    String
-  status          AutomationStatus @default(PENDING)
+  status          AutomationStatus      @default(PENDING)
+  subjectType     AutomationSubjectType
+  subjectId       String
   registrationId  String?
+  leadId          String?
   recipientName   String
   recipientPhone  String
   externalBatchId String?
@@ -325,14 +336,16 @@ model AutomationLog {
   error           String?
   scheduledFor    DateTime?
   sentAt          DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 
   automation   Automation    @relation(fields: [automationId], references: [id])
   registration Registration? @relation(fields: [registrationId], references: [id])
+  lead         Lead?         @relation(fields: [leadId], references: [id])
 
-  @@unique([automationId, registrationId])
+  @@unique([automationId, subjectType, subjectId])
   @@index([automationId, status, createdAt])
+  @@index([status, scheduledFor])
   @@map("automation_logs")
 }
 
@@ -402,6 +415,7 @@ model Lead {
   updatedAt      DateTime  @updatedAt
 
   events LeadEvent[]
+  automationLogs AutomationLog[]
 
   @@index([stage])
   @@map("leads")

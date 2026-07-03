@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { RegistrationResumeWhatsappForm } from "@/modules/automations/registration-resume-whatsapp/components/form";
+import { AutomationForm } from "@/modules/automations/components/automation-form";
 import { getAdminAutomationById } from "@/modules/automations/service";
-import { AUTOMATION_CHANNEL_LABELS, AUTOMATION_TYPE_LABELS } from "@/modules/automations/types";
+import { AUTOMATION_CHANNEL_LABELS, describeAutomationConfig } from "@/modules/automations/types";
 import { Card } from "@/shared/ui";
 import { StatusBadge } from "../../_components/admin-ui";
 
@@ -31,7 +31,7 @@ export default async function AdminAutomationDetailPage({
           </StatusBadge>
         </div>
         <p className="mt-3 max-w-3xl text-ink-muted">
-          {automation.description ?? AUTOMATION_TYPE_LABELS[automation.type]} ·{" "}
+          {describeAutomationConfig(automation.config)} ·{" "}
           {AUTOMATION_CHANNEL_LABELS[automation.channel]} · {automation._count.logs} disparo(s)
           registrado(s)
         </p>
@@ -40,23 +40,20 @@ export default async function AdminAutomationDetailPage({
       <Card className="max-w-3xl p-6">
         <h2 className="text-xl font-extrabold text-primary-700">Configuração</h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Parâmetros operacionais persistidos em `Automation.config`. O worker usa estes valores
-          em runtime.
+          Parâmetros persistidos em `Automation.config`. Gatilhos SCHEDULED são processados pelo
+          worker; EVENT dispara nos pontos de integração do sistema.
         </p>
         <div className="mt-5">
-          {automation.type === "REGISTRATION_RESUME_WHATSAPP" ? (
-            <RegistrationResumeWhatsappForm
-              initial={{
-                id: automation.id,
-                enabled: automation.enabled,
-                config: automation.config,
-              }}
-            />
-          ) : (
-            <p className="text-sm text-ink-muted">
-              Edição administrativa ainda não implementada para este tipo de automação.
-            </p>
-          )}
+          <AutomationForm
+            mode="edit"
+            initial={{
+              id: automation.id,
+              name: automation.name,
+              description: automation.description,
+              enabled: automation.enabled,
+              config: automation.config,
+            }}
+          />
         </div>
       </Card>
     </div>

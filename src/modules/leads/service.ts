@@ -102,3 +102,12 @@ export async function markLeadLost(leadId: string, note: string) {
 export function listPreAccountLeads() {
   return db.lead.findMany({ where: { stage: "NEW" }, orderBy: { updatedAt: "desc" } });
 }
+
+/** Leads elegíveis para automações de recuperação pré-conta. */
+export function listRecoverableLeads(limit: number) {
+  return db.lead.findMany({
+    where: { stage: "NEW" },
+    orderBy: { createdAt: "asc" },
+    take: limit,
+  });
+}

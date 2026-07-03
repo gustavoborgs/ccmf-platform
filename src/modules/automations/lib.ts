@@ -1,30 +1,40 @@
-import type { AutomationType, Prisma } from "@/generated/prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/shared/db";
-import { registrationResumeWhatsappConfigSchema } from "./registration-resume-whatsapp/validators";
+import { automationConfigSchema } from "./validators";
 import type { AutomationConfig } from "./types";
+import type { AutomationTemplateVariable } from "./types";
 
-export async function getAutomation<T extends AutomationType>(type: T) {
-  const automation = await db.automation.findUnique({ where: { type } });
+function normalizeLegacyAutomationConfig(config: unknown): unknown {
+  if (!config || typeof config !== "object") return config;
+  const record = config as Record<string, unknown>;
+  if (Array.isArray(record.templateBindings)) return config;
+  if (!Array.isArray(record.templateVariables)) return config;
+
+  return {
+    ...record,
+    templateBindings: (record.templateVariables as AutomationTemplateVariable[]).map(
+      (variable, index) => ({
+        variable,
+        position: index + 1,
+      }),
+    ),
+  };
+}
+
+export async function getAutomationById(id: string) {
+  const automation = await db.automation.findUnique({ where: { id } });
   if (!automation) {
-    throw new Error(`Automação não configurada: ${type}.`);
+    throw new Error(`Automação não encontrada: ${id}.`);
   }
 
   return {
     ...automation,
-    config: parseAutomationConfig(type, automation.config),
+    config: parseAutomationConfig(automation.config),
   };
 }
 
-export function parseAutomationConfig<T extends AutomationType>(
-  type: T,
-  config: unknown,
-): AutomationConfig<T> {
-  switch (type) {
-    case "REGISTRATION_RESUME_WHATSAPP":
-      return registrationResumeWhatsappConfigSchema.parse(config) as AutomationConfig<T>;
-    default:
-      throw new Error(`Parser de config não implementado para ${String(type)}.`);
-  }
+export function parseAutomationConfig(config: unknown): AutomationConfig {
+  return automationConfigSchema.parse(normalizeLegacyAutomationConfig(config));
 }
 
 export function normalizePhone(phone: string | null | undefined): string | null {
@@ -39,13 +49,13 @@ export function normalizePhone(phone: string | null | undefined): string | null 
 
 export function buildAutomationLogWhere(
   filters: {
-    type?: AutomationType;
+    automationId?: string;
     status?: Prisma.EnumAutomationStatusFilter["equals"];
     q?: string;
   },
 ): Prisma.AutomationLogWhereInput {
   const where: Prisma.AutomationLogWhereInput = {};
-  if (filters.type) where.automation = { type: filters.type };
+  if (filters.automationId) where.automationId = filters.automationId;
   if (filters.status) where.status = filters.status;
 
   if (filters.q) {
@@ -72,6 +82,8 @@ export function buildAutomationLogWhere(
           },
         },
       },
+      { lead: { name: { contains: filters.q, mode: "insensitive" } } },
+      { lead: { email: { contains: filters.q, mode: "insensitive" } } },
       ...(digits ? [{ recipientPhone: { contains: digits } }] : []),
     ];
   }

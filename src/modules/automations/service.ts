@@ -1,17 +1,21 @@
 import { db } from "@/shared/db";
 import { resolvePagination } from "@/shared/list-params";
 import { buildAutomationLogWhere, parseAutomationConfig } from "./lib";
-import type { AdminAutomationLogFilters, AdminAutomationUpdateInput } from "./validators";
+import type {
+  AdminAutomationCreateInput,
+  AdminAutomationLogFilters,
+  AdminAutomationUpdateInput,
+} from "./validators";
 
 /**
  * Módulo Automations: API pública compartilhada e listagem de logs.
  * Spec: docs/modules/automations.md
- *
- * Cada automação tem pasta própria com service dedicado.
  */
 
-export { getAutomation, normalizePhone, parseAutomationConfig } from "./lib";
-export { runRegistrationResumeWhatsappAutomation } from "./registration-resume-whatsapp/service";
+export { normalizePhone, parseAutomationConfig, getAutomationById } from "./lib";
+export { dispatchAutomationEvent } from "./engine/dispatch-event";
+export { runAutomationsWorker } from "./engine/run-worker";
+export type { AutomationsWorkerResult } from "./engine/run-worker";
 
 export async function listAdminAutomations() {
   const items = await db.automation.findMany({
@@ -21,7 +25,7 @@ export async function listAdminAutomations() {
 
   return items.map((automation) => ({
     ...automation,
-    config: parseAutomationConfig(automation.type, automation.config),
+    config: parseAutomationConfig(automation.config),
   }));
 }
 
@@ -34,20 +38,54 @@ export async function getAdminAutomationById(id: string) {
 
   return {
     ...automation,
-    config: parseAutomationConfig(automation.type, automation.config),
+    config: parseAutomationConfig(automation.config),
   };
 }
 
+export async function createAdminAutomation(input: AdminAutomationCreateInput) {
+  const config = parseAutomationConfig(input.config);
+
+  return db.automation.create({
+    data: {
+      type: "WHATSAPP",
+      name: input.name,
+      description: input.description,
+      channel: "WHATSAPP",
+      enabled: input.enabled,
+      config,
+    },
+  });
+}
+
 export async function updateAdminAutomation(id: string, input: AdminAutomationUpdateInput) {
-  const automation = await db.automation.findUnique({ where: { id }, select: { id: true, type: true } });
+  const automation = await db.automation.findUnique({ where: { id }, select: { id: true } });
   if (!automation) throw new Error("Automação não encontrada.");
 
-  const config = parseAutomationConfig(automation.type, input.config);
+  const config = parseAutomationConfig(input.config);
 
   return db.automation.update({
     where: { id },
-    data: { enabled: input.enabled, config },
+    data: {
+      enabled: input.enabled,
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.description !== undefined ? { description: input.description } : {}),
+      config,
+    },
   });
+}
+
+export async function deleteAdminAutomation(id: string) {
+  const automation = await db.automation.findUnique({
+    where: { id },
+    include: { logs: { where: { status: "SENT" }, take: 1 } },
+  });
+  if (!automation) throw new Error("Automação não encontrada.");
+  if (automation.logs.length > 0) {
+    throw new Error("Não é possível excluir automação com disparos enviados.");
+  }
+
+  await db.automationLog.deleteMany({ where: { automationId: id } });
+  return db.automation.delete({ where: { id } });
 }
 
 export async function listAutomationLogs(filters: AdminAutomationLogFilters) {
@@ -72,6 +110,7 @@ export async function listAutomationLogs(filters: AdminAutomationLogFilters) {
           },
         },
       },
+      lead: { select: { id: true, name: true, email: true, phone: true } },
     },
     orderBy: { createdAt: "desc" },
     skip,

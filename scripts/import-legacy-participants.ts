@@ -13,6 +13,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import yauzl from "yauzl";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { buildReferralCode } from "../src/modules/guardians/referral";
 import { buildProtocol, slugify } from "../src/shared/utils";
 
 type Command = "analyze" | "import" | "photo-manifest" | "photos" | "build-json" | "sync-data" | "upload-images";
@@ -1398,6 +1399,7 @@ async function syncGuardianProfile(guardianData: NormalizedLegacyImport["guardia
   return db.guardianProfile.create({
     data: {
       userId: user.id,
+      referralCode: buildReferralCode(),
       ...buildGuardianProfileData(guardianData),
     },
     select: { id: true },
@@ -1603,6 +1605,7 @@ async function importGuardians(
 
     profilesToCreate.push({
       userId: user.id,
+      referralCode: buildReferralCode(),
       cpf: customer.cpf,
       whatsapp: customer.phone,
       zipCode: customer.zipCode,

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { runRegistrationResumeWhatsappAutomation } from "@/modules/automations/service";
-import { runRegistrationResumeWorkerSchema } from "@/modules/automations/validators";
+import { runAutomationsWorker } from "@/modules/automations/service";
+import { runAutomationsWorkerSchema } from "@/modules/automations/validators";
 import { env } from "@/shared/env";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Worker de recuperação de inscrições abandonadas.
+ * Worker de automações agendadas (SCHEDULED) e logs pendentes.
  * Chamada esperada por scheduler externo via POST com Bearer/x-worker-token.
  * Spec: docs/modules/automations.md
  */
@@ -16,8 +16,8 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const input = runRegistrationResumeWorkerSchema.parse(body);
-  const result = await runRegistrationResumeWhatsappAutomation(input);
+  const input = runAutomationsWorkerSchema.parse(body);
+  const result = await runAutomationsWorker(input);
 
   return NextResponse.json(result, { status: result.ok ? 200 : 502 });
 }

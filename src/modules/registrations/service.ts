@@ -12,6 +12,8 @@ import type {
   ParticipantInput,
 } from "./validators";
 import { convertLead } from "@/modules/leads/service";
+import { generateUniqueReferralCode } from "@/modules/guardians/referral";
+import { dispatchAutomationEvent } from "@/modules/automations/service";
 import { sendPaymentConfirmedEmail } from "@/shared/integrations/email/client";
 import { env } from "@/shared/env";
 
@@ -140,6 +142,8 @@ export async function ensureGuardian(input: GuardianStep1Input): Promise<EnsureG
     throw new Error("Este e-mail já possui conta. Entre com sua senha em /entrar.");
   }
 
+  const referralCode = await generateUniqueReferralCode();
+
   const user = await db.user.create({
     data: {
       name: input.name,
@@ -151,6 +155,7 @@ export async function ensureGuardian(input: GuardianStep1Input): Promise<EnsureG
         create: {
           cpf: input.cpf,
           whatsapp: input.phone,
+          referralCode,
           zipCode: input.zipCode,
           street: input.street,
           number: input.number,
@@ -500,6 +505,48 @@ const FUNNEL_BY_STATUS: Partial<Record<string, EnrollmentFunnelStep>> = {
   WINNER: "PAYMENT_CONFIRMED",
 };
 
+type FunnelRegistrationInput = {
+  status: string;
+  createdAt: Date;
+  _count: { photos: number };
+};
+
+type StepTimingRegistration = {
+  createdAt: Date;
+  photos: { createdAt: Date }[];
+  payments: { createdAt: Date }[];
+};
+
+/** Etapa do funil derivada de status + contagem de fotos. */
+export function deriveEnrollmentFunnelStep(registration: FunnelRegistrationInput): EnrollmentFunnelStep {
+  const byStatus = FUNNEL_BY_STATUS[registration.status];
+  if (byStatus) return byStatus;
+  return registration._count.photos < 2 ? "PENDING_PHOTOS" : "READY_FOR_CHECKOUT";
+}
+
+/**
+ * Referência de tempo para automações SCHEDULED.
+ * `STEP_ENTERED` usa marco da etapa; `ENTITY_CREATED` usa `registration.createdAt`.
+ */
+export function deriveStepEnteredAt(
+  registration: StepTimingRegistration,
+  step: Exclude<EnrollmentFunnelStep, "PAYMENT_CONFIRMED">,
+  anchor: "STEP_ENTERED" | "ENTITY_CREATED",
+): Date {
+  if (anchor === "ENTITY_CREATED") return registration.createdAt;
+
+  switch (step) {
+    case "PENDING_PHOTOS":
+      return registration.createdAt;
+    case "READY_FOR_CHECKOUT":
+      return registration.photos[1]?.createdAt ?? registration.createdAt;
+    case "PAYMENT_PENDING":
+      return registration.payments[0]?.createdAt ?? registration.createdAt;
+    default:
+      return registration.createdAt;
+  }
+}
+
 /**
  * Funil derivado 100% de Registration — nenhuma etapa é persistida.
  * Consumido pelo board do CRM (módulo leads) e pelo dashboard admin.
@@ -517,9 +564,7 @@ export async function getEnrollmentFunnel(contestId: string) {
   });
 
   return registrations.map((registration) => {
-    const step: EnrollmentFunnelStep =
-      FUNNEL_BY_STATUS[registration.status] ??
-      (registration._count.photos < 2 ? "PENDING_PHOTOS" : "READY_FOR_CHECKOUT");
+    const step = deriveEnrollmentFunnelStep(registration);
 
     return {
       step,
@@ -719,7 +764,7 @@ export async function approveRegistration(registrationId: string) {
     throw new Error("A inscrição precisa ter 2 fotos antes da aprovação.");
   }
 
-  return db.registration.update({
+  const updated = await db.registration.update({
     where: { id: registrationId },
     data: {
       status: "APPROVED",
@@ -727,6 +772,14 @@ export async function approveRegistration(registrationId: string) {
       rejectionReason: null,
     },
   });
+
+  try {
+    await dispatchAutomationEvent("REGISTRATION_APPROVED", { registrationId });
+  } catch (error) {
+    console.error("[automations] Falha ao disparar REGISTRATION_APPROVED:", error);
+  }
+
+  return updated;
 }
 
 /** Rejeita a inscrição após análise administrativa. */

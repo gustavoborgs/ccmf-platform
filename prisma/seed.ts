@@ -2,11 +2,19 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
-import {
-  DEFAULT_REGISTRATION_RESUME_WHATSAPP_CONFIG,
-  REGISTRATION_RESUME_WHATSAPP_META,
-  REGISTRATION_RESUME_WHATSAPP_TYPE,
-} from "../src/modules/automations/registration-resume-whatsapp/constants";
+
+const DEFAULT_WHATSAPP_AUTOMATION_CONFIG = {
+  trigger: "SCHEDULED" as const,
+  statuses: ["DRAFT", "PENDING_PAYMENT"] as const,
+  delayHours: 1,
+  delayAnchor: "ENTITY_CREATED" as const,
+  templateId: "532e7a0c-1380-4001-aa2b-94532c2cd750",
+  batchLimit: 50,
+  templateBindings: [
+    { variable: "guardianName" as const, position: 1 },
+    { variable: "resumeUrl" as const, position: 2 },
+  ],
+};
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -65,25 +73,29 @@ async function main() {
     });
   }
 
-  await prisma.automation.upsert({
-    where: { type: REGISTRATION_RESUME_WHATSAPP_TYPE },
-    update: {},
-    create: {
-      type: REGISTRATION_RESUME_WHATSAPP_TYPE,
-      name: REGISTRATION_RESUME_WHATSAPP_META.name,
-      description: REGISTRATION_RESUME_WHATSAPP_META.description,
-      channel: "WHATSAPP",
-      enabled: true,
-      config: DEFAULT_REGISTRATION_RESUME_WHATSAPP_CONFIG,
-    },
+  const existingAutomation = await prisma.automation.findFirst({
+    where: { name: "Retomada de inscrição via WhatsApp" },
   });
 
-  console.log("Seed concluído: admin + concurso 2026 + categorias + parceiros + automações.");
+  if (!existingAutomation) {
+    await prisma.automation.create({
+      data: {
+        type: "WHATSAPP",
+        name: "Retomada de inscrição via WhatsApp",
+        description: "Envia link de retomada 1h após inscrição sem pagamento.",
+        channel: "WHATSAPP",
+        enabled: true,
+        config: DEFAULT_WHATSAPP_AUTOMATION_CONFIG,
+      },
+    });
+  }
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
+  .catch((error) => {
+    console.error(error);
     process.exit(1);
   })
-  .finally(() => prisma.$disconnect());
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

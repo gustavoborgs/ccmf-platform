@@ -51,7 +51,9 @@ NEW → LOST      (descarte manual pelo admin, com nota)
 
 - O link de recuperação é permanente e usa o **próprio id** do lead ou da
   inscrição: `/inscricao/retomar/[id]` (ver `registrations.md`).
-- Gatilhos de disparo baseados no estado **derivado** (nunca em coluna própria):
+- Gatilhos de disparo baseados no estado **derivado** (nunca em coluna própria).
+  Automações SCHEDULED com `funnelStep: PRE_ACCOUNT` cobrem esta coluna — ver
+  `docs/modules/automations.md`.
 
 | Estado | Cadência sugerida | Para quando |
 | --- | --- | --- |

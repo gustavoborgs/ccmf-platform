@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { listAdminAutomations, listAutomationLogs } from "@/modules/automations/service";
-import { AUTOMATION_CHANNEL_LABELS, AUTOMATION_TYPE_LABELS } from "@/modules/automations/types";
+import {
+  AUTOMATION_CHANNEL_LABELS,
+  describeAutomationConfig,
+} from "@/modules/automations/types";
 import {
   adminAutomationLogFiltersSchema,
   AUTOMATION_STATUSES,
-  AUTOMATION_TYPES,
 } from "@/modules/automations/validators";
 import {
+  Button,
   Card,
   DataTable,
   DataTablePagination,
@@ -33,10 +36,7 @@ const automationColumns: DataTableColumn<AutomationRow>[] = [
     cell: (automation) => (
       <div>
         <p className="font-bold">{automation.name}</p>
-        <p className="text-ink-muted">
-          {AUTOMATION_TYPE_LABELS[automation.type]} ·{" "}
-          {AUTOMATION_CHANNEL_LABELS[automation.channel]}
-        </p>
+        <p className="text-ink-muted">{describeAutomationConfig(automation.config)}</p>
       </div>
     ),
   },
@@ -50,17 +50,11 @@ const automationColumns: DataTableColumn<AutomationRow>[] = [
     ),
   },
   {
-    id: "config",
-    header: "Parâmetros",
-    cell: (automation) =>
-      automation.type === "REGISTRATION_RESUME_WHATSAPP" ? (
-        <div className="text-sm text-ink-muted">
-          <p>Atraso: {automation.config.delayHours}h</p>
-          <p>Lote: {automation.config.batchLimit}</p>
-        </div>
-      ) : (
-        <span className="text-ink-muted">—</span>
-      ),
+    id: "channel",
+    header: "Canal",
+    cell: (automation) => (
+      <span className="text-ink-muted">{AUTOMATION_CHANNEL_LABELS[automation.channel]}</span>
+    ),
   },
   {
     id: "logs",
@@ -123,13 +117,18 @@ const columns: DataTableColumn<AutomationLogRow>[] = [
     ),
   },
   {
-    id: "registration",
-    header: "Inscrição",
+    id: "subject",
+    header: "Alvo",
     cell: (log) =>
       log.registration ? (
         <div>
           <p className="font-bold text-primary-700">{log.registration.protocol}</p>
           <p className="text-ink-muted">{log.registration.participant.name}</p>
+        </div>
+      ) : log.lead ? (
+        <div>
+          <p className="font-bold text-primary-700">Lead pré-conta</p>
+          <p className="text-ink-muted">{log.lead.name ?? log.lead.email ?? log.lead.phone}</p>
         </div>
       ) : (
         <span className="text-ink-muted">Sem vínculo</span>
@@ -175,11 +174,11 @@ export default async function AdminAutomationsPage({
 
   const tableFilters: DataTableFilter[] = [
     {
-      id: "type",
+      id: "automationId",
       label: "Automação",
-      options: AUTOMATION_TYPES.map((type) => ({
-        value: type,
-        label: AUTOMATION_TYPE_LABELS[type] ?? type,
+      options: automations.map((automation) => ({
+        value: automation.id,
+        label: automation.name,
       })),
     },
     {
@@ -194,15 +193,18 @@ export default async function AdminAutomationsPage({
 
   return (
     <div className="space-y-6">
-      <section>
-        <p className="font-display text-sm font-extrabold uppercase tracking-widest text-accent-700">
-          Automações
-        </p>
-        <h1 className="mt-2 text-3xl font-extrabold text-primary-700">Automações</h1>
-        <p className="mt-3 max-w-3xl text-ink-muted">
-          Configure templates, cadências e limites de cada automação. Abaixo, acompanhe os
-          disparos com destinatário, inscrição, horário e ids retornados pelo nevoa-manager.
-        </p>
+      <section className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="font-display text-sm font-extrabold uppercase tracking-widest text-accent-700">
+            Automações
+          </p>
+          <h1 className="mt-2 text-3xl font-extrabold text-primary-700">Automações</h1>
+          <p className="mt-3 max-w-3xl text-ink-muted">
+            Configure regras por etapa do funil ou por evento. Acompanhe os disparos com
+            destinatário, alvo, horário e ids do nevoa-manager.
+          </p>
+        </div>
+        <Button href="/admin/automacoes/novo">Nova automação</Button>
       </section>
 
       <Card className="overflow-hidden p-0">
@@ -248,10 +250,11 @@ function AutomationLogDetailsDialog({ log }: { log: AutomationLogRow }) {
           <div>
             <DialogTitle>{log.automation.name}</DialogTitle>
             <DialogDescription>
-              {AUTOMATION_TYPE_LABELS[log.automation.type]} ·{" "}
               {log.registration
                 ? `${log.registration.protocol} · ${log.registration.participant.name}`
-                : "Registro sem inscrição vinculada"}
+                : log.lead
+                  ? `Lead pré-conta · ${log.lead.name ?? log.lead.email ?? "-"}`
+                  : "Registro sem alvo vinculado"}
             </DialogDescription>
           </div>
           <StatusBadge tone={STATUS_TONES[log.status] ?? "neutral"}>
@@ -265,8 +268,11 @@ function AutomationLogDetailsDialog({ log }: { log: AutomationLogRow }) {
               items={[
                 ["Nome", log.recipientName],
                 ["Telefone", log.recipientPhone || "Não informado"],
-                ["Responsável", log.registration?.participant.guardian.user.name ?? "-"],
-                ["E-mail", log.registration?.participant.guardian.user.email ?? "-"],
+                [
+                  "Responsável",
+                  log.registration?.participant.guardian.user.name ?? log.lead?.name ?? "-",
+                ],
+                ["E-mail", log.registration?.participant.guardian.user.email ?? log.lead?.email ?? "-"],
               ]}
             />
           </DetailSection>
