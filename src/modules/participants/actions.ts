@@ -20,7 +20,7 @@ import {
 } from "./validators";
 
 /**
- * Server Actions públicas do módulo Participants.
+ * Server Actions públicas do módulo Participants..
  * Like anônimo, sem login: deduplicado por fingerprint (ip + user-agent).
  * Spec: docs/modules/participants.md
  */
