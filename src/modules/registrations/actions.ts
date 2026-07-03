@@ -26,7 +26,8 @@ import {
   guardianCancelRegistrationSchema,
   guardianPhotoReplaceSchema,
   guardianStep1Schema,
-  participantSchema,
+  participantBaseSchema,
+  participantCreateSchema,
   photoUploadSchema,
   registrationRejectionSchema,
   registrationReviewSchema,
@@ -135,7 +136,7 @@ export async function createParticipantAction(
   const guardianId = await resolveEnrollmentGuardianId(rawRef);
   if (!guardianId) return { ok: false, error: "Referência inválida. Volte ao passo 1." };
 
-  const parsed = participantSchema.safeParse(input);
+  const parsed = participantCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
@@ -144,11 +145,12 @@ export async function createParticipantAction(
   if (!contest) return { ok: false, error: "As inscrições não estão abertas no momento." };
 
   try {
+    const { referralCode, ...participant } = parsed.data;
     const registration = await createRegistration({
       guardianId,
       contestId: contest.id,
-      participant: parsed.data,
-      referralCode: parsed.data.referralCode,
+      participant,
+      referralCode,
     });
 
     return {
@@ -184,7 +186,7 @@ export async function updateParticipantAction(
     return { ok: false, error: "Referência inválida. Use seu link de retomada." };
   }
 
-  const parsed = participantSchema.safeParse(input);
+  const parsed = participantBaseSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }

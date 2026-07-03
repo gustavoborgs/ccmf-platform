@@ -46,7 +46,7 @@ export const guardianStep1Schema = guardianAddressSchema.extend({
   password: z.string().min(8, "Senha deve ter ao menos 8 caracteres").optional(),
 });
 
-export const participantSchema = z.object({
+export const participantBaseSchema = z.object({
   name: z.string().min(3, "Informe o nome completo da criança"),
   birthDate: z.coerce.date().max(new Date(), "Data de nascimento inválida"),
   gender: z.enum(["MALE", "FEMALE"]).optional(),
@@ -55,17 +55,22 @@ export const participantSchema = z.object({
   imageConsent: z.literal(true, {
     error: "É necessário aceitar o termo de uso de imagem",
   }),
-  referralCode: z
-    .string()
-    .trim()
-    .transform((value) => value || undefined)
-    .pipe(
-      z
-        .string()
-        .regex(/^[A-Za-z0-9]{6,12}$/, "Código de indicação inválido.")
-        .optional(),
-    ),
 });
+
+/** Step 2 — criação com código de indicação opcional. */
+export const participantCreateSchema = participantBaseSchema.extend({
+  referralCode: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9]{6,12}$/, "Código de indicação inválido.")
+      .optional(),
+  ),
+});
+
+/** @deprecated Use participantBaseSchema ou participantCreateSchema. */
+export const participantSchema = participantCreateSchema;
 
 export const photoUploadSchema = z.object({
   registrationId: z.string().cuid(),
@@ -76,7 +81,8 @@ export const photoUploadSchema = z.object({
 });
 
 export type GuardianStep1Input = z.infer<typeof guardianStep1Schema>;
-export type ParticipantInput = z.infer<typeof participantSchema>;
+export type ParticipantInput = z.infer<typeof participantBaseSchema>;
+export type ParticipantCreateInput = z.infer<typeof participantCreateSchema>;
 
 /** Filtros da fila administrativa de inscrições (`/admin/inscricoes`). */
 export const REGISTRATION_STATUSES = [
