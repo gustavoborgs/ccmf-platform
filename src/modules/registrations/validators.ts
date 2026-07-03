@@ -55,6 +55,16 @@ export const participantSchema = z.object({
   imageConsent: z.literal(true, {
     error: "É necessário aceitar o termo de uso de imagem",
   }),
+  referralCode: z
+    .string()
+    .trim()
+    .transform((value) => value || undefined)
+    .pipe(
+      z
+        .string()
+        .regex(/^[A-Za-z0-9]{6,12}$/, "Código de indicação inválido.")
+        .optional(),
+    ),
 });
 
 export const photoUploadSchema = z.object({

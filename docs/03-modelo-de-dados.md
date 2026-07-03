@@ -18,6 +18,10 @@ erDiagram
     Registration ||--o{ Like : "likes públicos"
     Registration ||--o{ Vote : "votos dos jurados"
     Registration ||--o{ AutomationLog : "automações"
+    Registration ||--o| Referral : "indicado"
+    Participant ||--o{ Referral : "indicou"
+    Contest ||--o| ReferralCampaign : "campanha"
+    ReferralCampaign ||--o{ Referral : ""
     Lead ||--o{ AutomationLog : "automações pré-conta"
     Automation ||--o{ AutomationLog : "logs"
     User ||--o{ Vote : "jurado"
@@ -40,7 +44,10 @@ erDiagram
 | `Lead` cobre só o pré-conta | O funil pós-conta é **derivado** de `Registration` (fotos/checkout/pagamento) — evita duplicar estado. Lead captura abandono antes do cadastro, identificado por CPF ou e-mail. |
 | `Vote` com `round` | Rodada 1 elege os 80 semifinalistas, rodada 2 os 10 vencedores. |
 | `Registration.deletedAt` (soft delete) | Cancelamento pelo responsável antes do pagamento confirmado. Mantém histórico/auditoria; todas as listagens filtram `deletedAt: null`. |
-| `GuardianProfile.referralCode` | Código único de indicação do responsável; usado em `referralUrl` das automações (`/inscricao?indicacao=`). |
+| `Participant.referralCode` | Código único por criança; link `/inscricao?indicacao=`; módulo `referrals`. |
+| `ReferralCampaign` por `Contest` | Uma campanha por edição (v1): prêmio em curtidas, período, habilitação. |
+| `Referral` | Vínculo indicador → inscrição indicada; prêmio em `rewardGrantedAt`. |
+| `GuardianProfile.referralCode` | Legado das automações WhatsApp; indicação operacional usa código do participante. |
 | `BlogPost.publishedAt` opcional | Permite rascunho/agendamento; leitura pública só considera posts com data no passado. |
 
 ## Máquinas de estado

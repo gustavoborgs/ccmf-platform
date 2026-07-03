@@ -13,6 +13,11 @@ import type {
 } from "./validators";
 import { convertLead } from "@/modules/leads/service";
 import { generateUniqueReferralCode } from "@/modules/guardians/referral";
+import {
+  attachReferralOnRegistration,
+  fulfillRewardOnApproval,
+  generateUniqueParticipantReferralCode,
+} from "@/modules/referrals/service";
 import { dispatchAutomationEvent } from "@/modules/automations/service";
 import { sendPaymentConfirmedEmail } from "@/shared/integrations/email/client";
 import { env } from "@/shared/env";
@@ -178,8 +183,9 @@ export async function createRegistration(params: {
   guardianId: string;
   contestId: string;
   participant: ParticipantInput;
+  referralCode?: string;
 }) {
-  const { guardianId, contestId, participant } = params;
+  const { guardianId, contestId, participant, referralCode } = params;
 
   const category = await findCategoryForBirthDate(contestId, participant.birthDate);
   if (!category) {
@@ -189,11 +195,14 @@ export async function createRegistration(params: {
   const contest = await db.contest.findUniqueOrThrow({ where: { id: contestId } });
 
   return db.$transaction(async (tx) => {
+    const participantReferralCode = await generateUniqueParticipantReferralCode(tx);
+
     const created = await tx.participant.create({
       data: {
         guardianId,
         name: participant.name,
         slug: await uniqueSlug(participant.name),
+        referralCode: participantReferralCode,
         birthDate: participant.birthDate,
         gender: participant.gender ?? null,
         city: participant.city,
@@ -204,7 +213,7 @@ export async function createRegistration(params: {
 
     const sequence = (await tx.registration.count({ where: { contestId } })) + 1;
 
-    return tx.registration.create({
+    const registration = await tx.registration.create({
       data: {
         participantId: created.id,
         contestId,
@@ -214,6 +223,21 @@ export async function createRegistration(params: {
       },
       include: { participant: true, category: true },
     });
+
+    if (referralCode?.trim()) {
+      await attachReferralOnRegistration(
+        {
+          registrationId: registration.id,
+          code: referralCode,
+          contestId,
+          guardianId,
+          referredParticipantId: created.id,
+        },
+        tx,
+      );
+    }
+
+    return registration;
   });
 }
 
@@ -774,6 +798,12 @@ export async function approveRegistration(registrationId: string) {
   });
 
   try {
+    await fulfillRewardOnApproval(registrationId);
+  } catch (error) {
+    console.error("[referrals] Falha ao conceder prêmio de indicação:", error);
+  }
+
+  try {
     await dispatchAutomationEvent("REGISTRATION_APPROVED", { registrationId });
   } catch (error) {
     console.error("[automations] Falha ao disparar REGISTRATION_APPROVED:", error);
@@ -825,6 +855,11 @@ export async function listAdminRegistrations(filters: AdminRegistrationFilters) 
       contest: true,
       photos: { orderBy: { order: "asc" } },
       payments: { orderBy: { createdAt: "desc" } },
+      referral: {
+        include: {
+          referrerParticipant: { select: { name: true } },
+        },
+      },
       _count: { select: { photos: true } },
     },
     orderBy: { updatedAt: "desc" },

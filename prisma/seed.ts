@@ -5,7 +5,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 
 const DEFAULT_WHATSAPP_AUTOMATION_CONFIG = {
   trigger: "SCHEDULED" as const,
-  statuses: ["DRAFT", "PENDING_PAYMENT"] as const,
+  funnelStep: "PENDING_PHOTOS" as const,
   delayHours: 1,
   delayAnchor: "ENTITY_CREATED" as const,
   templateId: "532e7a0c-1380-4001-aa2b-94532c2cd750",
@@ -89,6 +89,17 @@ async function main() {
       },
     });
   }
+
+  await prisma.referralCampaign.upsert({
+    where: { contestId: contest.id },
+    update: {},
+    create: {
+      contestId: contest.id,
+      name: "Indique e ganhe curtidas",
+      enabled: true,
+      rewardLikesCount: 50,
+    },
+  });
 }
 
 main()

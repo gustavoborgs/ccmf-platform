@@ -28,4 +28,5 @@ export type WizardInitialState = {
   } | null;
   feeFormatted: string;
   feeCents: number;
+  initialReferralCode?: string;
 };

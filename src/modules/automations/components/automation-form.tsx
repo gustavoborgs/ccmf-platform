@@ -7,7 +7,7 @@ import {
   deleteAutomationAction,
   updateAutomationAction,
 } from "@/modules/automations/actions";
-import type { AutomationConfig, AutomationTemplateBinding } from "@/modules/automations/types";
+import type { AutomationConfig, AutomationFunnelStep, AutomationTemplateBinding } from "@/modules/automations/types";
 import {
   AUTOMATION_DELAY_ANCHOR_LABELS,
   AUTOMATION_DELAY_ANCHORS,
@@ -23,8 +23,6 @@ import {
   sortTemplateBindings,
 } from "@/modules/automations/types";
 import { Button, Field, SelectInput, TextInput } from "@/shared/ui";
-
-const REGISTRATION_STATUSES = ["DRAFT", "PENDING_PAYMENT"] as const;
 
 export type AutomationFormInitial = {
   id?: string;
@@ -74,15 +72,8 @@ export function AutomationForm({ initial, mode }: { initial?: AutomationFormInit
   const [delayAnchor, setDelayAnchor] = useState(
     initial?.config.delayAnchor ?? DEFAULT_CONFIG.delayAnchor,
   );
-  const [funnelStep, setFunnelStep] = useState(
-    initial?.config.trigger === "SCHEDULED"
-      ? (initial.config.funnelStep ?? "PENDING_PHOTOS")
-      : "PENDING_PHOTOS",
-  );
-  const [useStatusFilter, setUseStatusFilter] = useState(
-    initial?.config.trigger === "SCHEDULED" &&
-      initial.config.funnelStep == null &&
-      Boolean(initial.config.statuses?.length),
+  const [funnelStep, setFunnelStep] = useState<AutomationFunnelStep>(
+    initial?.config.trigger === "SCHEDULED" ? initial.config.funnelStep : "PENDING_PHOTOS",
   );
   const [event, setEvent] = useState(
     initial?.config.trigger === "EVENT" ? initial.config.event : AUTOMATION_EVENTS[0],
@@ -164,8 +155,7 @@ export function AutomationForm({ initial, mode }: { initial?: AutomationFormInit
       templateBindings: bindings,
       delayHours: parsedDelayHours,
       delayAnchor,
-      funnelStep: useStatusFilter ? null : funnelStep,
-      statuses: useStatusFilter ? [...REGISTRATION_STATUSES] : undefined,
+      funnelStep,
     };
   }
 
@@ -270,34 +260,19 @@ export function AutomationForm({ initial, mode }: { initial?: AutomationFormInit
 
       {trigger === "SCHEDULED" ? (
         <>
-          <label className="flex items-center gap-3 rounded-2xl border border-primary-100 px-4 py-3">
-            <input
-              type="checkbox"
-              checked={useStatusFilter}
-              onChange={(e) => setUseStatusFilter(e.target.checked)}
+          <Field label="Etapa do funil">
+            <SelectInput
+              value={funnelStep}
+              onChange={(e) => setFunnelStep(e.target.value as typeof funnelStep)}
               disabled={isPending}
-              className="h-5 w-5 rounded border-primary-300 text-accent-600"
-            />
-            <span className="text-sm text-ink">
-              Filtrar por status (DRAFT + PENDING_PAYMENT) em vez de etapa do funil
-            </span>
-          </label>
-
-          {!useStatusFilter && (
-            <Field label="Etapa do funil">
-              <SelectInput
-                value={funnelStep ?? ""}
-                onChange={(e) => setFunnelStep(e.target.value as typeof funnelStep)}
-                disabled={isPending}
-              >
-                {AUTOMATION_FUNNEL_STEPS.map((value) => (
-                  <option key={value} value={value}>
-                    {AUTOMATION_FUNNEL_STEP_LABELS[value]}
-                  </option>
-                ))}
-              </SelectInput>
-            </Field>
-          )}
+            >
+              {AUTOMATION_FUNNEL_STEPS.map((value) => (
+                <option key={value} value={value}>
+                  {AUTOMATION_FUNNEL_STEP_LABELS[value]}
+                </option>
+              ))}
+            </SelectInput>
+          </Field>
 
           <Field label="Referência de tempo">
             <SelectInput

@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
+import {
+  getReferralStatsForParticipant,
+  getReferralsMadeCounts,
+} from "@/modules/referrals/service";
+import type { ReferralStats } from "@/modules/referrals/types";
 import { db } from "@/shared/db";
 import { resolvePagination } from "@/shared/list-params";
 import { PUBLIC_CONTEST_STATUSES } from "@/modules/contests/validators";
@@ -99,6 +104,43 @@ export async function likeRegistration(registrationId: string, fingerprint: stri
   return { liked: true, likesCount: updated.likesCount };
 }
 
+/**
+ * Credita curtidas bônus (ex.: prêmio de indicação) com fingerprints sintéticos.
+ * Idempotência é responsabilidade do chamador (ex.: referrals.fulfillRewardOnApproval).
+ */
+export async function grantBonusLikes(
+  registrationId: string,
+  count: number,
+  sourceId: string,
+) {
+  if (count <= 0) return { likesCount: 0 };
+
+  const updated = await db.$transaction(async (tx) => {
+    for (let index = 0; index < count; index += 1) {
+      const fingerprint = `referral-bonus:${sourceId}:${index}`;
+      const existing = await tx.like.findUnique({
+        where: { registrationId_fingerprint: { registrationId, fingerprint } },
+      });
+      if (!existing) {
+        await tx.like.create({ data: { registrationId, fingerprint } });
+      }
+    }
+
+    const [row] = await tx.$queryRaw<{ likesCount: number }[]>`
+      UPDATE registrations
+      SET "likesCount" = (
+        SELECT COUNT(*)::int FROM likes WHERE "registrationId" = ${registrationId}
+      )
+      WHERE id = ${registrationId}
+      RETURNING "likesCount"
+    `;
+    if (!row) throw new Error("Inscrição não encontrada.");
+    return row;
+  });
+
+  return { likesCount: updated.likesCount };
+}
+
 const adminParticipantRegistrationInclude = {
   participant: {
     include: {
@@ -116,12 +158,23 @@ const adminParticipantRegistrationInclude = {
     orderBy: { createdAt: "desc" as const },
     take: 1,
   },
+  referral: {
+    include: {
+      referrerParticipant: { select: { id: true, name: true, referralCode: true } },
+      campaign: { select: { name: true, rewardLikesCount: true } },
+    },
+  },
   _count: { select: { photos: true, likes: true, votes: true } },
 } satisfies Prisma.RegistrationInclude;
 
 export type AdminParticipantRegistration = Prisma.RegistrationGetPayload<{
   include: typeof adminParticipantRegistrationInclude;
 }>;
+
+export type AdminParticipantListItem = AdminParticipantRegistration & {
+  referralsMadeCount: number;
+  referralStats: ReferralStats | null;
+};
 
 /** Listagem administrativa: uma linha por inscrição de participante. */
 export async function listAdminParticipants(filters: AdminParticipantFilters) {
@@ -137,7 +190,33 @@ export async function listAdminParticipants(filters: AdminParticipantFilters) {
     take: filters.pageSize,
   });
 
-  return { items, pagination };
+  const byContest = new Map<string, string[]>();
+  for (const item of items) {
+    const ids = byContest.get(item.contestId) ?? [];
+    ids.push(item.participantId);
+    byContest.set(item.contestId, ids);
+  }
+
+  const countMaps = new Map<string, Map<string, number>>();
+  await Promise.all(
+    [...byContest.entries()].map(async ([contestId, participantIds]) => {
+      countMaps.set(contestId, await getReferralsMadeCounts(participantIds, contestId));
+    }),
+  );
+
+  const enriched: AdminParticipantListItem[] = await Promise.all(
+    items.map(async (registration) => ({
+      ...registration,
+      referralsMadeCount:
+        countMaps.get(registration.contestId)?.get(registration.participantId) ?? 0,
+      referralStats: await getReferralStatsForParticipant(
+        registration.participantId,
+        registration.contestId,
+      ),
+    })),
+  );
+
+  return { items: enriched, pagination };
 }
 
 /** Detalhe administrativo de uma inscrição de participante. */

@@ -7,6 +7,8 @@ import {
   getWizardStateFromRef,
   resolveResumeLink,
 } from "@/modules/registrations/service";
+import { normalizeReferralCode } from "@/modules/referrals/lib/code";
+import { REFERRAL_CODE_COOKIE } from "@/modules/referrals/referral-cookie";
 import { WIZARD_REF_COOKIE } from "@/modules/registrations/wizard-cookie";
 import { EnrollmentWizard } from "@/modules/registrations/components/enrollment-wizard";
 import type {
@@ -33,14 +35,16 @@ export const metadata: Metadata = {
 export default async function RegistrationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ lead?: string; ref?: string }>;
+  searchParams: Promise<{ lead?: string; ref?: string; indicacao?: string }>;
 }) {
-  const [{ lead: leadId, ref: queryRef }, cookieStore] = await Promise.all([
+  const [{ lead: leadId, ref: queryRef, indicacao: queryReferral }, cookieStore] = await Promise.all([
     searchParams,
     cookies(),
   ]);
   const cookieRef = cookieStore.get(WIZARD_REF_COOKIE)?.value;
+  const cookieReferral = cookieStore.get(REFERRAL_CODE_COOKIE)?.value;
   const rawRef = queryRef ?? cookieRef;
+  const initialReferralCode = normalizeReferralCode(queryReferral ?? cookieReferral ?? "") || undefined;
 
   const contest = await getActiveContest();
   if (!contest) {
@@ -64,6 +68,7 @@ export default async function RegistrationPage({
     summary: null,
     feeFormatted,
     feeCents: contest.registrationFeeCents,
+    initialReferralCode,
   };
 
   // Prefill de lead (link de retomada pré-conta) — dados mascarados.

@@ -115,14 +115,7 @@ export function describeAutomationConfig(config: AutomationConfig): string {
     return `${AUTOMATION_TRIGGER_LABELS.EVENT}: ${AUTOMATION_EVENT_LABELS[config.event]}${delay}`;
   }
 
-  const step =
-    config.funnelStep != null
-      ? AUTOMATION_FUNNEL_STEP_LABELS[config.funnelStep]
-      : config.statuses?.length
-        ? `Status: ${config.statuses.join(", ")}`
-        : "Qualquer abandono";
-
-  return `${AUTOMATION_TRIGGER_LABELS.SCHEDULED}: ${step} · ${config.delayHours}h · ${AUTOMATION_DELAY_ANCHOR_LABELS[config.delayAnchor]}`;
+  return `${AUTOMATION_TRIGGER_LABELS.SCHEDULED}: ${AUTOMATION_FUNNEL_STEP_LABELS[config.funnelStep]} · ${config.delayHours}h · ${AUTOMATION_DELAY_ANCHOR_LABELS[config.delayAnchor]}`;
 }
 
 export function sortTemplateBindings(bindings: AutomationTemplateBinding[]): AutomationTemplateBinding[] {

@@ -53,6 +53,24 @@ const columns: DataTableColumn<AdminParticipantRow>[] = [
     ),
   },
   {
+    id: "referral",
+    header: "Indicação",
+    cell: (registration) => (
+      <div className="space-y-1 text-sm">
+        {registration.referral ? (
+          <StatusBadge tone="info">
+            Indicado por {registration.referral.referrerParticipant.name}
+          </StatusBadge>
+        ) : (
+          <span className="text-ink-muted">—</span>
+        )}
+        {registration.referralsMadeCount > 0 && (
+          <p className="text-ink-muted">{registration.referralsMadeCount} indicação(ões) feita(s)</p>
+        )}
+      </div>
+    ),
+  },
+  {
     id: "guardian",
     header: "Responsável",
     cell: (registration) => {

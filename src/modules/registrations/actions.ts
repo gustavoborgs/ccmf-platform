@@ -148,6 +148,7 @@ export async function createParticipantAction(
       guardianId,
       contestId: contest.id,
       participant: parsed.data,
+      referralCode: parsed.data.referralCode,
     });
 
     return {

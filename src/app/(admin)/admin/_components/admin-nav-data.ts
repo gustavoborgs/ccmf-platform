@@ -44,6 +44,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         description: "Logs de disparos WhatsApp e próximas rotinas.",
         status: "available",
       },
+      {
+        href: "/admin/indicacoes",
+        label: "Indicações",
+        description: "Campanhas de indicação e prêmios em curtidas.",
+        status: "available",
+      },
     ],
   },
   {

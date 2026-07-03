@@ -5,7 +5,11 @@ import {
   AdminParticipantPhotoManager,
   AdminParticipantStatusControl,
 } from "@/modules/participants/components/admin-participant-controls";
-import type { AdminParticipantRegistration } from "@/modules/participants/service";
+import type {
+  AdminParticipantListItem,
+  AdminParticipantRegistration,
+} from "@/modules/participants/service";
+import { AdminParticipantReferralSection } from "@/modules/referrals/components/admin-participant-referral-section";
 import { ADMIN_REGISTRATION_STATUSES } from "@/modules/participants/validators";
 import { getPublicUrl } from "@/shared/integrations/s3/storage";
 import {
@@ -40,7 +44,7 @@ function genderLabel(gender: string | null) {
 }
 
 type AdminParticipantDetailsDialogProps = {
-  registration: AdminParticipantRegistration;
+  registration: AdminParticipantRegistration | AdminParticipantListItem;
   trigger?: ReactNode;
   triggerClassName?: string;
 };
@@ -69,10 +73,19 @@ export function AdminParticipantDetailsDialog({
 export function AdminParticipantDetailsContent({
   registration,
 }: {
-  registration: AdminParticipantRegistration;
+  registration: AdminParticipantRegistration | AdminParticipantListItem;
 }) {
   const guardian = registration.participant.guardian.user;
   const latestPayment = registration.payments[0];
+  const referralStats = "referralStats" in registration ? registration.referralStats : null;
+  const incomingReferral = registration.referral
+    ? {
+        referrerName: registration.referral.referrerParticipant.name,
+        referrerCode: registration.referral.referrerParticipant.referralCode,
+        campaignName: registration.referral.campaign.name,
+        rewardGranted: registration.referral.rewardGrantedAt !== null,
+      }
+    : null;
   const photos = registration.photos.map((photo) => ({
     id: photo.id,
     url: getPublicUrl(photo.storageKey),
@@ -127,6 +140,13 @@ export function AdminParticipantDetailsContent({
                 ["E-mail", guardian.email],
                 ["Telefone", guardian.phone ?? "Não informado"],
               ]}
+            />
+          </DetailSection>
+
+          <DetailSection title="Indicação">
+            <AdminParticipantReferralSection
+              incomingReferral={incomingReferral}
+              referralStats={referralStats}
             />
           </DetailSection>
 

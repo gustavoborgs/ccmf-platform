@@ -1,4 +1,4 @@
-import type { Lead, Prisma, RegistrationStatus } from "@/generated/prisma/client";
+import type { Lead, Prisma } from "@/generated/prisma/client";
 import { deriveEnrollmentFunnelStep, deriveStepEnteredAt } from "@/modules/registrations/service";
 import { listRecoverableLeads } from "@/modules/leads/service";
 import { db } from "@/shared/db";
@@ -107,13 +107,8 @@ async function findRegistrationCandidates(
   config: Extract<AutomationConfig, { trigger: "SCHEDULED" }>,
   limit: number,
 ): Promise<RegistrationCandidate[]> {
-  const statusWhere: Prisma.RegistrationWhereInput = config.statuses?.length
-    ? { status: { in: config.statuses as RegistrationStatus[] } }
-    : config.funnelStep === "PAYMENT_PENDING"
-      ? { status: "PENDING_PAYMENT" }
-      : config.funnelStep === "PENDING_PHOTOS" || config.funnelStep === "READY_FOR_CHECKOUT"
-        ? { status: "DRAFT" }
-        : { status: { in: ["DRAFT", "PENDING_PAYMENT"] } };
+  const statusWhere: Prisma.RegistrationWhereInput =
+    config.funnelStep === "PAYMENT_PENDING" ? { status: "PENDING_PAYMENT" } : { status: "DRAFT" };
 
   const registrations = await db.registration.findMany({
     where: {
@@ -133,10 +128,6 @@ async function findRegistrationCandidates(
     take: limit * 5,
   });
 
-  if (!config.funnelStep || config.statuses?.length) {
-    return registrations;
-  }
-
   return registrations.filter((registration) => {
     const step = deriveEnrollmentFunnelStep(registration);
     return step === config.funnelStep;
@@ -147,10 +138,6 @@ function resolveRegistrationReferenceAt(
   registration: RegistrationCandidate,
   config: Extract<AutomationConfig, { trigger: "SCHEDULED" }>,
 ): Date {
-  if (config.statuses?.length && config.funnelStep == null) {
-    return registration.createdAt;
-  }
-
   const step = deriveEnrollmentFunnelStep(registration);
   if (step === "PAYMENT_CONFIRMED") return registration.createdAt;
 

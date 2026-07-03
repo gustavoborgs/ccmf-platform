@@ -7,6 +7,8 @@ import {
   getGuardianByUserId,
   listGuardianRegistrations,
 } from "@/modules/registrations/service";
+import { listGuardianReferralPanels } from "@/modules/referrals/service";
+import { GuardianReferralPanel } from "@/modules/referrals/components/guardian-referral-panel";
 import {
   CancelRegistrationButton,
   GuardianPhotoManager,
@@ -40,6 +42,11 @@ export default async function AccountPage({
   const visibleRegistrations = selectedYear
     ? registrations.filter((registration) => registration.contest.year === selectedYear)
     : registrations;
+
+  const approvedRegistrationIds = visibleRegistrations
+    .filter((registration) => isPublicRegistration(registration.status))
+    .map((registration) => registration.id);
+  const referralPanels = await listGuardianReferralPanels(guardian.id, approvedRegistrationIds);
 
   return (
     <Container className="py-12">
@@ -95,6 +102,7 @@ export default async function AccountPage({
           {visibleRegistrations.map((registration) => {
             const latestPayment = registration.payments[0];
             const status = getAccountStatus(registration.status, registration._count.photos);
+            const referralPanel = referralPanels.get(registration.id);
             const resumeHref = `/inscricao/retomar/${registration.protocol}`;
             const frameUrl = registration.contest.frameImageKey
               ? getPublicUrl(registration.contest.frameImageKey)
@@ -139,6 +147,8 @@ export default async function AccountPage({
                       </p>
                     )}
                     </div>
+
+                    {referralPanel && <GuardianReferralPanel panel={referralPanel} />}
 
                     <div className="rounded-2xl border border-primary-100 bg-primary-50/40 px-4 py-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -386,6 +396,10 @@ function getAccountStatus(status: string, photosCount: number): AccountStatus {
 
 function isPaymentConfirmed(status: string): boolean {
   return ["PAID", "UNDER_REVIEW", "APPROVED", "SEMIFINALIST", "WINNER"].includes(status);
+}
+
+function isPublicRegistration(status: string): boolean {
+  return ["APPROVED", "SEMIFINALIST", "WINNER"].includes(status);
 }
 
 const statusLabel: Record<string, string> = {

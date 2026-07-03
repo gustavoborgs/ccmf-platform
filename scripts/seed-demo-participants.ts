@@ -3,7 +3,7 @@ import { deflateSync } from "node:zlib";
 import bcrypt from "bcryptjs";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { db } from "../src/shared/db";
-import { buildReferralCode } from "../src/modules/guardians/referral";
+import { buildReferralCode } from "../src/modules/referrals/lib/code";
 import { buildProtocol, slugify } from "../src/shared/utils";
 
 /**
@@ -246,6 +246,7 @@ async function main() {
         guardianId: user.guardianProfile!.id,
         name: kid.name,
         slug: slugify(`${kid.name}-demo`),
+        referralCode: buildReferralCode(),
         birthDate,
         gender: kid.gender,
         city: kid.city,

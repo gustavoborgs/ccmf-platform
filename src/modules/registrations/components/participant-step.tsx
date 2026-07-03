@@ -19,11 +19,15 @@ export function ParticipantStep({
   wizardRef,
   registrationId,
   initialParticipant,
+  initialReferralCode,
+  onReferralCodeChange,
   onDone,
 }: {
   wizardRef: string | null;
   registrationId: string | null;
   initialParticipant?: WizardParticipantState;
+  initialReferralCode?: string;
+  onReferralCodeChange?: (code: string) => void;
   onDone: (data: {
     ref: string;
     registrationId: string;
@@ -40,9 +44,17 @@ export function ParticipantStep({
     city: initialParticipant?.city ?? "",
     state: initialParticipant?.state ?? "",
   });
+  const [showReferral, setShowReferral] = useState(Boolean(initialReferralCode));
+  const [referralCode, setReferralCode] = useState(initialReferralCode ?? "");
   const [consent, setConsent] = useState(Boolean(initialParticipant));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  function handleReferralChange(value: string) {
+    const normalized = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    setReferralCode(normalized);
+    onReferralCodeChange?.(normalized);
+  }
 
   function submit() {
     setError(null);
@@ -54,6 +66,7 @@ export function ParticipantStep({
         city: form.city,
         state: form.state,
         imageConsent: consent,
+        ...(registrationId ? {} : { referralCode: referralCode || undefined }),
       };
       const result = registrationId
         ? await updateParticipantAction(wizardRef, registrationId, input)
@@ -64,6 +77,7 @@ export function ParticipantStep({
           category_name: result.data.categoryName,
           participant_state: form.state,
           edited_existing: Boolean(registrationId),
+          has_referral_code: Boolean(referralCode),
         });
         onDone({
           ...result.data,
@@ -131,6 +145,33 @@ export function ParticipantStep({
           </SelectInput>
         </Field>
       </div>
+
+      {!registrationId && (
+        <div className="rounded-2xl border border-primary-100 bg-primary-50/50 p-4">
+          {!showReferral ? (
+            <button
+              type="button"
+              onClick={() => setShowReferral(true)}
+              className="text-sm font-bold text-primary-700 underline-offset-4 hover:underline"
+            >
+              Tem um código de indicação?
+            </button>
+          ) : (
+            <Field
+              label="Código de indicação"
+              hint="Opcional. Se alguém te indicou, informe o código aqui."
+            >
+              <TextInput
+                value={referralCode}
+                onChange={(event) => handleReferralChange(event.target.value)}
+                placeholder="Ex.: ABC12345"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </Field>
+          )}
+        </div>
+      )}
 
       <label className="flex items-start gap-3 rounded-2xl bg-primary-50 p-4">
         <input

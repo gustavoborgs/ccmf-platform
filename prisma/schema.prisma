@@ -109,8 +109,9 @@ model Contest {
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
 
-  categories    Category[]
-  registrations Registration[]
+  categories       Category[]
+  registrations    Registration[]
+  referralCampaign ReferralCampaign?
 
   @@map("contests")
 }
@@ -146,6 +147,8 @@ model Participant {
   guardianId     String
   name           String
   slug           String    @unique
+  /// código de indicação para link /inscricao?indicacao=
+  referralCode   String    @unique
   birthDate      DateTime
   gender         Gender?
   city           String
@@ -155,8 +158,9 @@ model Participant {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  guardian      GuardianProfile @relation(fields: [guardianId], references: [id])
-  registrations Registration[]
+  guardian       GuardianProfile @relation(fields: [guardianId], references: [id])
+  registrations  Registration[]
+  referralsMade  Referral[]      @relation("ReferralsMade")
 
   @@map("participants")
 }
@@ -197,10 +201,51 @@ model Registration {
   votes          Vote[]
   likes          Like[]
   automationLogs AutomationLog[]
+  referral       Referral?
 
   @@unique([participantId, contestId])
   @@index([contestId, status])
   @@map("registrations")
+}
+
+// ─────────────────────────────────────────────
+// Indicação (referrals)
+// ─────────────────────────────────────────────
+
+/// Campanha de indicação por edição (uma por concurso na v1).
+model ReferralCampaign {
+  id               String    @id @default(cuid())
+  contestId        String    @unique
+  name             String
+  enabled          Boolean   @default(true)
+  /// curtidas concedidas ao indicador quando a inscrição indicada é aprovada
+  rewardLikesCount Int       @default(50)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  contest   Contest    @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  referrals Referral[]
+
+  @@map("referral_campaigns")
+}
+
+/// Vínculo entre indicador e inscrição indicada.
+model Referral {
+  id                     String    @id @default(cuid())
+  campaignId             String
+  referrerParticipantId  String
+  referredRegistrationId String    @unique
+  rewardGrantedAt        DateTime?
+  createdAt              DateTime  @default(now())
+
+  campaign             ReferralCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  referrerParticipant  Participant      @relation("ReferralsMade", fields: [referrerParticipantId], references: [id])
+  referredRegistration Registration     @relation(fields: [referredRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([referrerParticipantId])
+  @@map("referrals")
 }
 
 model Photo {

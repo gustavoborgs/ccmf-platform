@@ -33,7 +33,7 @@ export function resolveCandidateContext(candidate: AutomationCandidate): Templat
   }
 
   const { registration } = candidate;
-  const referralCode = registration.participant.guardian.referralCode;
+  const referralCode = registration.participant.referralCode;
 
   return {
     guardianName: candidate.recipientName,

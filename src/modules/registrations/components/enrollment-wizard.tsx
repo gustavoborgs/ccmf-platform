@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/shared/analytics/events";
 import { cn } from "@/shared/ui/cn";
 import { WIZARD_REF_COOKIE, WIZARD_REF_MAX_AGE_SECONDS } from "../wizard-cookie";
+import { REFERRAL_CODE_COOKIE, REFERRAL_CODE_MAX_AGE_SECONDS } from "@/modules/referrals/referral-cookie";
 import { GuardianStep } from "./guardian-step";
 import { ParticipantStep } from "./participant-step";
 import { PhotosStep } from "./photos-step";
@@ -30,9 +31,8 @@ function stepIndex(step: WizardUiStep): number {
 }
 
 /** Mantém o ref na URL sem recarregar a página (estado restaurável). */
-function syncRefToUrl(ref: string | null) {
-  const url = ref ? `/inscricao?ref=${encodeURIComponent(ref)}` : "/inscricao";
-  window.history.replaceState(null, "", url);
+function syncRefToUrl(ref: string | null, referralCode: string | null = null) {
+  syncReferralToUrl(ref, referralCode);
 }
 
 function rememberRef(ref: string) {
@@ -41,6 +41,23 @@ function rememberRef(ref: string) {
 
 function forgetRef() {
   document.cookie = `${WIZARD_REF_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
+}
+
+function rememberReferralCode(code: string) {
+  document.cookie = `${REFERRAL_CODE_COOKIE}=${encodeURIComponent(code)}; Max-Age=${REFERRAL_CODE_MAX_AGE_SECONDS}; Path=/; SameSite=Lax`;
+}
+
+function forgetReferralCode() {
+  document.cookie = `${REFERRAL_CODE_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
+}
+
+function syncReferralToUrl(ref: string | null, referralCode: string | null) {
+  const params = new URLSearchParams();
+  if (ref) params.set("ref", ref);
+  if (referralCode) params.set("indicacao", referralCode);
+  const query = params.toString();
+  const url = query ? `/inscricao?${query}` : "/inscricao";
+  window.history.replaceState(null, "", url);
 }
 
 export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
@@ -54,15 +71,17 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
     initial.participant,
   );
   const [summary, setSummary] = useState(initial.summary);
+  const [referralCode, setReferralCode] = useState(initial.initialReferralCode ?? "");
 
   const currentIndex = stepIndex(step);
   const canEditDraft = !initial.paymentPending || initial.registrationId !== registrationId;
 
   useEffect(() => {
-    if (!ref) return;
-    syncRefToUrl(ref);
-    rememberRef(ref);
-  }, [ref]);
+    if (!ref && !referralCode) return;
+    syncRefToUrl(ref, referralCode || null);
+    if (ref) rememberRef(ref);
+    if (referralCode) rememberReferralCode(referralCode);
+  }, [ref, referralCode]);
 
   useEffect(() => {
     trackEvent("enrollment_step_view", {
@@ -85,8 +104,18 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
 
   function advanceRef(nextRef: string) {
     setRef(nextRef);
-    syncRefToUrl(nextRef);
+    syncRefToUrl(nextRef, referralCode || null);
     rememberRef(nextRef);
+  }
+
+  function handleReferralCodeChange(code: string) {
+    setReferralCode(code);
+    if (code) {
+      rememberReferralCode(code);
+    } else {
+      forgetReferralCode();
+    }
+    syncRefToUrl(ref, code || null);
   }
 
   function restart() {
@@ -97,7 +126,9 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
     setParticipant(undefined);
     setSummary(null);
     forgetRef();
-    syncRefToUrl(null);
+    forgetReferralCode();
+    setReferralCode("");
+    syncRefToUrl(null, null);
   }
 
   function goToStep(target: WizardUiStep) {
@@ -175,6 +206,8 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
             wizardRef={ref}
             registrationId={registrationId}
             initialParticipant={participant}
+            initialReferralCode={referralCode || initial.initialReferralCode}
+            onReferralCodeChange={handleReferralCodeChange}
             onDone={(data) => {
               advanceRef(data.ref);
               setRegistrationId(data.registrationId);

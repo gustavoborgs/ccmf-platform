@@ -6,19 +6,23 @@ import type { AutomationTemplateVariable } from "./types";
 
 function normalizeLegacyAutomationConfig(config: unknown): unknown {
   if (!config || typeof config !== "object") return config;
-  const record = config as Record<string, unknown>;
-  if (Array.isArray(record.templateBindings)) return config;
-  if (!Array.isArray(record.templateVariables)) return config;
+  const record = { ...(config as Record<string, unknown>) };
 
-  return {
-    ...record,
-    templateBindings: (record.templateVariables as AutomationTemplateVariable[]).map(
+  if (!Array.isArray(record.templateBindings) && Array.isArray(record.templateVariables)) {
+    record.templateBindings = (record.templateVariables as AutomationTemplateVariable[]).map(
       (variable, index) => ({
         variable,
         position: index + 1,
       }),
-    ),
-  };
+    );
+  }
+
+  if (record.trigger === "SCHEDULED" && record.funnelStep == null && Array.isArray(record.statuses)) {
+    record.funnelStep = "PENDING_PHOTOS";
+  }
+  delete record.statuses;
+
+  return record;
 }
 
 export async function getAutomationById(id: string) {

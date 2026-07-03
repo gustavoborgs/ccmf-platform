@@ -14,17 +14,6 @@ import {
  * Spec: docs/modules/automations.md
  */
 
-const REGISTRATION_STATUSES = [
-  "DRAFT",
-  "PENDING_PAYMENT",
-  "PAID",
-  "UNDER_REVIEW",
-  "APPROVED",
-  "REJECTED",
-  "SEMIFINALIST",
-  "WINNER",
-] as const;
-
 export const automationTemplateBindingSchema = z.object({
   variable: z.enum(AUTOMATION_TEMPLATE_VARIABLES),
   position: z.number().int().min(1).max(20),
@@ -72,18 +61,10 @@ export const automationScheduledConfigSchema = automationConfigBaseSchema
   .extend({
     trigger: z.literal("SCHEDULED"),
     delayAnchor: z.enum(AUTOMATION_DELAY_ANCHORS),
-    funnelStep: z.enum(AUTOMATION_FUNNEL_STEPS).nullable().optional(),
-    statuses: z.array(z.enum(REGISTRATION_STATUSES)).optional(),
+    funnelStep: z.enum(AUTOMATION_FUNNEL_STEPS),
   })
   .superRefine((config, ctx) => {
     normalizeTemplateBindings(config.templateBindings, ctx);
-    if (config.funnelStep != null) return;
-    if (config.statuses?.length) return;
-    ctx.addIssue({
-      code: "custom",
-      message: "Informe a etapa do funil ou os status da inscrição.",
-      path: ["funnelStep"],
-    });
   });
 
 export const automationEventConfigSchema = automationConfigBaseSchema

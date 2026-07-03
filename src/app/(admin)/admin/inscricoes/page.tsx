@@ -63,6 +63,11 @@ const columns: DataTableColumn<AdminRegistrationRow>[] = [
           <StatusBadge tone={registration._count.photos >= 2 ? "success" : "warning"}>
             {registration._count.photos}/2 fotos
           </StatusBadge>
+          {registration.referral && (
+            <StatusBadge tone="info">
+              Indicado por {registration.referral.referrerParticipant.name}
+            </StatusBadge>
+          )}
         </div>
       </div>
     ),
