@@ -12,6 +12,22 @@ import {
  * Spec: docs/modules/registrations.md
  */
 
+/** Normaliza código Nevoa vindo do browser (aceita prefixo NV-). */
+export function normalizeNevoaSessionCode(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+
+  const trimmed = value.trim().replace(/^NV-/i, "");
+  if (!trimmed) return undefined;
+  if (!/^[A-Z0-9]{6,12}$/i.test(trimmed)) return undefined;
+
+  return trimmed.toUpperCase();
+}
+
+const nevoaSessionCodeSchema = z.preprocess(
+  normalizeNevoaSessionCode,
+  z.string().regex(/^[A-Z0-9]{6,12}$/).optional(),
+);
+
 export const cpfSchema = z
   .string()
   .transform((value) => value.replace(/\D/g, ""))
@@ -67,6 +83,12 @@ export const participantCreateSchema = participantBaseSchema.extend({
       .regex(/^[A-Za-z0-9]{6,12}$/, "Código de indicação inválido.")
       .optional(),
   ),
+  nevoaSessionCode: nevoaSessionCodeSchema,
+});
+
+export const nevoaSessionCodeUpdateSchema = z.object({
+  registrationId: z.string().cuid(),
+  nevoaSessionCode: nevoaSessionCodeSchema,
 });
 
 /** @deprecated Use participantBaseSchema ou participantCreateSchema. */

@@ -17,8 +17,10 @@ export function SummaryStep({
   wizardRef,
   registrationId,
   summary,
+  nevoaSessionCode,
   paymentPending,
 }: {
+  /** ref assinado do wizard (?ref=) — autoriza as actions sem login */
   wizardRef: string | null;
   registrationId: string;
   summary: {
@@ -28,6 +30,7 @@ export function SummaryStep({
     feeFormatted: string;
     feeCents: number;
   };
+  nevoaSessionCode?: string | null;
   paymentPending: boolean;
 }) {
   const summaryTopRef = useRef<HTMLDivElement>(null);
@@ -99,6 +102,7 @@ export function SummaryStep({
           protocol={summary.protocol}
           feeFormatted={summary.feeFormatted}
           feeCents={summary.feeCents}
+          nevoaSessionCode={nevoaSessionCode}
           hasPendingPayment={paymentPending}
         />
       )}

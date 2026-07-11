@@ -8,6 +8,8 @@ import {
   trackInscricaoConfirmadaOnce,
   trackPurchaseOnce,
 } from "@/shared/analytics/events";
+import { readNevoaSessionCode } from "@/shared/analytics/nevoa-session";
+import { updateNevoaSessionCodeAction } from "@/modules/registrations/actions";
 import { cn } from "@/shared/ui/cn";
 import { Button } from "@/shared/ui/button";
 import {
@@ -47,6 +49,7 @@ export function Checkout({
   protocol,
   feeFormatted,
   feeCents,
+  nevoaSessionCode,
   hasPendingPayment,
   onPaid,
 }: {
@@ -56,6 +59,7 @@ export function Checkout({
   protocol: string;
   feeFormatted: string;
   feeCents: number;
+  nevoaSessionCode?: string | null;
   hasPendingPayment: boolean;
   onPaid?: () => void;
 }) {
@@ -135,6 +139,14 @@ export function Checkout({
     setSubmitting(true);
     setError(null);
     try {
+      const sessionCode = nevoaSessionCode ?? readNevoaSessionCode();
+      if (sessionCode) {
+        await updateNevoaSessionCodeAction(wizardRef, {
+          registrationId,
+          nevoaSessionCode: sessionCode,
+        });
+      }
+
       const result = await createCheckoutAction(wizardRef, { registrationId, ...input });
       if (!result.ok) {
         setError(result.error);

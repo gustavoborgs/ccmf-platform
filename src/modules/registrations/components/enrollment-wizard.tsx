@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/shared/analytics/events";
+import { waitForNevoaSessionCode } from "@/shared/analytics/nevoa-session";
 import { cn } from "@/shared/ui/cn";
 import { WIZARD_REF_COOKIE, WIZARD_REF_MAX_AGE_SECONDS } from "../wizard-cookie";
 import { REFERRAL_CODE_COOKIE, REFERRAL_CODE_MAX_AGE_SECONDS } from "@/modules/referrals/referral-cookie";
@@ -72,9 +73,22 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
   );
   const [summary, setSummary] = useState(initial.summary);
   const [referralCode, setReferralCode] = useState(initial.initialReferralCode ?? "");
+  const [nevoaSessionCode, setNevoaSessionCode] = useState<string | null>(null);
 
   const currentIndex = stepIndex(step);
   const canEditDraft = !initial.paymentPending || initial.registrationId !== registrationId;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    waitForNevoaSessionCode().then((code) => {
+      if (!cancelled && code) setNevoaSessionCode(code);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!ref && !referralCode) return;
@@ -207,6 +221,7 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
             registrationId={registrationId}
             initialParticipant={participant}
             initialReferralCode={referralCode || initial.initialReferralCode}
+            nevoaSessionCode={nevoaSessionCode}
             onReferralCodeChange={handleReferralCodeChange}
             onDone={(data) => {
               advanceRef(data.ref);
@@ -241,6 +256,7 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
             wizardRef={ref}
             registrationId={registrationId}
             summary={summary}
+            nevoaSessionCode={nevoaSessionCode}
             paymentPending={initial.paymentPending && initial.registrationId === registrationId}
           />
         )}

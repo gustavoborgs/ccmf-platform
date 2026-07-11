@@ -20,6 +20,7 @@ import {
 } from "@/modules/referrals/service";
 import { dispatchAutomationEvent } from "@/modules/automations/service";
 import { sendPaymentConfirmedEmail } from "@/shared/integrations/email/client";
+import { reportNevoaConversion } from "@/shared/integrations/nevoa-manager/conversions";
 import { env } from "@/shared/env";
 
 import { parseWizardRef } from "./wizard-ref";
@@ -184,8 +185,9 @@ export async function createRegistration(params: {
   contestId: string;
   participant: ParticipantInput;
   referralCode?: string;
+  nevoaSessionCode?: string;
 }) {
-  const { guardianId, contestId, participant, referralCode } = params;
+  const { guardianId, contestId, participant, referralCode, nevoaSessionCode } = params;
 
   const category = await findCategoryForBirthDate(contestId, participant.birthDate);
   if (!category) {
@@ -220,6 +222,7 @@ export async function createRegistration(params: {
         categoryId: category.id,
         status: "DRAFT",
         protocol: buildProtocol(contest.year, sequence),
+        nevoaSessionCode: nevoaSessionCode ?? null,
       },
       include: { participant: true, category: true },
     });
@@ -743,6 +746,60 @@ export async function handlePaymentConfirmedSideEffects(registrationId: string) 
   }
 }
 
+/** Preenche nevoaSessionCode apenas se ainda estiver vazio (first-write-wins). */
+export async function attachNevoaSessionCodeIfEmpty(
+  registrationId: string,
+  guardianId: string,
+  nevoaSessionCode: string,
+) {
+  if (!nevoaSessionCode) return;
+
+  await db.registration.updateMany({
+    where: {
+      id: registrationId,
+      nevoaSessionCode: null,
+      deletedAt: null,
+      participant: { guardianId },
+    },
+    data: { nevoaSessionCode },
+  });
+}
+
+async function reportNevoaSaleConversion(registrationId: string) {
+  try {
+    const registration = await db.registration.findUnique({
+      where: { id: registrationId },
+      select: {
+        nevoaSessionCode: true,
+        protocol: true,
+        contest: { select: { registrationFeeCents: true } },
+        payments: {
+          where: { status: { in: ["CONFIRMED", "RECEIVED"] } },
+          orderBy: { paidAt: "desc" },
+          take: 1,
+          select: { paidAt: true, amountCents: true },
+        },
+      },
+    });
+
+    if (!registration?.nevoaSessionCode) return;
+
+    const payment = registration.payments[0];
+    const amountCents = payment?.amountCents ?? registration.contest.registrationFeeCents;
+
+    await reportNevoaConversion({
+      eventName: "venda_fechada",
+      sessionCode: registration.nevoaSessionCode,
+      transactionId: registration.protocol,
+      value: amountCents / 100,
+      currency: "BRL",
+      eventTime: payment?.paidAt ?? new Date(),
+    });
+  } catch (error) {
+    console.error("[nevoa-conversions] Falha ao reportar venda_fechada:", error);
+  }
+}
+
 /** Efeitos colaterais idempotentes ao aprovar/publicar uma inscrição. */
 export async function handleRegistrationApprovedSideEffects(registrationId: string) {
   try {
@@ -802,6 +859,7 @@ export async function sendRegistrationToReview(registrationId: string) {
   }
 
   await handlePaymentConfirmedSideEffects(registrationId);
+  await reportNevoaSaleConversion(registrationId);
 
   return updated;
 }

@@ -20,6 +20,7 @@ export function ParticipantStep({
   registrationId,
   initialParticipant,
   initialReferralCode,
+  nevoaSessionCode,
   onReferralCodeChange,
   onDone,
 }: {
@@ -27,6 +28,7 @@ export function ParticipantStep({
   registrationId: string | null;
   initialParticipant?: WizardParticipantState;
   initialReferralCode?: string;
+  nevoaSessionCode?: string | null;
   onReferralCodeChange?: (code: string) => void;
   onDone: (data: {
     ref: string;
@@ -67,6 +69,7 @@ export function ParticipantStep({
         state: form.state,
         imageConsent: consent,
         ...(registrationId ? {} : { referralCode: referralCode || undefined }),
+        ...(registrationId || !nevoaSessionCode ? {} : { nevoaSessionCode }),
       };
       const result = registrationId
         ? await updateParticipantAction(wizardRef, registrationId, input)

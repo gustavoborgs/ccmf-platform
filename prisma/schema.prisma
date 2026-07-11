@@ -190,6 +190,8 @@ model Registration {
   rejectionReason String?
   /// soft delete: inscrição cancelada pelo responsável antes do pagamento
   deletedAt       DateTime?
+  /// Código de sessão Nevoa (sem prefixo NV-), capturado no wizard
+  nevoaSessionCode String?           @map("nevoa_session_code")
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 

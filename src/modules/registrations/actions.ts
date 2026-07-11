@@ -12,6 +12,7 @@ import { getActiveContest } from "@/modules/contests/service";
 import { resolveEnrollmentGuardianId } from "./context";
 import {
   approveRegistration,
+  attachNevoaSessionCodeIfEmpty,
   cancelGuardianRegistration,
   checkCpfExists,
   createRegistration,
@@ -26,6 +27,7 @@ import {
   guardianCancelRegistrationSchema,
   guardianPhotoReplaceSchema,
   guardianStep1Schema,
+  nevoaSessionCodeUpdateSchema,
   participantBaseSchema,
   participantCreateSchema,
   photoUploadSchema,
@@ -145,12 +147,13 @@ export async function createParticipantAction(
   if (!contest) return { ok: false, error: "As inscrições não estão abertas no momento." };
 
   try {
-    const { referralCode, ...participant } = parsed.data;
+    const { referralCode, nevoaSessionCode, ...participant } = parsed.data;
     const registration = await createRegistration({
       guardianId,
       contestId: contest.id,
       participant,
       referralCode,
+      nevoaSessionCode,
     });
 
     return {
@@ -163,6 +166,35 @@ export async function createParticipantAction(
         participantName: registration.participant.name,
       },
     };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Fallback: associa código Nevoa à inscrição se ainda não houver um salvo. */
+export async function updateNevoaSessionCodeAction(
+  rawRef: string | null,
+  input: unknown,
+): Promise<ActionResult> {
+  const guardianId = await resolveEnrollmentGuardianId(rawRef);
+  if (!guardianId) return { ok: false, error: "Referência inválida. Use seu link de retomada." };
+
+  const parsed = nevoaSessionCodeUpdateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  if (!parsed.data.nevoaSessionCode) {
+    return { ok: true };
+  }
+
+  try {
+    await attachNevoaSessionCodeIfEmpty(
+      parsed.data.registrationId,
+      guardianId,
+      parsed.data.nevoaSessionCode,
+    );
+    return { ok: true };
   } catch (error) {
     return fail(error);
   }

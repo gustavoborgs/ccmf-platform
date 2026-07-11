@@ -27,6 +27,7 @@ const envSchema = z.object({
   NEVOA_MANAGER_BASE_URL: z.string().url().optional(),
   NEVOA_MANAGER_WEBHOOK_ID: z.string().min(1).optional(),
   NEVOA_MANAGER_TOKEN: z.string().min(1).optional(),
+  NEVOA_CONVERSION_API_TOKEN: z.string().min(1).optional(),
   AUTOMATION_WORKER_TOKEN: z.string().min(1).optional(),
 });
 
