@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Baloo_2, Nunito } from "next/font/google";
 import { GoogleTag } from "@/shared/analytics/google-tag";
+import { MetaPixel } from "@/shared/analytics/meta-pixel";
 import { NevoaTracking } from "@/shared/analytics/nevoa-tracking";
 import "./globals.css";
 
@@ -90,6 +91,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${baloo.variable} ${nunito.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <GoogleTag />
+        <MetaPixel />
         <NevoaTracking />
         {children}
       </body>
