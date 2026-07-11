@@ -23,27 +23,12 @@ import type {
 /** Status visíveis publicamente — nunca expor inscrições fora desta lista. */
 const PUBLIC_STATUSES = ["APPROVED", "SEMIFINALIST", "WINNER"] as const;
 
-/** Com resultados publicados, a galeria exibe somente vencedores. */
-function publicRegistrationStatuses(contestStatus: string) {
-  if (contestStatus === "RESULTS_PUBLISHED") return ["WINNER"] as const;
-  return PUBLIC_STATUSES;
-}
-
 /** Anos de edições ativas com participantes públicos (mais recente primeiro). */
 export async function listPublicYears(): Promise<number[]> {
   const contests = await db.contest.findMany({
     where: {
       status: { in: [...PUBLIC_CONTEST_STATUSES] },
-      OR: [
-        {
-          status: { not: "RESULTS_PUBLISHED" },
-          registrations: { some: { status: { in: [...PUBLIC_STATUSES] } } },
-        },
-        {
-          status: "RESULTS_PUBLISHED",
-          registrations: { some: { status: "WINNER" } },
-        },
-      ],
+      registrations: { some: { status: { in: [...PUBLIC_STATUSES] } } },
     },
     select: { year: true },
     orderBy: { year: "desc" },
@@ -51,20 +36,18 @@ export async function listPublicYears(): Promise<number[]> {
   return contests.map((contest) => contest.year);
 }
 
-/** Listagem pública: inscrições visíveis do ano, conforme o status da edição. */
+/** Listagem pública: inscrições visíveis do ano. */
 export async function listPublicParticipants(year: number, filters: Partial<PublicGalleryFilters> = {}) {
   const contest = await db.contest.findFirst({
     where: { year, status: { in: [...PUBLIC_CONTEST_STATUSES] } },
-    select: { status: true },
+    select: { id: true },
   });
   if (!contest) return [];
-
-  const statuses = publicRegistrationStatuses(contest.status);
 
   return db.registration.findMany({
     where: {
       contest: { year, status: { in: [...PUBLIC_CONTEST_STATUSES] } },
-      status: { in: [...statuses] },
+      status: { in: [...PUBLIC_STATUSES] },
       ...(filters.categorySlug ? { category: { slug: filters.categorySlug } } : {}),
       ...(filters.q
         ? { participant: { name: { contains: filters.q, mode: "insensitive" } } }

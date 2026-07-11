@@ -14,6 +14,7 @@ export type ParticipantCardData = {
   likesCount: number;
   photoUrl: string | null;
   badge: { label: string; tone: "winner" | "semifinalist" } | null;
+  photoGrayscale?: boolean;
 };
 
 /**
@@ -31,6 +32,7 @@ export function ParticipantCard({ participant }: { participant: ParticipantCardD
           src={participant.photoUrl}
           alt={`Foto de ${participant.name}`}
           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+          grayscale={participant.photoGrayscale}
           imageClassName="transition duration-300 group-hover:scale-105"
         />
 

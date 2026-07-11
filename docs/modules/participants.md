@@ -34,6 +34,7 @@ individual, likes e compartilhamento.
 | `updateAdminParticipantStatus(registrationId, status)` | Sobrescrita administrativa do status da inscrição |
 | `publicDisplayName(fullName)` | Nome público (primeiro nome + sobrenome) |
 | `publicStatusBadge(status, gender)` | Selo de vencedor/semifinalista |
+| `shouldGrayscalePublicPhoto(contestStatus, registrationStatus)` | P&B nas fotos após resultados (não vencedores) |
 
 ## Regras de negócio
 
@@ -53,10 +54,10 @@ individual, likes e compartilhamento.
    os demais removem da galeria pública.
 7. Somente edições **ativas** (`REGISTRATION_OPEN` … `RESULTS_PUBLISHED`) aparecem
    na galeria — rascunhos e edições arquivadas ficam ocultas, mesmo com aprovados.
-8. Com a edição em `RESULTS_PUBLISHED`, a **listagem** da galeria exibe somente
-   inscrições `WINNER` (vencedores). Antes disso, aparecem `APPROVED`, `SEMIFINALIST`
-   e `WINNER`. A página individual de um participante continua acessível por URL
-   direta enquanto a inscrição estiver em status público.
+8. Com a edição em `RESULTS_PUBLISHED`, a galeria e os perfis continuam exibindo
+   todos os participantes públicos (`APPROVED`, `SEMIFINALIST`, `WINNER`). As fotos
+   de quem **não** é `WINNER` aparecem em preto e branco; vencedores permanecem a
+   cores, com selo de destaque.
 9. O admin pode adicionar/remover fotos mesmo após publicação. O limite continua
    sendo 2 fotos por inscrição; ao remover a capa, a próxima foto vira capa.
 

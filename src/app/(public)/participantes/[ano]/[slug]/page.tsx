@@ -6,7 +6,7 @@ import { cache } from "react";
 import { LikeButton } from "@/modules/participants/components/like-button";
 import { PhotoCarousel } from "@/modules/participants/components/photo-carousel";
 import { ShareButton } from "@/modules/participants/components/share-button";
-import { publicDisplayName, publicStatusBadge } from "@/modules/participants/format";
+import { publicDisplayName, publicStatusBadge, shouldGrayscalePublicPhoto } from "@/modules/participants/format";
 import { getPublicParticipant } from "@/modules/participants/service";
 import { getPublicUrl } from "@/shared/integrations/s3/storage";
 import { formatAgeRange } from "@/shared/utils";
@@ -73,6 +73,7 @@ export default async function ParticipantProfilePage({ params }: PageProps) {
     url: getPublicUrl(photo.storageKey),
   }));
   const frameUrl = contest.frameImageKey ? getPublicUrl(contest.frameImageKey) : null;
+  const photoGrayscale = shouldGrayscalePublicPhoto(contest.status, registration.status);
 
   return (
     <>
@@ -88,7 +89,7 @@ export default async function ParticipantProfilePage({ params }: PageProps) {
 
           <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-14">
             <div className="mx-auto w-full max-w-md lg:sticky lg:top-24">
-              <PhotoCarousel photos={photos} frameUrl={frameUrl} alt={name} />
+              <PhotoCarousel photos={photos} frameUrl={frameUrl} alt={name} photoGrayscale={photoGrayscale} />
             </div>
 
             <div className="mx-auto w-full max-w-md lg:max-w-none">
@@ -132,7 +133,7 @@ export default async function ParticipantProfilePage({ params }: PageProps) {
                 />
               </div>
               <p className="mt-3 text-sm text-ink-muted">
-                Curta a foto e compartilhe com a família — não precisa de cadastro.
+                Curta a foto e compartilhe com a família, não precisa de cadastro.
               </p>
 
               <dl className="mt-8 grid grid-cols-2 gap-3">

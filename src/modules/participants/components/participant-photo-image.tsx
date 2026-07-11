@@ -13,6 +13,7 @@ export function ParticipantPhotoImage({
   priority,
   className,
   imageClassName,
+  grayscale = false,
 }: {
   src?: string | null;
   alt: string;
@@ -20,6 +21,7 @@ export function ParticipantPhotoImage({
   priority?: boolean;
   className?: string;
   imageClassName?: string;
+  grayscale?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -34,7 +36,7 @@ export function ParticipantPhotoImage({
         fill
         priority={priority}
         sizes={sizes}
-        className={cn("object-cover", imageClassName)}
+        className={cn("object-cover", grayscale && "grayscale", imageClassName)}
         aria-hidden={showRealPhoto}
       />
       {realPhotoSrc && (
@@ -49,6 +51,7 @@ export function ParticipantPhotoImage({
           className={cn(
             "object-cover opacity-0 transition-opacity duration-300",
             loaded && "opacity-100",
+            grayscale && "grayscale",
             imageClassName,
           )}
         />

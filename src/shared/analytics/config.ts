@@ -18,5 +18,6 @@ export function getGtagPrimaryId(): string | null {
 export const NEVOA_TRACKING_TENANT =
   process.env.NEXT_PUBLIC_NEVOA_TRACKING_TENANT ?? "1234";
 
-/** Snippet first-party (proxy em `/api/tracking/snippet.js`) — evita bloqueio por adblock. */
-export const NEVOA_TRACKING_SNIPPET_URL = "/api/tracking/snippet.js";
+export const NEVOA_TRACKING_SNIPPET_URL =
+  process.env.NEXT_PUBLIC_NEVOA_TRACKING_SNIPPET_URL ??
+  "https://nevoa-manager-backend-9e27f965f73e.herokuapp.com/api/public/tracking/snippet.js";

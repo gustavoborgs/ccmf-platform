@@ -7,7 +7,7 @@ import {
   ParticipantCard,
   type ParticipantCardData,
 } from "@/modules/participants/components/participant-card";
-import { publicDisplayName, publicStatusBadge } from "@/modules/participants/format";
+import { publicDisplayName, publicStatusBadge, shouldGrayscalePublicPhoto } from "@/modules/participants/format";
 import { listPublicParticipants, listPublicYears } from "@/modules/participants/service";
 import { publicGalleryFiltersSchema } from "@/modules/participants/validators";
 import { getPublicUrl } from "@/shared/integrations/s3/storage";
@@ -70,6 +70,7 @@ export default async function ParticipantsGalleryPage({ params, searchParams }: 
     likesCount: registration.likesCount,
     photoUrl: registration.photos[0] ? getPublicUrl(registration.photos[0].storageKey) : null,
     badge: publicStatusBadge(registration.status, registration.participant.gender),
+    photoGrayscale: shouldGrayscalePublicPhoto(contest.status, registration.status),
   }));
 
   const hasFilters = Boolean(filters.q || filters.categorySlug);

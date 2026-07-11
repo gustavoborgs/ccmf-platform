@@ -1,4 +1,4 @@
-import type { Gender, RegistrationStatus } from "@/generated/prisma/client";
+import type { ContestStatus, Gender, RegistrationStatus } from "@/generated/prisma/client";
 
 /**
  * Formatação da exibição pública de participantes.
@@ -27,4 +27,12 @@ export function publicStatusBadge(
     return { label: "Semifinalista", tone: "semifinalist" };
   }
   return null;
+}
+
+/** Com resultados publicados, só vencedores permanecem a cores na galeria e no perfil. */
+export function shouldGrayscalePublicPhoto(
+  contestStatus: ContestStatus | string,
+  registrationStatus: RegistrationStatus | string,
+): boolean {
+  return contestStatus === "RESULTS_PUBLISHED" && registrationStatus !== "WINNER";
 }

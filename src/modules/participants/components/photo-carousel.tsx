@@ -19,10 +19,12 @@ export function PhotoCarousel({
   photos,
   alt,
   frameUrl,
+  photoGrayscale = false,
 }: {
   photos: CarouselPhoto[];
   alt: string;
   frameUrl?: string | null;
+  photoGrayscale?: boolean;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
@@ -34,6 +36,7 @@ export function PhotoCarousel({
           alt={alt}
           sizes="(min-width: 1024px) 40vw, 100vw"
           priority
+          grayscale={photoGrayscale}
         />
       </div>
     );
@@ -42,7 +45,13 @@ export function PhotoCarousel({
   if (photos.length === 1) {
     return (
       <div className="relative aspect-[3/4] overflow-hidden rounded-bubble shadow-brand-lg">
-        <FramedPhoto photoUrl={photos[0].url} frameUrl={frameUrl} alt={alt} priority />
+        <FramedPhoto
+          photoUrl={photos[0].url}
+          frameUrl={frameUrl}
+          alt={alt}
+          priority
+          photoGrayscale={photoGrayscale}
+        />
       </div>
     );
   }
@@ -74,6 +83,7 @@ export function PhotoCarousel({
               frameUrl={frameUrl}
               alt={`${alt} — foto ${index + 1} de ${photos.length}`}
               priority={index === 0}
+              photoGrayscale={photoGrayscale}
             />
           </div>
         ))}
@@ -103,11 +113,13 @@ function FramedPhoto({
   frameUrl,
   alt,
   priority,
+  photoGrayscale = false,
 }: {
   photoUrl: string;
   frameUrl?: string | null;
   alt: string;
   priority?: boolean;
+  photoGrayscale?: boolean;
 }) {
   return (
     <>
@@ -116,6 +128,7 @@ function FramedPhoto({
         alt={alt}
         priority={priority}
         sizes="(min-width: 1024px) 40vw, 100vw"
+        grayscale={photoGrayscale}
       />
       {frameUrl && (
         <Image

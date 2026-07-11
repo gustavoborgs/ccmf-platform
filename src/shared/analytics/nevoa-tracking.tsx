@@ -1,14 +1,12 @@
-import Script from "next/script";
 import { NEVOA_TRACKING_SNIPPET_URL, NEVOA_TRACKING_TENANT } from "./config";
 
+/** Snippet oficial Nevoa — carregado direto do backend, como no embed padrão. */
 export function NevoaTracking() {
-  if (!NEVOA_TRACKING_TENANT) return null;
-
   return (
-    <Script
+    <script
       src={NEVOA_TRACKING_SNIPPET_URL}
       data-tenant={NEVOA_TRACKING_TENANT}
-      strategy="afterInteractive"
+      async
     />
   );
 }
