@@ -4,6 +4,7 @@ export { Card } from "./card";
 export { Container } from "./container";
 export { SectionHeading } from "./section-heading";
 export { cn } from "./cn";
+export { FacebookIcon, InstagramIcon } from "./social-icons";
 export {
   Table,
   TableBody,

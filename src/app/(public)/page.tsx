@@ -18,7 +18,15 @@ import {
 import { getActiveContest } from "@/modules/contests/service";
 import { PartnersShowcase } from "@/modules/content/components/partners-showcase";
 import { listPartnersByType } from "@/modules/content/service";
-import { Button, Card, Container, SectionHeading } from "@/shared/ui";
+import { SOCIAL } from "@/shared/contact";
+import {
+  Button,
+  Card,
+  Container,
+  FacebookIcon,
+  InstagramIcon,
+  SectionHeading,
+} from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/utils";
 
 export const dynamic = "force-dynamic";
@@ -454,6 +462,51 @@ export default async function HomePage() {
                 <p className="mt-1 text-sm text-ink-muted">{category.range}</p>
               </Card>
             ))}
+          </div>
+        </Container>
+      </section>
+
+      {/* Instagram — canal oficial de notícias e lembretes da edição */}
+      <section className="py-20">
+        <Container>
+          <div className="overflow-hidden rounded-bubble bg-brand-gradient px-6 py-12 text-center text-white shadow-brand-lg sm:px-10">
+            <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white/15">
+              <InstagramIcon className="h-7 w-7" />
+            </span>
+            <p className="mt-4 font-display text-sm font-bold uppercase tracking-widest text-white/75">
+              Acompanhe de perto
+            </p>
+            <h2 className="mx-auto mt-3 max-w-2xl text-balance text-3xl font-extrabold sm:text-4xl">
+              Siga o concurso no Instagram
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-white/85">
+              Notícias da edição, lembretes de prazos, bastidores e os anúncios
+              oficiais saem primeiro no perfil{" "}
+              <strong className="font-semibold text-white">{SOCIAL.instagram.handle}</strong>.
+              Siga para não perder nenhuma etapa do concurso.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+              <Button
+                href={SOCIAL.instagram.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="lg"
+                variant="secondary"
+                className="bg-white text-accent-700 hover:bg-accent-50"
+              >
+                <InstagramIcon className="h-5 w-5" />
+                Seguir no Instagram
+              </Button>
+              <a
+                href={SOCIAL.facebook.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 font-display font-bold text-white/90 transition hover:text-white"
+              >
+                <FacebookIcon className="h-5 w-5" />
+                Também estamos no Facebook
+              </a>
+            </div>
           </div>
         </Container>
       </section>

@@ -15,6 +15,8 @@ Specs da plataforma do **Concurso Criança Mais Fotogênica do Brasil**.
 | [03-modelo-de-dados.md](./03-modelo-de-dados.md) | Entidades, enums e relacionamentos |
 | [04-template-de-modulo.md](./04-template-de-modulo.md) | Template para spec de novos módulos |
 | [05-design-system.md](./05-design-system.md) | Tokens, tipografia, componentes UI e diretrizes da marca |
+| [06-estrategia-comercial-inscricoes.md](./06-estrategia-comercial-inscricoes.md) | Posicionamento, pacote participante e conversão |
+| [07-programa-embaixadoras.md](./07-programa-embaixadoras.md) | Programa de embaixadoras / juradas convidadas — regras, remuneração e copy |
 
 ### Módulos
 
@@ -34,6 +36,8 @@ Specs da plataforma do **Concurso Criança Mais Fotogênica do Brasil**.
 | Media | [modules/media.md](./modules/media.md) | `src/modules/media` |
 | Guardians (admin) | [modules/guardians.md](./modules/guardians.md) | consultas via `registrations` |
 | Legacy Import | [modules/legacy-import.md](./modules/legacy-import.md) | `scripts/import-legacy-participants.ts` |
+| Referrals | [modules/referrals.md](./modules/referrals.md) | `src/modules/referrals` |
+| Ambassadors | [modules/ambassadors.md](./modules/ambassadors.md) | `src/modules/ambassadors` (planejado) |
 
 ### Integrações
 

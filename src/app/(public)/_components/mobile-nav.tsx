@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, cn } from "@/shared/ui";
+import { SOCIAL } from "@/shared/contact";
+import { Button, cn, FacebookIcon, InstagramIcon } from "@/shared/ui";
 
 type NavLink = { href: string; label: string };
 
@@ -63,13 +64,34 @@ export function MobileNav({ links }: { links: NavLink[] }) {
               );
             })}
 
-            <div className="mt-3 flex gap-3 border-t border-primary-100 pt-4 pb-2">
+            <div className="mt-3 flex gap-3 border-t border-primary-100 pt-4">
               <Button href="/entrar" variant="outline" size="sm" className="flex-1">
                 Entrar
               </Button>
               <Button href="/inscricao" size="sm" className="flex-1">
                 Inscrição
               </Button>
+            </div>
+
+            <div className="mt-3 flex items-center justify-center gap-4 pb-2 text-sm font-semibold text-ink-muted">
+              <a
+                href={SOCIAL.instagram.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 transition hover:text-accent-600"
+              >
+                <InstagramIcon className="h-4 w-4" />
+                {SOCIAL.instagram.handle}
+              </a>
+              <a
+                href={SOCIAL.facebook.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Página oficial do concurso no Facebook"
+                className="transition hover:text-accent-600"
+              >
+                <FacebookIcon className="h-4 w-4" />
+              </a>
             </div>
           </nav>
         </div>

@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { buildWhatsAppUrl, CONTACT } from "@/shared/contact";
-import { Button, Container } from "@/shared/ui";
+import { buildWhatsAppUrl, CONTACT, SOCIAL } from "@/shared/contact";
+import { Button, Container, FacebookIcon, InstagramIcon } from "@/shared/ui";
 import { MobileNav } from "./_components/mobile-nav";
 import { WhatsAppFloat } from "./_components/whatsapp-float";
 
@@ -19,9 +19,23 @@ const NAV_LINKS = [
 
 const COPYRIGHT_YEAR = 2026;
 
+/** Organization schema com sameAs — vincula o site aos perfis oficiais (SEO/credibilidade). */
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Concurso Criança Mais Fotogênica do Brasil",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://criancamaisfotogenica.com.br",
+  email: CONTACT.email,
+  sameAs: [SOCIAL.instagram.url, SOCIAL.facebook.url],
+};
+
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
       <header className="sticky top-0 z-50 border-b border-primary-100 bg-white/90 backdrop-blur">
         <Container className="flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
@@ -71,6 +85,26 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
               O maior concurso de fotografia infantil do Brasil, com avaliação
               técnica por jurados especializados.
             </p>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <a
+                href={SOCIAL.instagram.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold transition hover:bg-white/25"
+              >
+                <InstagramIcon className="h-4 w-4" />
+                {SOCIAL.instagram.handle}
+              </a>
+              <a
+                href={SOCIAL.facebook.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Página oficial do concurso no Facebook"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25"
+              >
+                <FacebookIcon className="h-4 w-4" />
+              </a>
+            </div>
           </div>
 
           <div>

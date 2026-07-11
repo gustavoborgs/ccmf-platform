@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 import { HelpCircle, Mail, MessageCircle, Phone } from "lucide-react";
-import { buildWhatsAppUrl, CONTACT } from "@/shared/contact";
-import { Button, Card, Container, SectionHeading } from "@/shared/ui";
+import { buildWhatsAppUrl, CONTACT, SOCIAL } from "@/shared/contact";
+import {
+  Button,
+  Card,
+  Container,
+  FacebookIcon,
+  InstagramIcon,
+  SectionHeading,
+} from "@/shared/ui";
 
 export const metadata: Metadata = {
   title: "Contato",
@@ -138,6 +145,59 @@ export default function ContactPage() {
                 </Card>
               );
             })}
+          </div>
+        </Container>
+      </section>
+
+      <section className="bg-surface-muted py-20">
+        <Container>
+          <SectionHeading
+            kicker="Redes sociais"
+            title="Acompanhe o concurso nas redes"
+            description="Notícias da edição, lembretes de prazos e os anúncios oficiais são publicados primeiro nos perfis oficiais do concurso."
+          />
+
+          <div className="mx-auto mt-12 grid max-w-3xl gap-5 md:grid-cols-2">
+            <a
+              href={SOCIAL.instagram.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group"
+            >
+              <Card className="flex h-full flex-col transition group-hover:shadow-brand-lg">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-50 text-accent-700">
+                  <InstagramIcon className="h-6 w-6" />
+                </span>
+                <h2 className="mt-5 font-display text-2xl font-extrabold text-primary-700">
+                  Instagram
+                </h2>
+                <p className="mt-1 font-semibold text-ink">{SOCIAL.instagram.handle}</p>
+                <p className="mt-3 flex-1 text-sm/6 text-ink-muted">
+                  O canal mais ativo do concurso: novidades, bastidores e lembretes
+                  importantes de cada etapa da edição.
+                </p>
+              </Card>
+            </a>
+            <a
+              href={SOCIAL.facebook.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group"
+            >
+              <Card className="flex h-full flex-col transition group-hover:shadow-brand-lg">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-primary-700">
+                  <FacebookIcon className="h-6 w-6" />
+                </span>
+                <h2 className="mt-5 font-display text-2xl font-extrabold text-primary-700">
+                  Facebook
+                </h2>
+                <p className="mt-1 font-semibold text-ink">{SOCIAL.facebook.label}</p>
+                <p className="mt-3 flex-1 text-sm/6 text-ink-muted">
+                  Página oficial do concurso, com histórico das edições e publicações
+                  para as famílias participantes.
+                </p>
+              </Card>
+            </a>
           </div>
         </Container>
       </section>

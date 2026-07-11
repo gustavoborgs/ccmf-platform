@@ -11,6 +11,18 @@ export const CONTACT = {
   email: "byclaudiacavalcante@yahoo.com.br",
 } as const;
 
+/** Redes sociais oficiais do CCMF — fonte única para site, SEO e e-mails. */
+export const SOCIAL = {
+  instagram: {
+    handle: "@concursocriancamaisfotogenica",
+    url: "https://www.instagram.com/concursocriancamaisfotogenica/",
+  },
+  facebook: {
+    label: "Concurso Criança Mais Fotogênica do Brasil",
+    url: "https://www.facebook.com/people/Concurso-Crian%C3%A7a-Mais-Fotog%C3%AAnica-do-Brasil/100060315901272/",
+  },
+} as const;
+
 /** Link wa.me com mensagem pré-preenchida opcional. */
 export function buildWhatsAppUrl(message?: string): string {
   const base = `https://wa.me/${CONTACT.whatsapp.e164}`;
