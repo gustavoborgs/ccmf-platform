@@ -62,6 +62,7 @@ export function GuardianStep({
     name: prefill?.name ?? "",
     email: "",
     phone: "",
+    birthDate: "",
     password: "",
     ...emptyAddress,
   });
@@ -260,6 +261,16 @@ export function GuardianStep({
 
       {cpfStatus === "new" && (
         <div className="space-y-4">
+          <Field label="Data de nascimento">
+            <TextInput
+              type="date"
+              value={form.birthDate}
+              onChange={(event) => setForm({ ...form, birthDate: event.target.value })}
+              autoComplete="bday"
+              disabled={pending}
+            />
+          </Field>
+
           <div className="border-t border-primary-100 pt-4">
             <p className="mb-1 font-display text-sm font-bold text-primary-700">
               Endereço do responsável
@@ -357,7 +368,7 @@ export function GuardianStep({
             />
           </Field>
 
-          <Button onClick={createAccount} disabled={pending || cepLoading}>
+          <Button onClick={createAccount} disabled={pending || cepLoading || !form.birthDate}>
             {pending ? "Criando cadastro..." : "Criar cadastro e continuar"}
           </Button>
         </div>

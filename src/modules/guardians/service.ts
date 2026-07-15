@@ -38,6 +38,7 @@ type AdminGuardianParticipant = {
 type AdminGuardianRecord = {
   id: string;
   cpf: string | null;
+  birthDate: Date | null;
   whatsapp: string | null;
   zipCode: string | null;
   street: string | null;
@@ -170,6 +171,7 @@ export async function updateAdminGuardian(
       where: { id: guardian.id },
       data: {
         cpf: input.cpf,
+        birthDate: input.birthDate,
         whatsapp: input.whatsapp,
         zipCode: input.zipCode,
         street: input.street,

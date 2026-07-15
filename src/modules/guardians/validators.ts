@@ -39,12 +39,20 @@ const nullableState = z
   .transform((value) => value || null)
   .pipe(z.string().length(2, "Informe o UF com 2 letras").nullable());
 
+const nullableBirthDate = z
+  .union([
+    z.literal(""),
+    z.coerce.date().max(new Date(), "Data de nascimento inválida"),
+  ])
+  .transform((value) => (value === "" ? null : value));
+
 export const adminGuardianUpdateSchema = z
   .object({
     name: z.string().trim().min(3, "Informe o nome completo."),
     email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
     phone: nullableDigits,
     cpf: nullableCpf,
+    birthDate: nullableBirthDate,
     whatsapp: nullableDigits,
     zipCode: nullableCep,
     street: nullableText,

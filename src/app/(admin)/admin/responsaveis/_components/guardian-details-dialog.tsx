@@ -25,6 +25,7 @@ import {
   registrationStatusTone,
   StatusBadge,
 } from "../../_components/admin-ui";
+import { formatDateBR } from "@/shared/datetime";
 
 type Mode = "details" | "edit";
 
@@ -33,6 +34,7 @@ type GuardianFormState = {
   email: string;
   phone: string;
   cpf: string;
+  birthDate: string;
   whatsapp: string;
   zipCode: string;
   street: string;
@@ -184,6 +186,15 @@ export function GuardianDetailsDialog({ guardian }: { guardian: AdminGuardianLis
                         onChange={(event) => updateField("cpf", event.target.value)}
                         disabled={isPending}
                         placeholder="000.000.000-00"
+                      />
+                    </Field>
+                    <Field label="Data de nascimento">
+                      <TextInput
+                        type="date"
+                        value={form.birthDate}
+                        onChange={(event) => updateField("birthDate", event.target.value)}
+                        disabled={isPending}
+                        autoComplete="bday"
                       />
                     </Field>
                   </div>
@@ -360,6 +371,7 @@ function GuardianDetailsView({
               ["Telefone", guardian.user.phone ?? "Não informado"],
               ["WhatsApp", guardian.whatsapp ?? "Não informado"],
               ["CPF", guardian.cpf ?? "Não informado"],
+              ["Nascimento", guardian.birthDate ? formatDateBR(guardian.birthDate) : "Não informado"],
               ["Cadastro", formatDateTime(guardian.user.createdAt)],
             ]}
           />
@@ -482,6 +494,7 @@ function initialFormState(guardian: AdminGuardianListItem): GuardianFormState {
     email: guardian.user.email,
     phone: guardian.user.phone ?? "",
     cpf: guardian.cpf ?? "",
+    birthDate: guardian.birthDate ? guardian.birthDate.toISOString().slice(0, 10) : "",
     whatsapp: guardian.whatsapp ?? "",
     zipCode: guardian.zipCode ?? "",
     street: guardian.street ?? "",

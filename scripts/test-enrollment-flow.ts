@@ -37,9 +37,12 @@ async function main() {
 
   // Step 1 — CPF novo cria conta
   assert.equal(await checkCpfExists(TEST_CPF), false, "CPF de teste não deveria existir");
+  const guardianBirth = new Date();
+  guardianBirth.setFullYear(guardianBirth.getFullYear() - 35);
   const created = await ensureGuardian({
     cpf: TEST_CPF,
     name: "Teste Fluxo",
+    birthDate: guardianBirth,
     email: "teste-fluxo@example.com",
     phone: "43999990000",
     password: "senha-teste-123",

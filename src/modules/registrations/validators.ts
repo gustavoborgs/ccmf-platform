@@ -57,6 +57,7 @@ export const guardianAddressSchema = z.object({
 export const guardianStep1Schema = guardianAddressSchema.extend({
   name: z.string().min(3, "Informe o nome completo"),
   cpf: cpfSchema,
+  birthDate: z.coerce.date().max(new Date(), "Data de nascimento inválida"),
   email: z.string().email("E-mail inválido"),
   phone: z.string().min(10, "Telefone inválido"),
   password: z.string().min(8, "Senha deve ter ao menos 8 caracteres").optional(),

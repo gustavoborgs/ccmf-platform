@@ -58,9 +58,10 @@ model PasswordResetToken {
 
 /// Perfil do responsável (dados extras além do login)
 model GuardianProfile {
-  id              String  @id @default(cuid())
-  userId          String  @unique
-  cpf             String? @unique
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  cpf             String?   @unique
+  birthDate       DateTime?
   whatsapp        String?
   zipCode         String?
   street          String?

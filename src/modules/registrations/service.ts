@@ -160,6 +160,7 @@ export async function ensureGuardian(input: GuardianStep1Input): Promise<EnsureG
       guardianProfile: {
         create: {
           cpf: input.cpf,
+          birthDate: input.birthDate,
           whatsapp: input.phone,
           referralCode,
           zipCode: input.zipCode,
