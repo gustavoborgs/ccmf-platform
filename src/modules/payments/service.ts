@@ -6,6 +6,7 @@ import type {
   AsaasCustomer,
   AsaasCreditCard,
 } from "@/shared/integrations/asaas/types";
+import { reportNevoaConversion } from "@/shared/integrations/nevoa-manager/conversions";
 import type { Prisma } from "@/generated/prisma/client";
 import type { PaymentStatus } from "@/generated/prisma/enums";
 import { sendRegistrationToReview } from "@/modules/registrations/service";
@@ -272,11 +273,39 @@ export async function createCheckout(params: {
     data: { status: "PENDING_PAYMENT" },
   });
 
+  await reportNevoaInitiateCheckout({
+    sessionCode: registration.nevoaSessionCode,
+    protocol: registration.protocol,
+    amountCents: registration.contest.registrationFeeCents,
+  });
+
   if (paidNow) {
     await sendRegistrationToReview(registration.id);
   }
 
   return toCheckoutResult(payment, pix?.encodedImage ?? null);
+}
+
+/** Conversão Nevoa ao gerar cobrança (best-effort; dedupe por protocolo). */
+async function reportNevoaInitiateCheckout(params: {
+  sessionCode: string | null;
+  protocol: string;
+  amountCents: number;
+}) {
+  if (!params.sessionCode) return;
+
+  try {
+    await reportNevoaConversion({
+      eventName: "initiate_checkout",
+      sessionCode: params.sessionCode,
+      transactionId: `checkout_${params.protocol}`,
+      value: params.amountCents / 100,
+      currency: "BRL",
+      eventTime: new Date(),
+    });
+  } catch (error) {
+    console.error("[nevoa-conversions] Falha ao reportar initiate_checkout:", error);
+  }
 }
 
 /**

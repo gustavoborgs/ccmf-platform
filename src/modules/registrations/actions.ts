@@ -25,8 +25,8 @@ import {
 import {
   cpfSchema,
   guardianCancelRegistrationSchema,
+  guardianCreateSchema,
   guardianPhotoReplaceSchema,
-  guardianStep1Schema,
   nevoaSessionCodeUpdateSchema,
   participantBaseSchema,
   participantCreateSchema,
@@ -105,7 +105,7 @@ export async function linkGuardianAction(rawCpf: string): Promise<ActionResult<{
 
 /** CPF novo → cria conta (senha obrigatória) e devolve o ref do wizard. */
 export async function createGuardianAction(input: unknown): Promise<ActionResult<{ ref: string }>> {
-  const parsed = guardianStep1Schema.safeParse(input);
+  const parsed = guardianCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
@@ -114,7 +114,8 @@ export async function createGuardianAction(input: unknown): Promise<ActionResult
   }
 
   try {
-    const result = await ensureGuardian(parsed.data);
+    const { nevoaSessionCode, ...guardian } = parsed.data;
+    const result = await ensureGuardian(guardian, { nevoaSessionCode });
     return { ok: true, data: { ref: serializeWizardRef({ guardianId: result.guardianId }) } };
   } catch (error) {
     return fail(error);

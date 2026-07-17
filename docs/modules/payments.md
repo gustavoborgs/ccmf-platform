@@ -34,6 +34,8 @@ wizard (step 3) → createCheckoutAction(method [, creditCard])
   4. PIX: busca QR Code (payload copia-e-cola + imagem base64)
   5. cria Payment + Registration → PENDING_PAYMENT
      (cartão aprovado síncrono → Payment CONFIRMED + Registration → PAID direto)
+  6. se houver `nevoaSessionCode` na inscrição, reporta conversão Nevoa
+     `initiate_checkout` (`transaction_id = checkout_{protocol}`) — best-effort
 ```
 
 ## Confirmação

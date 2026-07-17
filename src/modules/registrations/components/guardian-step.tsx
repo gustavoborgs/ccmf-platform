@@ -4,6 +4,7 @@ import { Lock } from "lucide-react";
 import posthog from "posthog-js";
 import { useState, useTransition } from "react";
 import { trackEvent } from "@/shared/analytics/events";
+import { readNevoaSessionCode } from "@/shared/analytics/nevoa-session";
 import { Button } from "@/shared/ui/button";
 import { Field, TextInput } from "@/shared/ui/field";
 import {
@@ -51,9 +52,11 @@ function formatPhone(value: string): string {
 
 export function GuardianStep({
   prefill,
+  nevoaSessionCode,
   onDone,
 }: {
   prefill?: { name?: string; emailMasked?: string; phoneMasked?: string };
+  nevoaSessionCode?: string | null;
   onDone: (ref: string) => void;
 }) {
   const [cpf, setCpf] = useState("");
@@ -143,7 +146,12 @@ export function GuardianStep({
   function createAccount() {
     setError(null);
     startTransition(async () => {
-      const result = await createGuardianAction({ cpf, ...form });
+      const sessionCode = nevoaSessionCode ?? readNevoaSessionCode();
+      const result = await createGuardianAction({
+        cpf,
+        ...form,
+        ...(sessionCode ? { nevoaSessionCode: sessionCode } : {}),
+      });
       if (result.ok) {
         posthog.identify(form.email, { email: form.email, name: form.name });
         posthog.capture("sign_up", { method: "enrollment_form" });

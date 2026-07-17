@@ -128,7 +128,10 @@ export async function getTrainingAccess(userId: string): Promise<TrainingAccess>
  *   um segundo momento, via senha ou recuperação).
  * - CPF novo → exige senha e cria User + GuardianProfile.
  */
-export async function ensureGuardian(input: GuardianStep1Input): Promise<EnsureGuardianResult> {
+export async function ensureGuardian(
+  input: GuardianStep1Input,
+  options?: { nevoaSessionCode?: string },
+): Promise<EnsureGuardianResult> {
   const email = input.email.toLowerCase();
 
   const existing = await db.guardianProfile.findUnique({
@@ -178,7 +181,26 @@ export async function ensureGuardian(input: GuardianStep1Input): Promise<EnsureG
 
   await convertLead({ email, cpf: input.cpf, guardianUserId: user.id });
 
-  return { guardianId: user.guardianProfile!.id, userId: user.id, linked: false };
+  const guardianId = user.guardianProfile!.id;
+  await reportNevoaLeadConversion(guardianId, options?.nevoaSessionCode);
+
+  return { guardianId, userId: user.id, linked: false };
+}
+
+/** Conversão Nevoa no cadastro do responsável (best-effort). */
+async function reportNevoaLeadConversion(guardianId: string, sessionCode?: string) {
+  if (!sessionCode) return;
+
+  try {
+    await reportNevoaConversion({
+      eventName: "lead",
+      sessionCode,
+      transactionId: `lead_${guardianId}`,
+      eventTime: new Date(),
+    });
+  } catch (error) {
+    console.error("[nevoa-conversions] Falha ao reportar lead:", error);
+  }
 }
 
 export async function createRegistration(params: {

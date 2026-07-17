@@ -208,6 +208,7 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
         {step === "guardian" && (
           <GuardianStep
             prefill={initial.prefill}
+            nevoaSessionCode={nevoaSessionCode}
             onDone={(nextRef) => {
               advanceRef(nextRef);
               setStep("participant");

@@ -63,6 +63,11 @@ export const guardianStep1Schema = guardianAddressSchema.extend({
   password: z.string().min(8, "Senha deve ter ao menos 8 caracteres").optional(),
 });
 
+/** Step 1 — criação de conta + atribuição Nevoa (opcional). */
+export const guardianCreateSchema = guardianStep1Schema.extend({
+  nevoaSessionCode: nevoaSessionCodeSchema,
+});
+
 export const participantBaseSchema = z.object({
   name: z.string().min(3, "Informe o nome completo da criança"),
   birthDate: z.coerce.date().max(new Date(), "Data de nascimento inválida"),

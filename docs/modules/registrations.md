@@ -12,7 +12,8 @@ inscrição (`Registration`) e integração com pagamento, indicações e automa
 - Wizard `/inscricao` (responsável → participante → fotos → pagamento).
 - Criação e atualização de `Registration` + `Participant` vinculados ao responsável.
 - Transições pós-pagamento (`UNDER_REVIEW`) e revisão admin (`APPROVED`/`REJECTED`).
-- Captura de atribuição Nevoa (`nevoaSessionCode`) e conversão `venda_fechada`.
+- Captura de atribuição Nevoa (`nevoaSessionCode`) e conversões server-side
+  (`lead`, `initiate_checkout`, `venda_fechada`).
 - Não processa cobrança diretamente (módulo `payments`).
 
 ## Modelos envolvidos
@@ -41,10 +42,18 @@ inscrição (`Registration`) e integração com pagamento, indicações e automa
 2. Máquina de estados: `DRAFT` → `PENDING_PAYMENT` → `UNDER_REVIEW` → `APPROVED`/`REJECTED`.
 3. Pagamento confirma **somente via webhook** Asaas (ou cartão síncrono / polling como conciliação).
 4. Ao abrir o wizard, o client lê `localStorage['nevoaTrack:session']` (snippet Nevoa) e envia
-   `nevoaSessionCode` na criação da inscrição. Fallback no checkout se a sessão surgir depois.
+   `nevoaSessionCode` no cadastro do responsável e na criação da inscrição. Fallback no checkout
+   se a sessão surgir depois.
 5. Código armazenado **sem** prefixo `NV-` (prefixo é só exibição/WhatsApp).
-6. Ao confirmar pagamento, se houver `nevoaSessionCode`, dispara conversão server-side
-   `venda_fechada` na API Nevoa (`transaction_id = protocol`). Best-effort — falha não bloqueia fluxo.
+6. Conversões Nevoa server-side (best-effort; falha não bloqueia o fluxo), com
+   `transaction_id` para deduplicar reenvios:
+
+   | Momento | `event_name` | `transaction_id` |
+   | --- | --- | --- |
+   | Conta do responsável criada | `lead` | `lead_{guardianId}` |
+   | Cobrança gerada (módulo payments) | `initiate_checkout` | `checkout_{protocol}` |
+   | Pagamento confirmado | `venda_fechada` | `{protocol}` |
+
 7. `nevoaSessionCode` é dado de atribuição — **nunca** expor publicamente.
 
 ## Rotas relacionadas
