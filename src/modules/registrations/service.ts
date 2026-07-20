@@ -189,7 +189,10 @@ export async function ensureGuardian(
 
 /** Conversão Nevoa no cadastro do responsável (best-effort). */
 async function reportNevoaLeadConversion(guardianId: string, sessionCode?: string) {
-  if (!sessionCode) return;
+  if (!sessionCode) {
+    console.warn("[nevoa-conversions] lead ignorado — sem nevoaSessionCode", { guardianId });
+    return;
+  }
 
   try {
     await reportNevoaConversion({
@@ -805,7 +808,13 @@ async function reportNevoaSaleConversion(registrationId: string) {
       },
     });
 
-    if (!registration?.nevoaSessionCode) return;
+    if (!registration?.nevoaSessionCode) {
+      console.warn("[nevoa-conversions] venda_fechada ignorada — sem nevoaSessionCode", {
+        registrationId,
+        protocol: registration?.protocol,
+      });
+      return;
+    }
 
     const payment = registration.payments[0];
     const amountCents = payment?.amountCents ?? registration.contest.registrationFeeCents;

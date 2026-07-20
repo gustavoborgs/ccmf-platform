@@ -292,7 +292,12 @@ async function reportNevoaInitiateCheckout(params: {
   protocol: string;
   amountCents: number;
 }) {
-  if (!params.sessionCode) return;
+  if (!params.sessionCode) {
+    console.warn("[nevoa-conversions] initiate_checkout ignorado — sem nevoaSessionCode", {
+      protocol: params.protocol,
+    });
+    return;
+  }
 
   try {
     await reportNevoaConversion({

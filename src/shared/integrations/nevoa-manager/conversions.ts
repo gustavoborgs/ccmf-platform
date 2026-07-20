@@ -27,9 +27,20 @@ function getConversionConfig() {
   const token = env.NEVOA_CONVERSION_API_TOKEN;
   const tenantId = NEVOA_TRACKING_TENANT;
 
-  if (!baseUrl || !token || !tenantId) return null;
+  const missing = [
+    !baseUrl ? "NEVOA_MANAGER_BASE_URL" : null,
+    !token ? "NEVOA_CONVERSION_API_TOKEN" : null,
+    !tenantId ? "NEXT_PUBLIC_NEVOA_TRACKING_TENANT" : null,
+  ].filter(Boolean);
 
-  return { baseUrl, token, tenantId };
+  if (missing.length > 0) {
+    console.warn("[nevoa-conversions] Configuração ausente — conversão ignorada.", {
+      missing,
+    });
+    return null;
+  }
+
+  return { baseUrl: baseUrl!, token: token!, tenantId };
 }
 
 /** Reporta conversão à API pública do Nevoa Manager (best-effort). */
@@ -37,10 +48,7 @@ export async function reportNevoaConversion(
   input: NevoaConversionEventInput,
 ): Promise<NevoaConversionEventResponse | null> {
   const config = getConversionConfig();
-  if (!config) {
-    console.warn("[nevoa-conversions] Configuração ausente — conversão ignorada.");
-    return null;
-  }
+  if (!config) return null;
 
   const body: Record<string, unknown> = {
     event_name: input.eventName,
@@ -70,6 +78,8 @@ export async function reportNevoaConversion(
     console.error("[nevoa-conversions] request failed", {
       url,
       status: response.status,
+      eventName: input.eventName,
+      transactionId: input.transactionId,
       body: payload,
     });
     throw new Error(`Nevoa conversions request failed (${response.status})`);
@@ -79,6 +89,12 @@ export async function reportNevoaConversion(
     console.info("[nevoa-conversions] evento duplicado ignorado", {
       eventName: input.eventName,
       transactionId: input.transactionId,
+    });
+  } else {
+    console.info("[nevoa-conversions] evento aceito", {
+      eventName: input.eventName,
+      transactionId: input.transactionId,
+      tenantId: config.tenantId,
     });
   }
 
