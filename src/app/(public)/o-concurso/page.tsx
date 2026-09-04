@@ -10,7 +10,8 @@ import {
 } from "@/shared/seo/json-ld";
 import { Button, Card, Container, SectionHeading } from "@/shared/ui";
 
-export const revalidate = 3600;
+/** Postgres não está acessível durante `next build` no Railway — renderiza em runtime. */
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "O Concurso",

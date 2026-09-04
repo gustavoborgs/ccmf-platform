@@ -13,7 +13,8 @@ import { publicGalleryFiltersSchema } from "@/modules/participants/validators";
 import { getPublicUrl } from "@/shared/integrations/s3/storage";
 import { Button, Card, Container, cn } from "@/shared/ui";
 
-export const revalidate = 60;
+/** Postgres não está acessível durante `next build` no Railway — renderiza em runtime. */
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ ano: string }>;

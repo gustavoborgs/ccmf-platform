@@ -13,7 +13,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/videos" },
 };
 
-export const revalidate = 300;
+/** Postgres não está acessível durante `next build` no Railway — renderiza em runtime. */
+export const dynamic = "force-dynamic";
 
 export default async function VideosPage() {
   const videos = await listVideos();

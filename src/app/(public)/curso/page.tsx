@@ -15,7 +15,8 @@ import { absoluteUrl } from "@/modules/blog/seo";
 import { Button, Card, Container, SectionHeading } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/utils";
 
-export const revalidate = 300;
+/** Postgres não está acessível durante `next build` no Railway — renderiza em runtime. */
+export const dynamic = "force-dynamic";
 
 const COURSE_OG_IMAGE = "/academy/promo-phone.jpg";
 

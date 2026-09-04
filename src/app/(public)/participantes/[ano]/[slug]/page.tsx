@@ -14,7 +14,8 @@ import { absoluteUrl } from "@/shared/site-url";
 import { buildBreadcrumbJsonLd, JsonLd } from "@/shared/seo/json-ld";
 import { Button, Container, cn } from "@/shared/ui";
 
-export const revalidate = 60;
+/** Postgres não está acessível durante `next build` no Railway — renderiza em runtime. */
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ ano: string; slug: string }>;

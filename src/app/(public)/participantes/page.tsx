@@ -10,7 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/participantes" },
 };
 
-export const revalidate = 60;
+/** Postgres não está acessível durante `next build` no Railway — renderiza em runtime. */
+export const dynamic = "force-dynamic";
 
 /** Índice: leva direto para a galeria da edição mais recente com aprovados. */
 export default async function ParticipantsIndexPage() {

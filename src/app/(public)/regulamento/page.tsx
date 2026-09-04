@@ -10,7 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/regulamento" },
 };
 
-export const revalidate = 300;
+/** Postgres não está acessível durante `next build` no Railway — renderiza em runtime. */
+export const dynamic = "force-dynamic";
 
 export default async function RegulationPage() {
   const contest = await getActiveContest();
