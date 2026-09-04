@@ -43,6 +43,8 @@ export default async function AdminBlogPostDetailPage({
             title: post.title,
             slug: post.slug,
             excerpt: post.excerpt,
+            metaDescription: post.metaDescription,
+            category: post.category,
             content: post.content,
             coverKey: post.coverKey,
             coverUrl: post.coverKey ? getPublicUrl(post.coverKey) : null,

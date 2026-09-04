@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/modules/auth/config";
 import { PasswordResetRequestForm } from "@/modules/auth/components/password-reset-request-form";
 import { Card, Container } from "@/shared/ui";
+
+export const metadata: Metadata = {
+  title: "Recuperar senha",
+  robots: { index: false, follow: false },
+};
 
 export default async function PasswordResetRequestPage() {
   const session = await auth();

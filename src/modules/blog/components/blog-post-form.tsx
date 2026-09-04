@@ -23,6 +23,8 @@ export type BlogPostFormInitial = {
   title: string;
   slug: string;
   excerpt: string;
+  metaDescription: string | null;
+  category: string | null;
   content: string;
   coverKey: string | null;
   coverUrl?: string | null;
@@ -50,6 +52,8 @@ export function BlogPostForm({ initial }: { initial?: BlogPostFormInitial }) {
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(Boolean(initial));
   const [excerpt, setExcerpt] = useState(initial?.excerpt ?? "");
+  const [metaDescription, setMetaDescription] = useState(initial?.metaDescription ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "");
   const [content, setContent] = useState(initial?.content ?? "");
   const [coverKey, setCoverKey] = useState(initial?.coverKey ?? "");
   const [coverPreviewUrl, setCoverPreviewUrl] = useState(initial?.coverUrl ?? "");
@@ -84,6 +88,8 @@ export function BlogPostForm({ initial }: { initial?: BlogPostFormInitial }) {
           title,
           slug,
           excerpt,
+          metaDescription: metaDescription.trim() || null,
+          category: category.trim() || null,
           content,
           coverKey: finalCoverKey,
           publishedAt,
@@ -219,6 +225,30 @@ export function BlogPostForm({ initial }: { initial?: BlogPostFormInitial }) {
             disabled={isPending}
             placeholder="Um resumo direto sobre o que o responsável vai aprender neste artigo."
             className="w-full rounded-2xl border border-primary-200 bg-white px-4 py-3 text-ink placeholder:text-ink-muted/60 focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-200 disabled:opacity-60"
+          />
+        </Field>
+
+        <Field
+          label="Meta description (opcional)"
+          hint={`${metaDescription.length}/160. Se vazia, o Google usa o resumo.`}
+        >
+          <textarea
+            rows={2}
+            maxLength={160}
+            value={metaDescription}
+            onChange={(event) => setMetaDescription(event.target.value)}
+            disabled={isPending}
+            placeholder="Frase otimizada para a snippet do Google (máx. 160 caracteres)."
+            className="w-full rounded-2xl border border-primary-200 bg-white px-4 py-3 text-ink placeholder:text-ink-muted/60 focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-200 disabled:opacity-60"
+          />
+        </Field>
+
+        <Field label="Categoria editorial" hint="Slug: carreira, fotos, concurso, autoestima…">
+          <TextInput
+            value={category}
+            onChange={(event) => setCategory(slugify(event.target.value))}
+            disabled={isPending}
+            placeholder="carreira"
           />
         </Field>
 

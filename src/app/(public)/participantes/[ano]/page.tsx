@@ -13,7 +13,7 @@ import { publicGalleryFiltersSchema } from "@/modules/participants/validators";
 import { getPublicUrl } from "@/shared/integrations/s3/storage";
 import { Button, Card, Container, cn } from "@/shared/ui";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 type PageProps = {
   params: Promise<{ ano: string }>;
@@ -35,9 +35,19 @@ function galleryHref(year: number, query: { q?: string; categoria?: string }): s
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { ano } = await params;
+  const title = `Participantes ${ano}`;
+  const description = `Galeria oficial dos participantes do Concurso Criança Mais Fotogênica ${ano}. Curta as fotos e compartilhe com a família.`;
   return {
-    title: `Participantes ${ano}`,
-    description: `Galeria oficial dos participantes do Concurso Criança Mais Fotogênica ${ano}. Curta as fotos e compartilhe com a família.`,
+    title,
+    description,
+    alternates: { canonical: `/participantes/${ano}` },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: `/participantes/${ano}`,
+      images: [{ url: "/og-default.jpg", width: 1200, height: 630 }],
+    },
   };
 }
 

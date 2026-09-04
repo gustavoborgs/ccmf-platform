@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Camera, Heart, ShieldCheck } from "lucide-react";
+import { getActiveContest } from "@/modules/contests/service";
+import {
+  buildBreadcrumbJsonLd,
+  buildEventJsonLd,
+  buildFaqJsonLd,
+  JsonLd,
+} from "@/shared/seo/json-ld";
 import { Button, Card, Container, SectionHeading } from "@/shared/ui";
+
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "O Concurso",
@@ -9,6 +18,29 @@ export const metadata: Metadata = {
     "Conheça o Concurso Criança Mais Fotogênica: como funciona a inscrição, a avaliação técnica e as categorias por faixa etária. Todo inscrito ainda ganha de brinde o curso de gestão de carreira infantil da Claudia Cavalcante.",
   alternates: { canonical: "/o-concurso" },
 };
+
+const aboutFaqs = [
+  {
+    question: "O que é o Concurso Criança Mais Fotogênica?",
+    answer:
+      "É um concurso nacional de fotografia infantil, com 19 edições, categorias por faixa etária (de bebê a teen) e avaliação técnica. A inscrição é online e as famílias acompanham tudo pela plataforma oficial.",
+  },
+  {
+    question: "Qual a idade para participar?",
+    answer:
+      "Crianças de aproximadamente 2 meses a 14 anos, distribuídas nas categorias Bebê, Mirim, Infantil, Juvenil e Teen, conforme a idade na data da inscrição.",
+  },
+  {
+    question: "Quem organiza o concurso?",
+    answer:
+      "O concurso é organizado pela fotógrafa Claudia Cavalcante, fundadora do CCMF, com equipe dedicada ao atendimento das famílias e à avaliação das fotos.",
+  },
+  {
+    question: "O que minha criança recebe ao se inscrever?",
+    answer:
+      "Participação oficial na edição, página pública quando aprovada, materiais digitais da participação e, de brinde, o curso Como Gerenciar a Carreira do Seu Filho, da fundadora Claudia Cavalcante.",
+  },
+];
 
 const processSteps = [
   {
@@ -56,9 +88,31 @@ const categories = [
   { name: "Teen", range: "10 a 14 anos" },
 ];
 
-export default function AboutContestPage() {
+export default async function AboutContestPage() {
+  const contest = await getActiveContest();
+
   return (
     <>
+      <JsonLd
+        data={buildBreadcrumbJsonLd([
+          { name: "Início", path: "/" },
+          { name: "O Concurso", path: "/o-concurso" },
+        ])}
+      />
+      <JsonLd data={buildFaqJsonLd(aboutFaqs)} />
+      {contest && (
+        <JsonLd
+          data={buildEventJsonLd({
+            name: contest.name,
+            description:
+              "Concurso nacional de fotografia infantil com categorias por idade, avaliação técnica e Live Revelação.",
+            year: contest.year,
+            startDate: contest.createdAt,
+            endDate: contest.revealAt,
+            url: "/o-concurso",
+          })}
+        />
+      )}
       <section className="bg-brand-gradient text-white">
         <Container className="grid items-center gap-10 py-20 lg:grid-cols-[1.15fr_0.85fr] lg:py-24">
           <div>
@@ -267,10 +321,19 @@ export default function AboutContestPage() {
               align="left"
               kicker="Quem organiza"
               title="Conduzido pela fotógrafa Claudia Cavalcante"
-              description="Fundadora do concurso, Claudia lidera uma equipe dedicada que acompanha as famílias da inscrição até a divulgação dos resultados."
+              description="Fundadora do concurso há 19 edições, Claudia lidera uma equipe dedicada que acompanha as famílias da inscrição até a divulgação dos resultados — com regulamento público, avaliação técnica e proteção dos dados infantis."
             />
 
             <div className="mt-8 grid gap-4">
+              <div className="rounded-bubble bg-white p-5 shadow-brand">
+                <h3 className="font-display text-lg font-extrabold text-primary-700">
+                  19 edições nacionais
+                </h3>
+                <p className="mt-1 text-sm/6 text-ink-muted">
+                  Histórico consolidado de concurso de fotogenia infantil no Brasil, com categorias
+                  por idade e comunicação direta com responsáveis.
+                </p>
+              </div>
               <div className="flex gap-4 rounded-bubble bg-white p-5 shadow-brand">
                 <span className="mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent-700">
                   <Heart aria-hidden="true" className="h-5 w-5" />
@@ -320,6 +383,24 @@ export default function AboutContestPage() {
             <Button href="/contato" size="lg" className="mt-8">
               Falar com a organização
             </Button>
+          </div>
+        </Container>
+      </section>
+
+      <section className="bg-surface-muted py-20">
+        <Container>
+          <SectionHeading
+            kicker="Perguntas frequentes"
+            title="O que as famílias mais querem saber"
+            description="Respostas diretas sobre o concurso, idades, organização e o que a criança recebe ao participar."
+          />
+          <div className="mx-auto mt-10 max-w-3xl space-y-4">
+            {aboutFaqs.map((faq) => (
+              <Card key={faq.question} className="bg-white">
+                <h3 className="font-display text-lg font-extrabold text-primary-700">{faq.question}</h3>
+                <p className="mt-2 text-sm/6 text-ink-muted">{faq.answer}</p>
+              </Card>
+            ))}
           </div>
         </Container>
       </section>

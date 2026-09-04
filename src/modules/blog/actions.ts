@@ -28,6 +28,7 @@ function revalidateBlog(postId?: string, slug?: string) {
   revalidatePath("/blog");
   revalidatePath("/admin/blog");
   revalidatePath("/sitemap.xml");
+  revalidatePath("/carreira-de-modelo-infantil");
   if (postId) revalidatePath(`/admin/blog/${postId}`);
   if (slug) revalidatePath(`/blog/${slug}`);
 }

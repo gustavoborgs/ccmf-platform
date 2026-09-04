@@ -9,6 +9,12 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   AUTH_SECRET: z.string().min(1),
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+  /** URL canônica pública (SEO, sitemap, OG). Preferir sobre APP_URL em produção. */
+  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
+  /** Código de verificação do Google Search Console (meta content). */
+  NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: z.string().min(1).optional(),
+  /** Código de verificação do Bing Webmaster Tools. */
+  NEXT_PUBLIC_BING_SITE_VERIFICATION: z.string().min(1).optional(),
 
   S3_REGION: z.string().default("us-east-1"),
   S3_BUCKET: z.string().min(1),

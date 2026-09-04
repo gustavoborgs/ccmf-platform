@@ -7,9 +7,10 @@ export const metadata: Metadata = {
   title: "Participantes",
   description:
     "Conheça os participantes do Concurso Criança Mais Fotogênica, curta as fotos e compartilhe com a família.",
+  alternates: { canonical: "/participantes" },
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 /** Índice: leva direto para a galeria da edição mais recente com aprovados. */
 export default async function ParticipantsIndexPage() {

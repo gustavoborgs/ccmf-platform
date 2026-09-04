@@ -10,13 +10,14 @@ import { estimateReadingMinutes } from "@/modules/blog/format";
 import { absoluteUrl, mediaUrl, postUrl } from "@/modules/blog/seo";
 import {
   getPublishedPostBySlug,
-  listRecentPosts,
+  listRelatedPosts,
   type PublicBlogPost,
 } from "@/modules/blog/service";
 import { getPublicUrl } from "@/shared/integrations/s3/storage";
+import { buildBreadcrumbJsonLd, JsonLd } from "@/shared/seo/json-ld";
 import { Button, Container } from "@/shared/ui";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -30,14 +31,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!post) return { title: "Post não encontrado" };
 
   const coverUrl = mediaUrl(post.coverKey);
+  const description = post.metaDescription?.trim() || post.excerpt;
 
   return {
     title: post.title,
-    description: post.excerpt,
+    description,
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
       title: post.title,
-      description: post.excerpt,
+      description,
       type: "article",
       url: `/blog/${post.slug}`,
       publishedTime: post.publishedAt?.toISOString(),
@@ -50,7 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
               alt: `Imagem de capa: ${post.title}`,
             },
           ]
-        : undefined,
+        : [{ url: "/og-default.jpg", width: 1200, height: 630 }],
     },
     twitter: { card: "summary_large_image" },
   };
@@ -61,42 +63,48 @@ export default async function BlogPostPage({ params }: PageProps) {
   const post = await loadPost(slug);
   if (!post) notFound();
 
-  const recentPosts = await listRecentPosts(3, post.slug);
+  const recentPosts = await listRelatedPosts(post.category, post.slug, 3);
   const readingMinutes = estimateReadingMinutes(post.content);
   const coverUrl = post.coverKey ? getPublicUrl(post.coverKey) : null;
   const absoluteCoverUrl = mediaUrl(post.coverKey);
+  const description = post.metaDescription?.trim() || post.excerpt;
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        suppressHydrationWarning
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "BlogPosting",
-            headline: post.title,
-            description: post.excerpt,
-            image: absoluteCoverUrl ? [absoluteCoverUrl] : undefined,
-            datePublished: post.publishedAt?.toISOString(),
-            dateModified: post.updatedAt.toISOString(),
-            author: post.author?.name
-              ? {
-                  "@type": "Person",
-                  name: post.author.name,
-                }
-              : {
-                  "@type": "Organization",
-                  name: "Concurso Criança Mais Fotogênica",
-                },
-            publisher: {
-              "@type": "Organization",
-              name: "Concurso Criança Mais Fotogênica",
-              url: absoluteUrl("/"),
-            },
-            mainEntityOfPage: postUrl(post.slug),
-          }),
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          headline: post.title,
+          description,
+          image: absoluteCoverUrl ? [absoluteCoverUrl] : [absoluteUrl("/og-default.jpg")],
+          datePublished: post.publishedAt?.toISOString(),
+          dateModified: post.updatedAt.toISOString(),
+          articleSection: post.category ?? undefined,
+          author: post.author?.name
+            ? {
+                "@type": "Person",
+                name: post.author.name,
+              }
+            : {
+                "@type": "Person",
+                name: "Claudia Cavalcante",
+                jobTitle: "Fundadora do Concurso Criança Mais Fotogênica",
+              },
+          publisher: {
+            "@type": "Organization",
+            name: "Concurso Criança Mais Fotogênica",
+            url: absoluteUrl("/"),
+          },
+          mainEntityOfPage: postUrl(post.slug),
         }}
+      />
+      <JsonLd
+        data={buildBreadcrumbJsonLd([
+          { name: "Início", path: "/" },
+          { name: "Blog", path: "/blog" },
+          { name: post.title, path: `/blog/${post.slug}` },
+        ])}
       />
 
       <article>
@@ -154,6 +162,28 @@ export default async function BlogPostPage({ params }: PageProps) {
         <section className="py-10 sm:py-14">
           <Container className="max-w-3xl">
             <BlogMarkdown content={post.content} />
+
+            <aside className="mt-12 rounded-bubble border border-primary-100 bg-surface-muted p-6">
+              <p className="font-display text-sm font-bold uppercase tracking-widest text-accent-700">
+                Sobre a autora
+              </p>
+              <h2 className="mt-2 font-display text-xl font-extrabold text-primary-700">
+                {post.author?.name ?? "Claudia Cavalcante"}
+              </h2>
+              <p className="mt-2 text-sm/6 text-ink-muted">
+                Fundadora do Concurso Criança Mais Fotogênica do Brasil (19 edições) e autora do curso
+                Como Gerenciar a Carreira do Seu Filho. Atua com fotografia infantil e orientação a
+                famílias sobre mercado, proteção da infância e decisões conscientes — sem prometer fama.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button href="/curso" size="sm" variant="outline">
+                  Ver curso
+                </Button>
+                <Button href="/carreira-de-modelo-infantil" size="sm" variant="ghost">
+                  Guia de carreira
+                </Button>
+              </div>
+            </aside>
           </Container>
         </section>
       </article>

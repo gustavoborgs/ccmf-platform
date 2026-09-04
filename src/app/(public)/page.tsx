@@ -19,6 +19,7 @@ import { getActiveContest } from "@/modules/contests/service";
 import { PartnersShowcase } from "@/modules/content/components/partners-showcase";
 import { listPartnersByType } from "@/modules/content/service";
 import { SOCIAL } from "@/shared/contact";
+import { buildEventJsonLd, JsonLd } from "@/shared/seo/json-ld";
 import {
   Button,
   Card,
@@ -29,11 +30,15 @@ import {
 } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/utils";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata: Metadata = {
+  title: {
+    absolute: "Concurso Criança Mais Fotogênica do Brasil | Modelo Infantil",
+  },
   description:
     "Inscreva sua criança no maior concurso de fotografia infantil do Brasil. Toda criança inscrita recebe uma foto profissional editada por IA e ganha de brinde o curso Como Gerenciar a Carreira do Seu Filho, da fundadora Claudia Cavalcante.",
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     locale: "pt_BR",
@@ -42,6 +47,14 @@ export const metadata: Metadata = {
     title: "Concurso Criança Mais Fotogênica do Brasil",
     description:
       "Inscrição online, foto profissional por IA e o curso de gestão de carreira infantil da Claudia Cavalcante grátis para todos os inscritos.",
+    images: [{ url: "/og-default.jpg", width: 1200, height: 630, alt: "Concurso Criança Mais Fotogênica" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Concurso Criança Mais Fotogênica do Brasil",
+    description:
+      "Inscrição online, foto profissional por IA e o curso de gestão de carreira infantil da Claudia Cavalcante grátis para todos os inscritos.",
+    images: ["/og-default.jpg"],
   },
 };
 
@@ -140,6 +153,19 @@ export default async function HomePage() {
 
   return (
     <>
+      {contest && (
+        <JsonLd
+          data={buildEventJsonLd({
+            name: contest.name,
+            description:
+              "Concurso nacional de fotografia infantil com categorias por faixa etária, avaliação técnica e Live Revelação.",
+            year: contest.year,
+            startDate: contest.createdAt,
+            endDate: contest.revealAt,
+            url: "/",
+          })}
+        />
+      )}
       {/* Hero — gradiente oficial da marca */}
       <section className="bg-brand-gradient text-white">
         <Container className="grid items-center gap-12 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">

@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/modules/auth/config";
 import { LoginForm } from "@/modules/auth/components/login-form";
 import { Card, Container } from "@/shared/ui";
+
+export const metadata: Metadata = {
+  title: "Entrar",
+  robots: { index: false, follow: false },
+};
 
 /**
  * Página pública de login. O cadastro de responsáveis acontece no wizard

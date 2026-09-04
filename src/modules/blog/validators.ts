@@ -41,6 +41,26 @@ export const blogPostFormSchema = z.object({
     .trim()
     .min(10, "O resumo precisa de pelo menos 10 caracteres.")
     .max(260, "Resumo muito longo para SEO."),
+  metaDescription: z
+    .union([z.string().trim().max(160, "Meta description muito longa (máx. 160 caracteres)."), z.null()])
+    .optional()
+    .transform((value) => {
+      if (value == null) return null;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }),
+  category: z
+    .union([
+      z
+        .string()
+        .trim()
+        .max(60, "Categoria muito longa.")
+        .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use slug minúsculo (letras, números e hífens)."),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional()
+    .transform((value) => (value && value.length > 0 ? value : null)),
   content: z
     .string({ message: "Informe o conteúdo." })
     .trim()

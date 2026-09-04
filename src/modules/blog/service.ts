@@ -13,6 +13,8 @@ const publicPostSelect = {
   title: true,
   slug: true,
   excerpt: true,
+  metaDescription: true,
+  category: true,
   content: true,
   coverKey: true,
   publishedAt: true,
@@ -53,6 +55,22 @@ export function listRecentPosts(limit: number, excludeSlug?: string) {
     where: {
       ...publishedPostWhere(),
       ...(excludeSlug ? { slug: { not: excludeSlug } } : {}),
+    },
+    select: publicPostSelect,
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    take: limit,
+  });
+}
+
+/** Posts publicados da mesma categoria editorial (interlinking SEO). */
+export function listRelatedPosts(category: string | null | undefined, excludeSlug: string, limit = 3) {
+  if (!category) return listRecentPosts(limit, excludeSlug);
+
+  return db.blogPost.findMany({
+    where: {
+      ...publishedPostWhere(),
+      category,
+      slug: { not: excludeSlug },
     },
     select: publicPostSelect,
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
@@ -165,6 +183,8 @@ function normalizePostInput(input: BlogPostFormInput, authorId: string): Prisma.
     title: input.title.trim(),
     slug: input.slug.trim(),
     excerpt: input.excerpt.trim(),
+    metaDescription: input.metaDescription?.trim() || null,
+    category: input.category?.trim() || null,
     content: input.content.trim(),
     coverKey: input.coverKey,
     publishedAt: input.publishedAt,

@@ -1,21 +1,50 @@
 import type { Metadata } from "next";
 import { VideoGallery } from "@/modules/content/components/video-gallery";
 import { listVideos } from "@/modules/content/service";
+import { getYoutubeThumbnailUrl } from "@/modules/content/youtube";
+import { absoluteUrl } from "@/shared/site-url";
+import { buildBreadcrumbJsonLd, JsonLd } from "@/shared/seo/json-ld";
 import { Button, Card, Container, SectionHeading } from "@/shared/ui";
 
 export const metadata: Metadata = {
   title: "Vídeos",
   description:
     "Assista aos vídeos do Concurso Criança Mais Fotogênica e acompanhe chamadas, bastidores e conteúdos oficiais.",
+  alternates: { canonical: "/videos" },
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function VideosPage() {
   const videos = await listVideos();
 
+  const videoJsonLd = videos.slice(0, 10).map((video) => ({
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    name: video.title,
+    description: `${video.title} — conteúdo oficial do Concurso Criança Mais Fotogênica.`,
+    thumbnailUrl: getYoutubeThumbnailUrl(video.youtubeUrl) ?? absoluteUrl("/og-default.jpg"),
+    contentUrl: video.youtubeUrl,
+    embedUrl: video.youtubeUrl,
+    uploadDate: new Date().toISOString(),
+    publisher: {
+      "@type": "Organization",
+      name: "Concurso Criança Mais Fotogênica do Brasil",
+      url: absoluteUrl("/"),
+    },
+  }));
+
   return (
     <>
+      <JsonLd
+        data={buildBreadcrumbJsonLd([
+          { name: "Início", path: "/" },
+          { name: "Vídeos", path: "/videos" },
+        ])}
+      />
+      {videoJsonLd.map((item) => (
+        <JsonLd key={String(item.name)} data={item} />
+      ))}
       <section className="bg-brand-gradient text-white">
         <Container className="py-20 lg:py-24">
           <p className="mb-3 inline-block rounded-full bg-white/15 px-4 py-1 font-display text-sm font-bold uppercase tracking-widest">

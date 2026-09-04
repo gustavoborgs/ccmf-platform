@@ -39,10 +39,25 @@ contato. Blog foi separado em `docs/modules/blog.md`.
    `/o-concurso`) e `fundadora-criancas-live.jpg` (seção "Quem organiza" em
    `/o-concurso`, com Claudia Cavalcante citada nominalmente).
 
+## Página pilar SEO — Carreira de modelo infantil
+
+Rota pública `/carreira-de-modelo-infantil` (server-rendered, conteúdo estático
+no App Router). Objetivo: capturar buscas orgânicas e citações em motores
+generativos (GEO) sobre carreira de modelo fotográfico infantil.
+
+Regras:
+
+1. Responde direto no primeiro parágrafo; inclui FAQ na linguagem das mães.
+2. Interliga `/curso`, `/blog`, `/inscricao` e `/o-concurso`.
+3. Não promete fama, agenciamento ou resultado garantido (ver
+   `docs/06-estrategia-comercial-inscricoes.md`).
+4. Emite JSON-LD `FAQPage` + `BreadcrumbList`.
+5. Entra no sitemap com prioridade alta.
+
 ## Rotas
 
 - Públicas: `/videos`, `/contato`, seções da home, `/o-concurso` (página
-  estática institucional).
+  estática institucional), `/carreira-de-modelo-infantil` (pilar SEO).
 - Admin: `/admin/videos` para vídeos, `/admin/parceiros` para parceiros. Inbox
   de contato fica para evolução futura.
 

@@ -505,19 +505,24 @@ model Partner {
 }
 
 model BlogPost {
-  id          String    @id @default(cuid())
-  title       String
-  slug        String    @unique
-  excerpt     String
-  content     String
-  coverKey    String?
-  authorId    String?
-  publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  title           String
+  slug            String    @unique
+  excerpt         String
+  /// Description SEO customizada (fallback: excerpt)
+  metaDescription String?
+  /// Categoria editorial (ex.: carreira, fotos, concurso)
+  category        String?
+  content         String
+  coverKey        String?
+  authorId        String?
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   author User? @relation(fields: [authorId], references: [id])
 
+  @@index([category])
   @@map("blog_posts")
 }
 

@@ -3,9 +3,10 @@ import { Baloo_2, Nunito } from "next/font/google";
 import { GoogleTag } from "@/shared/analytics/google-tag";
 import { MetaPixel } from "@/shared/analytics/meta-pixel";
 import { NevoaTracking } from "@/shared/analytics/nevoa-tracking";
+import { getSiteUrl } from "@/shared/site-url";
 import "./globals.css";
 
-const siteUrl = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://criancamaisfotogenica.com.br");
+const siteUrl = new URL(getSiteUrl());
 
 const baloo = Baloo_2({
   variable: "--font-baloo",
@@ -66,6 +67,21 @@ export const metadata: Metadata = {
     title: "Concurso Criança Mais Fotogênica do Brasil",
     description:
       "O maior concurso de fotografia infantil do Brasil, com inscrições online e avaliação técnica.",
+    images: [
+      {
+        url: "/og-default.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Concurso Criança Mais Fotogênica do Brasil",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Concurso Criança Mais Fotogênica do Brasil",
+    description:
+      "O maior concurso de fotografia infantil do Brasil, com inscrições online e avaliação técnica.",
+    images: ["/og-default.jpg"],
   },
   robots: {
     index: true,
@@ -74,6 +90,12 @@ export const metadata: Metadata = {
       index: true,
       follow: true,
     },
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+      : undefined,
   },
 };
 
@@ -89,7 +111,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${baloo.variable} ${nunito.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <GoogleTag />
         <MetaPixel />
         <NevoaTracking />

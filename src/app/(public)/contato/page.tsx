@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   title: "Contato",
   description:
     "Fale com a equipe do Concurso Criança Mais Fotogênica pelo WhatsApp, telefone ou e-mail oficial.",
+  alternates: { canonical: "/contato" },
 };
 
 const WHATSAPP_MESSAGES = {

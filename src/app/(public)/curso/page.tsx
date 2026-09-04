@@ -15,7 +15,7 @@ import { absoluteUrl } from "@/modules/blog/seo";
 import { Button, Card, Container, SectionHeading } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/utils";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const COURSE_OG_IMAGE = "/academy/promo-phone.jpg";
 

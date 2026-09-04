@@ -2,6 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { buildWhatsAppUrl, CONTACT, SOCIAL } from "@/shared/contact";
+import {
+  buildOrganizationJsonLd,
+  buildWebSiteJsonLd,
+  JsonLd,
+} from "@/shared/seo/json-ld";
 import { Button, Container, FacebookIcon, InstagramIcon } from "@/shared/ui";
 import { MobileNav } from "./_components/mobile-nav";
 import { WhatsAppFloat } from "./_components/whatsapp-float";
@@ -10,6 +15,7 @@ const NAV_LINKS = [
   { href: "/", label: "Inicial" },
   { href: "/o-concurso", label: "O Concurso" },
   { href: "/curso", label: "Curso" },
+  { href: "/carreira-de-modelo-infantil", label: "Carreira" },
   { href: "/regulamento", label: "Regulamento" },
   { href: "/videos", label: "Vídeos" },
   { href: "/participantes", label: "Participantes" },
@@ -19,23 +25,11 @@ const NAV_LINKS = [
 
 const COPYRIGHT_YEAR = 2026;
 
-/** Organization schema com sameAs — vincula o site aos perfis oficiais (SEO/credibilidade). */
-const organizationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: "Concurso Criança Mais Fotogênica do Brasil",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://criancamaisfotogenica.com.br",
-  email: CONTACT.email,
-  sameAs: [SOCIAL.instagram.url, SOCIAL.facebook.url],
-};
-
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-      />
+      <JsonLd data={buildOrganizationJsonLd()} />
+      <JsonLd data={buildWebSiteJsonLd()} />
       <header className="sticky top-0 z-50 border-b border-primary-100 bg-white/90 backdrop-blur">
         <Container className="flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
@@ -49,7 +43,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             />
           </Link>
 
-          <nav className="hidden items-center gap-6 font-semibold text-ink-muted lg:flex">
+          <nav className="hidden items-center gap-5 font-semibold text-ink-muted xl:flex">
             {NAV_LINKS.map((link) => (
               <Link key={link.href} href={link.href} className="text-sm transition hover:text-accent-600">
                 {link.label}

@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { getPasswordResetTokenStatus } from "@/modules/auth/service";
 import { PasswordResetForm } from "@/modules/auth/components/password-reset-form";
 import { Button, Card, Container } from "@/shared/ui";
+
+export const metadata: Metadata = {
+  title: "Nova senha",
+  robots: { index: false, follow: false },
+};
 
 export default async function PasswordResetPage({
   params,

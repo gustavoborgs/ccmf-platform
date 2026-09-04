@@ -78,6 +78,43 @@ export function getPublicParticipant(year: number, slug: string) {
   });
 }
 
+/** Entradas leves para o sitemap: galerias por ano + perfis públicos aprovados. */
+export async function listPublicSitemapEntries(): Promise<{
+  years: { year: number; updatedAt: Date }[];
+  profiles: { year: number; slug: string; updatedAt: Date }[];
+}> {
+  const PUBLIC_STATUSES_LIST = [...PUBLIC_STATUSES];
+  const contests = await db.contest.findMany({
+    where: {
+      status: { in: [...PUBLIC_CONTEST_STATUSES] },
+      registrations: { some: { status: { in: PUBLIC_STATUSES_LIST } } },
+    },
+    select: {
+      year: true,
+      updatedAt: true,
+      registrations: {
+        where: { status: { in: PUBLIC_STATUSES_LIST } },
+        select: {
+          updatedAt: true,
+          participant: { select: { slug: true } },
+        },
+      },
+    },
+    orderBy: { year: "desc" },
+  });
+
+  return {
+    years: contests.map((contest) => ({ year: contest.year, updatedAt: contest.updatedAt })),
+    profiles: contests.flatMap((contest) =>
+      contest.registrations.map((registration) => ({
+        year: contest.year,
+        slug: registration.participant.slug,
+        updatedAt: registration.updatedAt,
+      })),
+    ),
+  };
+}
+
 /** Fingerprint anônimo para deduplicar likes sem exigir login. */
 export function buildLikeFingerprint(ip: string, userAgent: string): string {
   return createHash("sha256").update(`${ip}:${userAgent}`).digest("hex");

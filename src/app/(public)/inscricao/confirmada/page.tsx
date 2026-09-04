@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { GraduationCap } from "lucide-react";
 import { Button, Container } from "@/shared/ui";
 import { InscricaoConfirmadaTracker } from "./inscricao-confirmada-tracker";
+
+export const metadata: Metadata = {
+  title: "Inscrição confirmada",
+  robots: { index: false, follow: false },
+};
 
 /** Destino do link de retomada quando a inscrição já está paga. */
 export default async function ConfirmedPage({

@@ -1,12 +1,12 @@
 import { getPublicUrl } from "@/shared/integrations/s3/storage";
+import { absoluteUrl as sharedAbsoluteUrl, getSiteUrl as sharedGetSiteUrl } from "@/shared/site-url";
 
 export function getSiteUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  return sharedGetSiteUrl();
 }
 
 export function absoluteUrl(path: string): string {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${getSiteUrl()}${normalizedPath}`;
+  return sharedAbsoluteUrl(path);
 }
 
 export function postUrl(slug: string): string {

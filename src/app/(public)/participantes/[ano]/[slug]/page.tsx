@@ -10,9 +10,11 @@ import { publicDisplayName, publicStatusBadge, shouldGrayscalePublicPhoto } from
 import { getPublicParticipant } from "@/modules/participants/service";
 import { getPublicUrl } from "@/shared/integrations/s3/storage";
 import { formatAgeRange } from "@/shared/utils";
+import { absoluteUrl } from "@/shared/site-url";
+import { buildBreadcrumbJsonLd, JsonLd } from "@/shared/seo/json-ld";
 import { Button, Container, cn } from "@/shared/ui";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 type PageProps = {
   params: Promise<{ ano: string; slug: string }>;
@@ -41,10 +43,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title,
     description,
+    alternates: { canonical: `/participantes/${ano}/${slug}` },
     openGraph: {
       title,
       description,
       type: "profile",
+      url: `/participantes/${ano}/${slug}`,
       images: cover
         ? [
             {
@@ -54,7 +58,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
               alt: `Foto de ${name}`,
             },
           ]
-        : undefined,
+        : [{ url: "/og-default.jpg", width: 1200, height: 630 }],
     },
     twitter: { card: "summary_large_image" },
   };
@@ -77,6 +81,34 @@ export default async function ParticipantProfilePage({ params }: PageProps) {
 
   return (
     <>
+      <JsonLd
+        data={buildBreadcrumbJsonLd([
+          { name: "Início", path: "/" },
+          { name: "Participantes", path: "/participantes" },
+          { name: `Participantes ${contest.year}`, path: `/participantes/${contest.year}` },
+          { name, path: `/participantes/${contest.year}/${participant.slug}` },
+        ])}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "ProfilePage",
+          name: `${name} — Participantes ${contest.year}`,
+          url: absoluteUrl(`/participantes/${contest.year}/${participant.slug}`),
+          mainEntity: {
+            "@type": "Person",
+            name,
+            description: `Participante da categoria ${category.name} no Concurso Criança Mais Fotogênica ${contest.year}, de ${participant.city}/${participant.state}.`,
+            image: photos[0]?.url,
+            address: {
+              "@type": "PostalAddress",
+              addressLocality: participant.city,
+              addressRegion: participant.state,
+              addressCountry: "BR",
+            },
+          },
+        }}
+      />
       <section className="py-6 sm:py-10">
         <Container>
           <Link

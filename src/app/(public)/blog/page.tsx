@@ -6,9 +6,10 @@ import { absoluteUrl } from "@/modules/blog/seo";
 import { listPublishedPosts, type PublicBlogPost } from "@/modules/blog/service";
 import { publicBlogFiltersSchema } from "@/modules/blog/validators";
 import { getPublicUrl } from "@/shared/integrations/s3/storage";
+import { buildBreadcrumbJsonLd, JsonLd } from "@/shared/seo/json-ld";
 import { Button, Card, Container } from "@/shared/ui";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -38,18 +39,20 @@ export default async function BlogPage({ searchParams }: PageProps) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        suppressHydrationWarning
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Blog",
-            name: "Blog do Criança Mais Fotogênica",
-            description: metadata.description,
-            url: absoluteUrl("/blog"),
-          }),
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Blog",
+          name: "Blog do Criança Mais Fotogênica",
+          description: metadata.description,
+          url: absoluteUrl("/blog"),
         }}
+      />
+      <JsonLd
+        data={buildBreadcrumbJsonLd([
+          { name: "Início", path: "/" },
+          { name: "Blog", path: "/blog" },
+        ])}
       />
 
       <section className="bg-brand-gradient text-white">
