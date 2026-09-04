@@ -48,5 +48,6 @@ next-env.d.ts
 /data/legacy/*.sql
 /data/legacy/*.json
 /docs
-/scripts
+/scripts/*
+!scripts/seed-blog-seo-posts.ts
 .env.local
