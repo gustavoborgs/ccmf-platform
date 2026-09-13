@@ -23,6 +23,7 @@ Specs da plataforma do **Concurso Criança Mais Fotogênica do Brasil**.
 | Módulo | Spec | Código |
 | --- | --- | --- |
 | Auth | [modules/auth.md](./modules/auth.md) | `src/modules/auth` |
+| Dashboard (admin) | [modules/dashboard.md](./modules/dashboard.md) | `src/modules/dashboard` |
 | Contests | [modules/contests.md](./modules/contests.md) | `src/modules/contests` |
 | Registrations | [modules/registrations.md](./modules/registrations.md) | `src/modules/registrations` |
 | Participants | [modules/participants.md](./modules/participants.md) | `src/modules/participants` |
