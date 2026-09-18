@@ -8,12 +8,19 @@ import type {
 } from "@/shared/integrations/asaas/types";
 import { reportNevoaConversion } from "@/shared/integrations/nevoa-manager/conversions";
 import type { Prisma } from "@/generated/prisma/client";
-import type { PaymentStatus } from "@/generated/prisma/enums";
+import type { PaymentMethod, PaymentStatus } from "@/generated/prisma/enums";
 import { sendRegistrationToReview } from "@/modules/registrations/service";
-import type { AdminPaymentFilters } from "./validators";
+import {
+  confirmVoucherRedemption,
+  quoteVoucher,
+  releaseVoucherRedemption,
+  reserveVoucher,
+  type VoucherQuote,
+} from "@/modules/vouchers/service";
+import type { AdminPaymentFilters, CheckoutMethod } from "./validators";
 
 /**
- * Módulo Payments: checkout da inscrição via Asaas (PIX, Boleto, Cartão).
+ * Módulo Payments: checkout da inscrição via Asaas (PIX, Boleto, Cartão) + FREE.
  * Spec: docs/modules/payments.md
  *
  * Confirmação:
@@ -24,6 +31,7 @@ import type { AdminPaymentFilters } from "./validators";
 
 const DUE_DAYS = 3;
 const PAID_STATUSES: PaymentStatus[] = ["CONFIRMED", "RECEIVED"];
+const ASAAS_METHODS: AsaasBillingType[] = ["PIX", "BOLETO", "CREDIT_CARD"];
 
 /** Mapeia status do Asaas → enum local (mesma régua do webhook). */
 const STATUS_FROM_ASAAS: Record<string, PaymentStatus> = {
@@ -132,8 +140,11 @@ function isInvalidAsaasCustomerError(error: AsaasError): boolean {
 export type CheckoutResult = {
   paymentId: string;
   status: PaymentStatus;
-  method: AsaasBillingType;
+  method: PaymentMethod;
   amountCents: number;
+  originalAmountCents: number;
+  discountCents: number;
+  voucherCode: string | null;
   dueDate: Date | null;
   invoiceUrl: string | null;
   boletoUrl: string | null;
@@ -143,21 +154,18 @@ export type CheckoutResult = {
 };
 
 /**
- * Cria a cobrança no Asaas e o Payment local.
+ * Cria a cobrança (Asaas ou FREE) e o Payment local.
  *
- * Reuso: se já existe um Payment PENDING do mesmo método e não vencido,
- * retorna a cobrança existente em vez de criar outra (evita cobranças
- * duplicadas quando o usuário recarrega a tela do PIX/boleto).
- *
- * Cartão: dados transitam apenas nesta chamada (nunca persistidos);
- * a confirmação do Asaas para cartão é síncrona na resposta.
+ * Reuso: se já existe um Payment PENDING do mesmo método, valor e voucher
+ * (não vencido), retorna a cobrança existente. Cartão e FREE sempre criam nova.
  */
 export async function createCheckout(params: {
   registrationId: string;
   guardianId: string;
-  method: AsaasBillingType;
+  method: CheckoutMethod;
   creditCard?: AsaasCreditCard;
   remoteIp?: string;
+  voucherCode?: string;
 }): Promise<CheckoutResult> {
   const registration = await db.registration.findUniqueOrThrow({
     where: { id: params.registrationId },
@@ -181,14 +189,32 @@ export async function createCheckout(params: {
     throw new Error("Envie as 2 fotos antes de ir para o pagamento.");
   }
 
-  // Reuso de cobrança pendente (PIX/Boleto). Cartão sempre cria nova tentativa.
-  if (params.method !== "CREDIT_CARD") {
+  const feeCents = registration.contest.registrationFeeCents;
+  const quote = params.voucherCode
+    ? await quoteVoucher({ code: params.voucherCode, feeCents })
+    : null;
+
+  const amountCents = quote?.amountCents ?? feeCents;
+  const discountCents = quote?.appliedDiscountCents ?? 0;
+  const voucherCode = quote?.code ?? null;
+
+  if (params.method === "FREE" && amountCents > 0) {
+    throw new Error("Esta inscrição ainda possui valor a pagar.");
+  }
+  if (params.method !== "FREE" && amountCents === 0) {
+    throw new Error("Use a confirmação gratuita para cupom que zera a taxa.");
+  }
+
+  // Reuso de cobrança pendente (PIX/Boleto). Cartão e FREE sempre criam nova.
+  if (params.method === "PIX" || params.method === "BOLETO") {
     const existing = await db.payment.findFirst({
       where: {
         registrationId: registration.id,
         method: params.method,
         status: "PENDING",
         dueDate: { gte: new Date() },
+        amountCents,
+        voucherCode: voucherCode,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -201,6 +227,25 @@ export async function createCheckout(params: {
     }
   }
 
+  // Nova tentativa: cancela PIX/boleto PENDING no Asaas e libera reservas.
+  await abandonPendingPayments(registration.id);
+
+  if (amountCents === 0) {
+    return createFreeCheckout({
+      registrationId: registration.id,
+      guardianId: params.guardianId,
+      protocol: registration.protocol,
+      nevoaSessionCode: registration.nevoaSessionCode,
+      feeCents,
+      quote,
+    });
+  }
+
+  if (!ASAAS_METHODS.includes(params.method as AsaasBillingType)) {
+    throw new Error("Método de pagamento inválido.");
+  }
+  const asaasMethod = params.method as AsaasBillingType;
+
   const customerId = await ensureAsaasCustomer(params.guardianId);
   const dueDate = new Date(Date.now() + DUE_DAYS * 24 * 60 * 60 * 1000);
   const guardian = registration.participant.guardian;
@@ -209,12 +254,12 @@ export async function createCheckout(params: {
   try {
     asaasPayment = await asaas.createPayment({
       customer: customerId,
-      billingType: params.method,
-      value: registration.contest.registrationFeeCents / 100,
+      billingType: asaasMethod,
+      value: amountCents / 100,
       dueDate: dueDate.toISOString().slice(0, 10),
       description: `Inscrição ${registration.contest.name} - ${registration.participant.name}`,
       externalReference: registration.id,
-      ...(params.method === "CREDIT_CARD" && params.creditCard
+      ...(asaasMethod === "CREDIT_CARD" && params.creditCard
         ? {
             creditCard: params.creditCard,
             creditCardHolderInfo: {
@@ -235,9 +280,9 @@ export async function createCheckout(params: {
       console.error("[payments] failed to create Asaas payment", {
         registrationId: registration.id,
         guardianId: params.guardianId,
-        method: params.method,
+        method: asaasMethod,
         customerId,
-        amountCents: registration.contest.registrationFeeCents,
+        amountCents,
         dueDate: dueDate.toISOString().slice(0, 10),
         asaasStatus: error.status,
         asaasBody: error.body,
@@ -248,35 +293,72 @@ export async function createCheckout(params: {
   }
 
   const initialStatus = STATUS_FROM_ASAAS[asaasPayment.status] ?? "PENDING";
-  const paidNow = isPaidStatus(initialStatus); // cartão aprova síncrono
+  const paidNow = isPaidStatus(initialStatus);
 
   const pix =
-    params.method === "PIX" ? await asaas.getPixQrCode(asaasPayment.id).catch(() => null) : null;
+    asaasMethod === "PIX" ? await asaas.getPixQrCode(asaasPayment.id).catch(() => null) : null;
 
-  const payment = await db.payment.create({
-    data: {
-      registrationId: registration.id,
-      asaasPaymentId: asaasPayment.id,
-      method: params.method,
-      status: initialStatus,
-      amountCents: registration.contest.registrationFeeCents,
-      dueDate,
-      paidAt: paidNow ? new Date() : null,
-      invoiceUrl: asaasPayment.invoiceUrl,
-      boletoUrl: asaasPayment.bankSlipUrl,
-      pixPayload: pix?.payload,
-    },
-  });
+  let payment;
+  try {
+    payment = await db.$transaction(async (tx) => {
+      const created = await tx.payment.create({
+        data: {
+          registrationId: registration.id,
+          asaasPaymentId: asaasPayment.id,
+          method: asaasMethod,
+          status: initialStatus,
+          amountCents,
+          originalAmountCents: feeCents,
+          discountCents,
+          voucherId: quote?.voucherId ?? null,
+          voucherCode,
+          dueDate,
+          paidAt: paidNow ? new Date() : null,
+          invoiceUrl: asaasPayment.invoiceUrl,
+          boletoUrl: asaasPayment.bankSlipUrl,
+          pixPayload: pix?.payload,
+        },
+      });
 
-  await db.registration.update({
-    where: { id: registration.id },
-    data: { status: "PENDING_PAYMENT" },
-  });
+      if (quote) {
+        await reserveVoucher({
+          voucherId: quote.voucherId,
+          registrationId: registration.id,
+          paymentId: created.id,
+          guardianId: params.guardianId,
+          discountCents: quote.appliedDiscountCents,
+          status: paidNow ? "CONFIRMED" : "RESERVED",
+          tx,
+        });
+      }
+
+      await tx.registration.update({
+        where: { id: registration.id },
+        data: { status: "PENDING_PAYMENT" },
+      });
+
+      return created;
+    });
+  } catch (error) {
+    // A cobrança já existe no Asaas mas o registro local falhou (ex.: cupom
+    // esgotou entre quote e reserve). Cancela a cobrança órfã (best-effort)
+    // para o cliente não ficar com um PIX/boleto pagável sem Payment local.
+    if (!paidNow) {
+      await asaas.deletePayment(asaasPayment.id).catch((cleanupError) => {
+        console.error("[payments] failed to cancel orphan Asaas payment", {
+          asaasPaymentId: asaasPayment.id,
+          registrationId: registration.id,
+          cleanupError,
+        });
+      });
+    }
+    throw error;
+  }
 
   await reportNevoaInitiateCheckout({
     sessionCode: registration.nevoaSessionCode,
     protocol: registration.protocol,
-    amountCents: registration.contest.registrationFeeCents,
+    amountCents,
   });
 
   if (paidNow) {
@@ -284,6 +366,137 @@ export async function createCheckout(params: {
   }
 
   return toCheckoutResult(payment, pix?.encodedImage ?? null);
+}
+
+async function createFreeCheckout(params: {
+  registrationId: string;
+  guardianId: string;
+  protocol: string;
+  nevoaSessionCode: string | null;
+  feeCents: number;
+  quote: VoucherQuote | null;
+}): Promise<CheckoutResult> {
+  if (params.feeCents > 0 && !params.quote) {
+    throw new Error("Cupom inválido ou indisponível.");
+  }
+
+  const payment = await db.$transaction(async (tx) => {
+    const created = await tx.payment.create({
+      data: {
+        registrationId: params.registrationId,
+        asaasPaymentId: null,
+        method: "FREE",
+        status: "RECEIVED",
+        amountCents: 0,
+        originalAmountCents: params.feeCents,
+        discountCents: params.quote?.appliedDiscountCents ?? params.feeCents,
+        voucherId: params.quote?.voucherId ?? null,
+        voucherCode: params.quote?.code ?? null,
+        dueDate: null,
+        paidAt: new Date(),
+      },
+    });
+
+    if (params.quote) {
+      await reserveVoucher({
+        voucherId: params.quote.voucherId,
+        registrationId: params.registrationId,
+        paymentId: created.id,
+        guardianId: params.guardianId,
+        discountCents: params.quote.appliedDiscountCents,
+        status: "CONFIRMED",
+        tx,
+      });
+    }
+
+    await tx.registration.update({
+      where: { id: params.registrationId },
+      data: { status: "PENDING_PAYMENT" },
+    });
+
+    return created;
+  });
+
+  await reportNevoaInitiateCheckout({
+    sessionCode: params.nevoaSessionCode,
+    protocol: params.protocol,
+    amountCents: 0,
+  });
+
+  await sendRegistrationToReview(params.registrationId);
+
+  return toCheckoutResult(payment, null);
+}
+
+/** Preview de cupom para a inscrição (sem reservar). */
+export async function previewCheckoutVoucher(params: {
+  registrationId: string;
+  guardianId: string;
+  code: string;
+}): Promise<VoucherQuote> {
+  const registration = await db.registration.findUniqueOrThrow({
+    where: { id: params.registrationId },
+    include: {
+      contest: { select: { registrationFeeCents: true } },
+      participant: { select: { guardianId: true } },
+    },
+  });
+
+  if (registration.participant.guardianId !== params.guardianId) {
+    throw new Error("Inscrição não pertence a este responsável.");
+  }
+  if (registration.deletedAt) {
+    throw new Error("Esta inscrição foi cancelada.");
+  }
+
+  return quoteVoucher({
+    code: params.code,
+    feeCents: registration.contest.registrationFeeCents,
+  });
+}
+
+/**
+ * Substitui cobranças PENDING da inscrição: cancela no Asaas, marca CANCELED
+ * localmente e libera o estoque do voucher. Se a antiga já foi paga, aborta.
+ */
+async function abandonPendingPayments(registrationId: string) {
+  const pending = await db.payment.findMany({
+    where: { registrationId, status: "PENDING" },
+    select: { id: true, asaasPaymentId: true },
+  });
+
+  for (const payment of pending) {
+    if (payment.asaasPaymentId) {
+      try {
+        await asaas.deletePayment(payment.asaasPaymentId);
+      } catch (error) {
+        const remote = await asaas.getPayment(payment.asaasPaymentId).catch(() => null);
+        const remoteStatus = remote ? (STATUS_FROM_ASAAS[remote.status] ?? "PENDING") : null;
+        if (remoteStatus && isPaidStatus(remoteStatus)) {
+          throw new Error(
+            "Há um pagamento em confirmação. Atualize a página antes de gerar outra cobrança.",
+          );
+        }
+        if (remoteStatus === "PENDING") {
+          throw new Error(
+            "Não foi possível cancelar a cobrança anterior. Tente de novo em instantes.",
+          );
+        }
+        console.warn("[payments] failed to delete superseded Asaas payment", {
+          paymentId: payment.id,
+          asaasPaymentId: payment.asaasPaymentId,
+          remoteStatus,
+          error,
+        });
+      }
+    }
+
+    await db.payment.update({
+      where: { id: payment.id },
+      data: { status: "CANCELED" },
+    });
+    await releaseVoucherRedemption(payment.id);
+  }
 }
 
 /** Conversão Nevoa ao gerar cobrança (best-effort; dedupe por protocolo). */
@@ -356,6 +569,12 @@ export async function syncPaymentStatus(
     where: { id: payment.id },
     data: { status: mapped, paidAt: paid ? new Date() : payment.paidAt },
   });
+
+  if (paid) {
+    await confirmVoucherRedemption(payment.id);
+  } else if (mapped === "OVERDUE" || mapped === "CANCELED" || mapped === "REFUNDED") {
+    await releaseVoucherRedemption(payment.id);
+  }
 
   if (paid && payment.registration.status === "PENDING_PAYMENT") {
     await sendRegistrationToReview(payment.registration.id);
@@ -454,8 +673,11 @@ function buildAdminPaymentWhere(filters: AdminPaymentFilters): Prisma.PaymentWhe
 type PaymentRow = {
   id: string;
   status: PaymentStatus;
-  method: "PIX" | "BOLETO" | "CREDIT_CARD";
+  method: PaymentMethod;
   amountCents: number;
+  originalAmountCents: number;
+  discountCents: number;
+  voucherCode: string | null;
   dueDate: Date | null;
   invoiceUrl: string | null;
   boletoUrl: string | null;
@@ -468,6 +690,9 @@ function toCheckoutResult(payment: PaymentRow, pixQrCodeBase64: string | null): 
     status: payment.status,
     method: payment.method,
     amountCents: payment.amountCents,
+    originalAmountCents: payment.originalAmountCents,
+    discountCents: payment.discountCents,
+    voucherCode: payment.voucherCode,
     dueDate: payment.dueDate,
     invoiceUrl: payment.invoiceUrl,
     boletoUrl: payment.boletoUrl,

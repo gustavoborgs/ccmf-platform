@@ -12,35 +12,36 @@ import { readNevoaSessionCode } from "@/shared/analytics/nevoa-session";
 import { updateNevoaSessionCodeAction } from "@/modules/registrations/actions";
 import { cn } from "@/shared/ui/cn";
 import { Button } from "@/shared/ui/button";
+import { TextInput } from "@/shared/ui";
 import {
   createCheckoutAction,
   getActiveCheckoutAction,
   pollPaymentStatusAction,
+  previewVoucherAction,
   type CheckoutData,
+  type VoucherPreviewData,
 } from "../actions";
 import type { CreditCardInput } from "../validators";
 import { CreditCardForm } from "./credit-card-form";
 
 /**
- * Checkout do wizard (step de pagamento): PIX, Boleto e Cartão.
- * - PIX: QR Code + copia-e-cola, com polling de 5s até confirmar
- * - Boleto: link/linha digitável, polling de 30s (webhook é a fonte de verdade)
- * - Cartão: confirmação síncrona do Asaas
- * Spec: docs/modules/payments.md
+ * Checkout do wizard (step de pagamento): cupom, PIX, Boleto, Cartão e FREE.
+ * Spec: docs/modules/payments.md + docs/modules/vouchers.md
  */
 
-type Method = "PIX" | "BOLETO" | "CREDIT_CARD";
+type PaidMethod = "PIX" | "BOLETO" | "CREDIT_CARD" | "FREE";
+type AsaasMethod = "PIX" | "BOLETO" | "CREDIT_CARD";
 
-const METHODS: { id: Method; label: string; hint: string }[] = [
+const METHODS: { id: AsaasMethod; label: string; hint: string }[] = [
   { id: "PIX", label: "PIX", hint: "Aprovação na hora" },
   { id: "CREDIT_CARD", label: "Cartão", hint: "Crédito à vista" },
   { id: "BOLETO", label: "Boleto", hint: "Até 3 dias úteis" },
 ];
 
-const POLL_INTERVAL_MS: Record<Method, number> = {
+const POLL_INTERVAL_MS: Record<AsaasMethod, number> = {
   PIX: 5_000,
   BOLETO: 30_000,
-  CREDIT_CARD: 10_000, // só usado se cartão ficar em análise
+  CREDIT_CARD: 10_000,
 };
 
 export function Checkout({
@@ -53,7 +54,6 @@ export function Checkout({
   hasPendingPayment,
   onPaid,
 }: {
-  /** ref assinado do wizard (?ref=) — autoriza as actions sem login */
   wizardRef: string | null;
   registrationId: string;
   protocol: string;
@@ -65,24 +65,45 @@ export function Checkout({
 }) {
   const checkoutTopRef = useRef<HTMLDivElement>(null);
   const didMountRef = useRef(false);
-  const [method, setMethod] = useState<Method>("PIX");
+  const [method, setMethod] = useState<AsaasMethod>("PIX");
   const [checkout, setCheckout] = useState<CheckoutData | null>(null);
   const [restoring, setRestoring] = useState(hasPendingPayment);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const [voucherInput, setVoucherInput] = useState("");
+  const [voucherPreview, setVoucherPreview] = useState<VoucherPreviewData | null>(null);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
+
   const onPaidRef = useRef(onPaid);
   onPaidRef.current = onPaid;
 
-  const markPaid = useCallback((paymentMethod?: Method) => {
-    setPaid(true);
-    trackPurchaseOnce({ protocol, feeCents, paymentMethod });
-    trackInscricaoConfirmadaOnce({ protocol, feeCents, paymentMethod });
-    onPaidRef.current?.();
-  }, [feeCents, protocol]);
+  const chargeCents = voucherPreview?.amountCents ?? feeCents;
+  const chargeFormatted = voucherPreview?.amountFormatted ?? feeFormatted;
+  const isFree = chargeCents === 0;
 
-  // Retomada: restaura a cobrança ativa (ex.: usuário fechou a tela do PIX).
+  const markPaid = useCallback(
+    (paymentMethod?: PaidMethod, amountOverride?: number) => {
+      setPaid(true);
+      const valueCents = amountOverride ?? chargeCents;
+      trackPurchaseOnce({
+        protocol,
+        feeCents: valueCents,
+        paymentMethod: paymentMethod === "FREE" ? undefined : paymentMethod,
+      });
+      trackInscricaoConfirmadaOnce({
+        protocol,
+        feeCents: valueCents,
+        paymentMethod: paymentMethod === "FREE" ? undefined : paymentMethod,
+      });
+      onPaidRef.current?.();
+    },
+    [chargeCents, protocol],
+  );
+
   useEffect(() => {
     if (!hasPendingPayment) return;
     let cancelled = false;
@@ -92,8 +113,23 @@ export function Checkout({
       setRestoring(false);
       if (result.ok && result.data) {
         setCheckout(result.data);
-        setMethod(result.data.method);
-        if (result.data.paid) markPaid(result.data.method);
+        if (result.data.method !== "FREE") {
+          setMethod(result.data.method);
+        }
+        if (result.data.voucherCode) {
+          setVoucherInput(result.data.voucherCode);
+          setVoucherPreview({
+            code: result.data.voucherCode,
+            listCents: result.data.originalAmountCents,
+            listFormatted: result.data.originalAmountFormatted,
+            discountCents: result.data.discountCents,
+            discountFormatted: result.data.discountFormatted ?? "",
+            amountCents: result.data.amountCents,
+            amountFormatted: result.data.amountFormatted,
+            isFree: result.data.isFree,
+          });
+        }
+        if (result.data.paid) markPaid(result.data.method, result.data.amountCents);
       }
     });
 
@@ -102,9 +138,9 @@ export function Checkout({
     };
   }, [hasPendingPayment, registrationId, wizardRef, markPaid]);
 
-  // Polling: concilia o status com o Asaas enquanto a cobrança está pendente.
   useEffect(() => {
     if (!checkout || paid || checkout.status !== "PENDING") return;
+    if (checkout.method === "FREE") return;
 
     const interval = setInterval(async () => {
       const result = await pollPaymentStatusAction(wizardRef, checkout.paymentId);
@@ -112,9 +148,8 @@ export function Checkout({
 
       if (result.data.paid) {
         clearInterval(interval);
-        markPaid(checkout.method);
+        markPaid(checkout.method, checkout.amountCents);
       } else if (result.data.status !== "PENDING") {
-        // venceu/cancelou → libera nova tentativa
         clearInterval(interval);
         setCheckout(null);
         setError("A cobrança expirou. Gere uma nova para concluir o pagamento.");
@@ -135,7 +170,36 @@ export function Checkout({
     });
   }, [checkout?.paymentId, paid]);
 
-  async function startCheckout(input: { method: Method; creditCard?: CreditCardInput }) {
+  async function applyVoucher() {
+    setVoucherLoading(true);
+    setVoucherError(null);
+    try {
+      const result = await previewVoucherAction(wizardRef, {
+        registrationId,
+        code: voucherInput,
+      });
+      if (!result.ok) {
+        setVoucherPreview(null);
+        setVoucherError(result.error);
+        return;
+      }
+      setVoucherPreview(result.data);
+      setVoucherInput(result.data.code);
+    } finally {
+      setVoucherLoading(false);
+    }
+  }
+
+  function clearVoucher() {
+    setVoucherPreview(null);
+    setVoucherInput("");
+    setVoucherError(null);
+  }
+
+  async function startCheckout(input: {
+    method: PaidMethod;
+    creditCard?: CreditCardInput;
+  }) {
     setSubmitting(true);
     setError(null);
     try {
@@ -147,7 +211,11 @@ export function Checkout({
         });
       }
 
-      const result = await createCheckoutAction(wizardRef, { registrationId, ...input });
+      const result = await createCheckoutAction(wizardRef, {
+        registrationId,
+        ...input,
+        voucherCode: voucherPreview?.code,
+      });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -155,15 +223,15 @@ export function Checkout({
       setCheckout(result.data);
       trackEvent("add_payment_info", {
         currency: "BRL",
-        value: centsToAnalyticsValue(feeCents),
+        value: centsToAnalyticsValue(result.data.amountCents),
         payment_type: result.data.method,
-        items: registrationFeeItem(feeCents),
+        items: registrationFeeItem(result.data.amountCents),
       });
       trackEvent("payment_generated", {
         payment_type: result.data.method,
         status: result.data.status,
       });
-      if (result.data.paid) markPaid(result.data.method);
+      if (result.data.paid) markPaid(result.data.method, result.data.amountCents);
     } finally {
       setSubmitting(false);
     }
@@ -181,7 +249,9 @@ export function Checkout({
       <div ref={checkoutTopRef} className="space-y-5 scroll-mt-24 text-center">
         <div className="rounded-bubble bg-primary-50 p-6">
           <p className="font-display text-2xl font-extrabold text-primary-700">
-            Pagamento confirmado!
+            {checkout?.isFree || chargeCents === 0
+              ? "Inscrição confirmada!"
+              : "Pagamento confirmado!"}
           </p>
           <p className="mt-2 text-sm text-ink-muted">
             Inscrição <span className="font-mono font-bold text-primary-800">{protocol}</span>{" "}
@@ -202,9 +272,96 @@ export function Checkout({
 
   return (
     <div ref={checkoutTopRef} className="space-y-5 scroll-mt-24">
-      {/* Seleção do método */}
       {!checkout && (
-        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Forma de pagamento">
+        <div className="space-y-3 rounded-bubble border border-primary-100 bg-white p-4 sm:p-5">
+          {!voucherPreview ? (
+            <>
+              <p className="font-display text-sm font-extrabold text-primary-800">
+                Tem um cupom de desconto?
+              </p>
+              <form
+                className="flex flex-col gap-2 sm:flex-row"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void applyVoucher();
+                }}
+              >
+                <TextInput
+                  value={voucherInput}
+                  onChange={(event) => {
+                    setVoucherInput(event.target.value.toUpperCase());
+                    setVoucherError(null);
+                  }}
+                  placeholder="Código do cupom"
+                  disabled={voucherLoading}
+                  className="min-w-0 flex-1 font-mono uppercase"
+                  aria-label="Código do cupom"
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  className="w-full shrink-0 sm:w-auto"
+                  disabled={voucherLoading || !voucherInput.trim()}
+                >
+                  {voucherLoading ? "Validando..." : "Aplicar"}
+                </Button>
+              </form>
+              {voucherError && (
+                <p className="text-sm font-semibold text-accent-700" role="alert">
+                  {voucherError}
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-primary-50 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate font-mono font-bold text-primary-800">
+                    {voucherPreview.code}
+                  </p>
+                  <p className="text-xs font-semibold text-primary-700">Cupom aplicado</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={clearVoucher}
+                  disabled={submitting}
+                >
+                  Remover
+                </Button>
+              </div>
+              <dl className="space-y-1.5 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-muted">Taxa de inscrição</dt>
+                  <dd className="text-ink">{voucherPreview.listFormatted}</dd>
+                </div>
+                <div className="flex justify-between gap-3 text-primary-700">
+                  <dt>Desconto do cupom</dt>
+                  <dd className="font-bold">−{voucherPreview.discountFormatted}</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-t border-primary-100 pt-2 font-display font-extrabold">
+                  <dt className="text-ink">Total a pagar</dt>
+                  <dd className="text-accent-700">
+                    {voucherPreview.isFree ? "Grátis" : voucherPreview.amountFormatted}
+                  </dd>
+                </div>
+              </dl>
+            </>
+          )}
+        </div>
+      )}
+
+      {!checkout && !isFree && (
+        <div
+          className="grid grid-cols-3 gap-1.5 sm:gap-2"
+          role="radiogroup"
+          aria-label="Forma de pagamento"
+        >
           {METHODS.map((item) => (
             <button
               key={item.id}
@@ -217,16 +374,18 @@ export function Checkout({
                 trackEvent("select_payment_method", { payment_type: item.id });
               }}
               className={cn(
-                "rounded-2xl border-2 p-3 text-center transition",
+                "min-w-0 rounded-2xl border-2 px-1.5 py-2.5 text-center transition sm:p-3",
                 method === item.id
                   ? "border-accent-600 bg-accent-50"
                   : "border-primary-100 bg-white hover:border-primary-200",
               )}
             >
-              <span className="block font-display font-extrabold text-primary-800">
+              <span className="block truncate font-display text-sm font-extrabold text-primary-800 sm:text-base">
                 {item.label}
               </span>
-              <span className="block text-xs text-ink-muted">{item.hint}</span>
+              <span className="mt-0.5 block text-[10px] leading-tight text-ink-muted sm:text-xs">
+                {item.hint}
+              </span>
             </button>
           ))}
         </div>
@@ -238,8 +397,22 @@ export function Checkout({
         </p>
       )}
 
-      {/* PIX / Boleto: gerar cobrança */}
-      {!checkout && method !== "CREDIT_CARD" && (
+      {!checkout && isFree && (
+        <div className="space-y-2">
+          <Button
+            className="w-full"
+            disabled={submitting}
+            onClick={() => void startCheckout({ method: "FREE" })}
+          >
+            {submitting ? "Confirmando..." : "Confirmar inscrição gratuita"}
+          </Button>
+          <p className="text-center text-xs text-ink-muted">
+            Seu cupom cobre 100% da taxa — nenhuma cobrança será gerada.
+          </p>
+        </div>
+      )}
+
+      {!checkout && !isFree && method !== "CREDIT_CARD" && (
         <Button
           className="w-full"
           disabled={submitting}
@@ -248,29 +421,32 @@ export function Checkout({
           {submitting
             ? "Gerando cobrança..."
             : method === "PIX"
-              ? `Gerar PIX de ${feeFormatted}`
-              : `Gerar boleto de ${feeFormatted}`}
+              ? `Gerar PIX de ${chargeFormatted}`
+              : `Gerar boleto de ${chargeFormatted}`}
         </Button>
       )}
 
-      {/* Cartão: formulário */}
-      {!checkout && method === "CREDIT_CARD" && (
+      {!checkout && !isFree && method === "CREDIT_CARD" && (
         <CreditCardForm
-          amountFormatted={feeFormatted}
+          amountFormatted={chargeFormatted}
           submitting={submitting}
           onSubmit={(creditCard) => void startCheckout({ method: "CREDIT_CARD", creditCard })}
         />
       )}
 
-      {/* Cobrança gerada: PIX */}
       {checkout?.method === "PIX" && (
         <div className="space-y-4 text-center">
+          {checkout.discountCents > 0 && (
+            <p className="rounded-2xl bg-primary-50 px-3 py-2 text-sm font-semibold text-primary-800">
+              Cupom {checkout.voucherCode}: total {checkout.amountFormatted}
+            </p>
+          )}
           {checkout.pixQrCodeBase64 && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={`data:image/png;base64,${checkout.pixQrCodeBase64}`}
               alt="QR Code PIX"
-              className="mx-auto size-52 rounded-2xl border border-primary-100"
+              className="mx-auto size-40 max-w-full rounded-2xl border border-primary-100 sm:size-52"
             />
           )}
           <p className="text-sm text-ink-muted">
@@ -278,7 +454,7 @@ export function Checkout({
           </p>
           {checkout.pixPayload && (
             <>
-              <p className="break-all rounded-2xl bg-primary-50 p-3 font-mono text-xs text-primary-800">
+              <p className="break-all rounded-2xl bg-primary-50 p-3 font-mono text-[11px] leading-relaxed text-primary-800 sm:text-xs">
                 {checkout.pixPayload}
               </p>
               <Button
@@ -291,15 +467,19 @@ export function Checkout({
             </>
           )}
           <p className="flex items-center justify-center gap-2 text-sm font-semibold text-primary-700">
-            <span className="size-2 animate-pulse rounded-full bg-accent-500" />
+            <span className="size-2 shrink-0 animate-pulse rounded-full bg-accent-500" />
             Aguardando pagamento... confirmamos automaticamente.
           </p>
         </div>
       )}
 
-      {/* Cobrança gerada: Boleto */}
       {checkout?.method === "BOLETO" && (
         <div className="space-y-4 text-center">
+          {checkout.discountCents > 0 && (
+            <p className="rounded-2xl bg-primary-50 px-3 py-2 text-sm font-semibold text-primary-800">
+              Cupom {checkout.voucherCode}: total {checkout.amountFormatted}
+            </p>
+          )}
           <p className="text-sm text-ink-muted">
             Boleto gerado! Vencimento em{" "}
             <strong className="text-ink">{checkout.dueDateFormatted}</strong>. A confirmação pode
@@ -323,14 +503,12 @@ export function Checkout({
         </div>
       )}
 
-      {/* Cartão em análise (raro) */}
       {checkout?.method === "CREDIT_CARD" && !paid && (
         <p className="rounded-2xl bg-primary-50 p-4 text-center text-sm font-semibold text-primary-800">
           Pagamento em análise. Você será notificado assim que for aprovado.
         </p>
       )}
 
-      {/* Trocar forma de pagamento */}
       {checkout && checkout.status === "PENDING" && (
         <Button
           variant="ghost"

@@ -77,6 +77,7 @@ model GuardianProfile {
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   participants Participant[]
+  voucherRedemptions VoucherRedemption[]
 
   @@map("guardian_profiles")
 }
@@ -205,6 +206,7 @@ model Registration {
   likes          Like[]
   automationLogs AutomationLog[]
   referral       Referral?
+  voucherRedemptions VoucherRedemption[]
 
   @@unique([participantId, contestId])
   @@index([contestId, status])
@@ -275,6 +277,8 @@ enum PaymentMethod {
   PIX
   BOLETO
   CREDIT_CARD
+  /// inscrição gratuita (voucher zerou a taxa) — sem Asaas
+  FREE
 }
 
 enum PaymentStatus {
@@ -287,26 +291,85 @@ enum PaymentStatus {
   FAILED
 }
 
-model Payment {
-  id             String        @id @default(cuid())
-  registrationId String
-  /// id da cobrança no Asaas
-  asaasPaymentId String?       @unique
-  method         PaymentMethod
-  status         PaymentStatus @default(PENDING)
-  amountCents    Int
-  dueDate        DateTime?
-  paidAt         DateTime?
-  /// dados de exibição do checkout
-  invoiceUrl     String?
-  pixPayload     String?
-  boletoUrl      String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+enum VoucherRedemptionStatus {
+  RESERVED
+  CONFIRMED
+  RELEASED
+}
 
+model Voucher {
+  id            String    @id @default(cuid())
+  /// código normalizado (trim + uppercase)
+  code          String    @unique
+  description   String?
+  /// desconto fixo em centavos
+  discountCents Int
+  /// null = ilimitado
+  maxUses       Int?
+  startsAt      DateTime?
+  endsAt        DateTime?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  redemptions VoucherRedemption[]
+  payments    Payment[]
+
+  @@map("vouchers")
+}
+
+model VoucherRedemption {
+  id             String                  @id @default(cuid())
+  voucherId      String
+  registrationId String
+  paymentId      String                  @unique
+  guardianId     String
+  /// snapshot do desconto aplicado
+  discountCents  Int
+  status         VoucherRedemptionStatus @default(RESERVED)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  voucher      Voucher      @relation(fields: [voucherId], references: [id])
   registration Registration @relation(fields: [registrationId], references: [id])
+  payment      Payment      @relation(fields: [paymentId], references: [id])
+  guardian     GuardianProfile @relation(fields: [guardianId], references: [id])
+
+  @@index([voucherId, status])
+  @@index([registrationId])
+  @@map("voucher_redemptions")
+}
+
+model Payment {
+  id                  String        @id @default(cuid())
+  registrationId      String
+  /// id da cobrança no Asaas
+  asaasPaymentId      String?       @unique
+  method              PaymentMethod
+  status              PaymentStatus @default(PENDING)
+  /// valor líquido cobrado (após voucher)
+  amountCents         Int
+  /// taxa cheia da edição no momento da cobrança
+  originalAmountCents Int
+  discountCents       Int           @default(0)
+  voucherId           String?
+  /// snapshot do código aplicado
+  voucherCode         String?
+  dueDate             DateTime?
+  paidAt              DateTime?
+  /// dados de exibição do checkout
+  invoiceUrl          String?
+  pixPayload          String?
+  boletoUrl           String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  registration Registration       @relation(fields: [registrationId], references: [id])
+  voucher      Voucher?           @relation(fields: [voucherId], references: [id])
+  redemption   VoucherRedemption?
 
   @@index([registrationId])
+  @@index([voucherId])
   @@map("payments")
 }
 

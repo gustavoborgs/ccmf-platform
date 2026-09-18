@@ -180,6 +180,13 @@ function PaymentDetailsDialog({ payment }: { payment: AdminPaymentRow }) {
             <DetailGrid
               items={[
                 ["Valor", formatCentsBRL(payment.amountCents)],
+                ...(payment.discountCents > 0
+                  ? ([
+                      ["Taxa original", formatCentsBRL(payment.originalAmountCents)],
+                      ["Desconto", formatCentsBRL(payment.discountCents)],
+                      ["Cupom", payment.voucherCode ?? "—"],
+                    ] satisfies [string, string][])
+                  : []),
                 ["Método", paymentMethodLabel(payment.method)],
                 ["Vencimento", formatDateTime(payment.dueDate)],
                 ["Pago em", payment.paidAt ? formatDateTime(payment.paidAt) : "Não pago"],

@@ -21,6 +21,7 @@ API REST v3 do Asaas para cobranças PIX, Boleto e Cartão de Crédito.
 | `POST /payments` | Criar cobrança (`billingType`: PIX/BOLETO/CREDIT_CARD, `externalReference` = registrationId). Cartão envia `creditCard` + `creditCardHolderInfo` + `remoteIp` (exigido pelo Asaas). Notificações de cobrança são herdadas do customer — não há `notificationDisabled` neste endpoint |
 | `GET /payments/:id` | Conciliação ativa (polling do PIX/boleto via `syncPaymentStatus`) |
 | `GET /payments/:id/pixQrCode` | QR Code (imagem base64) + payload copia-e-cola |
+| `DELETE /payments/:id` | Cancelar cobrança PENDING (troca de método/cupom ou rollback de TX local) |
 
 ## Webhook
 

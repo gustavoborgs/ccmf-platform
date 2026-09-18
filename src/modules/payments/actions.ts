@@ -2,9 +2,11 @@
 
 import { headers } from "next/headers";
 import { resolveEnrollmentGuardianId } from "@/modules/registrations/context";
+import { previewVoucherInputSchema } from "@/modules/vouchers/validators";
 import {
   createCheckout,
   getActivePayment,
+  previewCheckoutVoucher,
   syncPaymentStatus,
   type CheckoutResult,
 } from "./service";
@@ -28,14 +30,32 @@ function fail(error: unknown): { ok: false; error: string } {
 export type CheckoutData = {
   paymentId: string;
   status: string;
-  method: "PIX" | "BOLETO" | "CREDIT_CARD";
+  method: "PIX" | "BOLETO" | "CREDIT_CARD" | "FREE";
+  amountCents: number;
   amountFormatted: string;
+  originalAmountCents: number;
+  originalAmountFormatted: string;
+  discountCents: number;
+  discountFormatted: string | null;
+  voucherCode: string | null;
   dueDateFormatted: string | null;
   invoiceUrl: string | null;
   boletoUrl: string | null;
   pixPayload: string | null;
   pixQrCodeBase64: string | null;
   paid: boolean;
+  isFree: boolean;
+};
+
+export type VoucherPreviewData = {
+  code: string;
+  listCents: number;
+  listFormatted: string;
+  discountCents: number;
+  discountFormatted: string;
+  amountCents: number;
+  amountFormatted: string;
+  isFree: boolean;
 };
 
 function toCheckoutData(result: CheckoutResult): CheckoutData {
@@ -43,7 +63,14 @@ function toCheckoutData(result: CheckoutResult): CheckoutData {
     paymentId: result.paymentId,
     status: result.status,
     method: result.method,
+    amountCents: result.amountCents,
     amountFormatted: formatCentsBRL(result.amountCents),
+    originalAmountCents: result.originalAmountCents,
+    originalAmountFormatted: formatCentsBRL(result.originalAmountCents),
+    discountCents: result.discountCents,
+    discountFormatted:
+      result.discountCents > 0 ? formatCentsBRL(result.discountCents) : null,
+    voucherCode: result.voucherCode,
     dueDateFormatted: result.dueDate
       ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(result.dueDate)
       : null,
@@ -52,10 +79,11 @@ function toCheckoutData(result: CheckoutResult): CheckoutData {
     pixPayload: result.pixPayload,
     pixQrCodeBase64: result.pixQrCodeBase64,
     paid: result.paid,
+    isFree: result.method === "FREE" || result.amountCents === 0,
   };
 }
 
-/** Cria (ou reutiliza) a cobrança no Asaas para o método escolhido. */
+/** Cria (ou reutiliza) a cobrança no Asaas / FREE para o método escolhido. */
 export async function createCheckoutAction(
   rawRef: string | null,
   input: unknown,
@@ -81,8 +109,46 @@ export async function createCheckoutAction(
       method: parsed.data.method,
       creditCard: parsed.data.method === "CREDIT_CARD" ? parsed.data.creditCard : undefined,
       remoteIp,
+      voucherCode: parsed.data.voucherCode,
     });
     return { ok: true, data: toCheckoutData(result) };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Preview de cupom (não reserva estoque). */
+export async function previewVoucherAction(
+  rawRef: string | null,
+  input: unknown,
+): Promise<ActionResult<VoucherPreviewData>> {
+  const parsed = previewVoucherInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Cupom inválido." };
+  }
+
+  const guardianId = await resolveEnrollmentGuardianId(rawRef);
+  if (!guardianId) return { ok: false, error: "Referência inválida. Use seu link de retomada." };
+
+  try {
+    const quote = await previewCheckoutVoucher({
+      registrationId: parsed.data.registrationId,
+      guardianId,
+      code: parsed.data.code,
+    });
+    return {
+      ok: true,
+      data: {
+        code: quote.code,
+        listCents: quote.listCents,
+        listFormatted: formatCentsBRL(quote.listCents),
+        discountCents: quote.appliedDiscountCents,
+        discountFormatted: formatCentsBRL(quote.appliedDiscountCents),
+        amountCents: quote.amountCents,
+        amountFormatted: formatCentsBRL(quote.amountCents),
+        isFree: quote.amountCents === 0,
+      },
+    };
   } catch (error) {
     return fail(error);
   }

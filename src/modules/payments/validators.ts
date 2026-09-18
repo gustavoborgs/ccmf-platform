@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { enumParam, pageParam, pageSizeParam, textParam } from "@/shared/list-params";
+import { optionalVoucherCodeSchema } from "@/modules/vouchers/validators";
 
 /** Validação das bordas do módulo Payments. Spec: docs/modules/payments.md */
 
@@ -17,18 +18,35 @@ export const creditCardSchema = z.object({
   ccv: z.string().regex(/^\d{3,4}$/, "CVV inválido"),
 });
 
+const voucherCodeField = optionalVoucherCodeSchema;
+
 export const checkoutInputSchema = z.discriminatedUnion("method", [
-  z.object({ method: z.literal("PIX"), registrationId: z.string().min(1) }),
-  z.object({ method: z.literal("BOLETO"), registrationId: z.string().min(1) }),
+  z.object({
+    method: z.literal("PIX"),
+    registrationId: z.string().min(1),
+    voucherCode: voucherCodeField,
+  }),
+  z.object({
+    method: z.literal("BOLETO"),
+    registrationId: z.string().min(1),
+    voucherCode: voucherCodeField,
+  }),
   z.object({
     method: z.literal("CREDIT_CARD"),
     registrationId: z.string().min(1),
     creditCard: creditCardSchema,
+    voucherCode: voucherCodeField,
+  }),
+  z.object({
+    method: z.literal("FREE"),
+    registrationId: z.string().min(1),
+    voucherCode: voucherCodeField,
   }),
 ]);
 
 export type CheckoutInput = z.infer<typeof checkoutInputSchema>;
 export type CreditCardInput = z.infer<typeof creditCardSchema>;
+export type CheckoutMethod = CheckoutInput["method"];
 
 /** Filtros da listagem administrativa de cobranças (`/admin/pagamentos`). */
 export const ADMIN_PAYMENT_STATUSES = [
@@ -41,7 +59,7 @@ export const ADMIN_PAYMENT_STATUSES = [
   "FAILED",
 ] as const;
 
-export const ADMIN_PAYMENT_METHODS = ["PIX", "BOLETO", "CREDIT_CARD"] as const;
+export const ADMIN_PAYMENT_METHODS = ["PIX", "BOLETO", "CREDIT_CARD", "FREE"] as const;
 
 export const adminPaymentFiltersSchema = z.object({
   q: textParam,

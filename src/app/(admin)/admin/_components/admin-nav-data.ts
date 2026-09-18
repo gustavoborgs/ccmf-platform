@@ -39,6 +39,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         status: "available",
       },
       {
+        href: "/admin/vouchers",
+        label: "Vouchers",
+        description: "Cupons de desconto fixo no checkout.",
+        status: "available",
+      },
+      {
         href: "/admin/automacoes",
         label: "Automações",
         description: "Logs de disparos WhatsApp e próximas rotinas.",

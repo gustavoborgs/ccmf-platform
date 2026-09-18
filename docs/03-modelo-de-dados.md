@@ -15,6 +15,10 @@ erDiagram
     Category ||--o{ Registration : ""
     Registration ||--o{ Photo : "2 fotos"
     Registration ||--o{ Payment : "cobranças"
+    Voucher ||--o{ VoucherRedemption : "usos"
+    Voucher ||--o{ Payment : "desconto"
+    Payment ||--o| VoucherRedemption : "reserva"
+    Registration ||--o{ VoucherRedemption : ""
     Registration ||--o{ Like : "likes públicos"
     Registration ||--o{ Vote : "votos dos jurados"
     Registration ||--o{ AutomationLog : "automações"
@@ -38,6 +42,9 @@ erDiagram
 | `registrationFeeCents` / `amountCents` | Dinheiro sempre em centavos (Int), sem float. |
 | `likesCount` desnormalizado em `Registration` | Leitura barata na galeria; fonte de verdade é a tabela `likes` (unique por fingerprint). |
 | `Payment` 1:N com `Registration` | Uma inscrição pode ter mais de uma tentativa de cobrança (ex.: boleto vencido → novo PIX). |
+| `Voucher` + `VoucherRedemption` | Desconto fixo no checkout; estoque = RESERVED+CONFIRMED; FREE quando líquido = 0. |
+| `Payment.originalAmountCents` / `discountCents` / `voucherCode` | Snapshots do preço cheio e do cupom no momento da cobrança. |
+| `PaymentMethod.FREE` | Inscrição gratuita (voucher zerou a taxa) — sem cobrança Asaas. |
 | `WebhookEvent` com `externalId` único | Idempotência e auditoria dos webhooks do Asaas. |
 | `AutomationLog` genérico | Auditoria e idempotência de disparos automáticos (WhatsApp/e-mail futuros), sem duplicar estado de funil. Usa `subjectType` (`LEAD` \| `REGISTRATION`) + `subjectId` para unicidade por automação. |
 | `Automation` com `config` JSON tipado | Múltiplas automações por canal; config define gatilho (`SCHEDULED`/`EVENT`), etapa do funil, delay e template. |
@@ -68,6 +75,17 @@ para corrigir operação, publicação ou resultado sem criar novos status.
 PENDING → CONFIRMED → RECEIVED
 PENDING → OVERDUE | CANCELED
 CONFIRMED/RECEIVED → REFUNDED
+```
+
+`FREE` nasce já `RECEIVED` (sem Asaas).
+
+### VoucherRedemption.status
+
+```
+RESERVED → CONFIRMED   (pagamento confirmado)
+RESERVED → RELEASED    (cobrança vencida/cancelada ou nova tentativa)
+CONFIRMED → RELEASED   (reembolso)
+RELEASED → CONFIRMED   (pagamento tardio de cobrança cuja reserva foi liberada)
 ```
 
 ### Contest.status

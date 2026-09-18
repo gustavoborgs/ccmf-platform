@@ -50,25 +50,27 @@ export function SummaryStep({
 
   return (
     <div ref={summaryTopRef} className="space-y-5 scroll-mt-24">
-      <div className="rounded-bubble bg-primary-50 p-5">
-        <dl className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <dt className="text-ink-muted">Protocolo</dt>
-            <dd className="font-mono font-bold text-primary-800">{summary.protocol}</dd>
+      <div className="rounded-bubble bg-primary-50 p-4 sm:p-5">
+        <dl className="space-y-2.5 text-sm">
+          <div className="flex items-start justify-between gap-4">
+            <dt className="shrink-0 text-ink-muted">Protocolo</dt>
+            <dd className="min-w-0 break-all text-right font-mono font-bold text-primary-800">
+              {summary.protocol}
+            </dd>
           </div>
-          <div className="flex justify-between">
-            <dt className="text-ink-muted">Participante</dt>
-            <dd className="font-bold">{summary.participantName}</dd>
+          <div className="flex items-start justify-between gap-4">
+            <dt className="shrink-0 text-ink-muted">Participante</dt>
+            <dd className="min-w-0 text-right font-bold">{summary.participantName}</dd>
           </div>
-          <div className="flex justify-between">
-            <dt className="text-ink-muted">Categoria</dt>
-            <dd className="font-bold">{summary.categoryName}</dd>
+          <div className="flex items-start justify-between gap-4">
+            <dt className="shrink-0 text-ink-muted">Categoria</dt>
+            <dd className="min-w-0 text-right font-bold">{summary.categoryName}</dd>
           </div>
-          <div className="flex justify-between">
-            <dt className="text-ink-muted">Curso: Como Gerenciar a Carreira Infantil</dt>
-            <dd className="font-bold text-primary-700">Brinde grátis</dd>
+          <div className="flex items-start justify-between gap-4">
+            <dt className="min-w-0 text-ink-muted">Curso: Como Gerenciar a Carreira Infantil</dt>
+            <dd className="shrink-0 text-right font-bold text-primary-700">Brinde grátis</dd>
           </div>
-          <div className="flex justify-between border-t border-primary-100 pt-2">
+          <div className="flex items-start justify-between gap-4 border-t border-primary-100 pt-2.5">
             <dt className="text-ink-muted">Taxa de inscrição</dt>
             <dd className="font-bold text-accent-700">{summary.feeFormatted}</dd>
           </div>

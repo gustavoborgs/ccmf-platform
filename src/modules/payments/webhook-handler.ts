@@ -1,5 +1,9 @@
 import { db } from "@/shared/db";
 import { sendRegistrationToReview } from "@/modules/registrations/service";
+import {
+  confirmVoucherRedemption,
+  releaseVoucherRedemption,
+} from "@/modules/vouchers/service";
 import { getPostHogClient } from "@/shared/posthog-server";
 import type { AsaasWebhookEvent } from "@/shared/integrations/asaas/types";
 
@@ -71,6 +75,12 @@ async function applyEvent(event: AsaasWebhookEvent) {
     where: { id: payment.id },
     data: { status: newStatus, paidAt: isPaid ? new Date() : payment.paidAt },
   });
+
+  if (isPaid) {
+    await confirmVoucherRedemption(payment.id);
+  } else if (newStatus === "OVERDUE" || newStatus === "CANCELED" || newStatus === "REFUNDED") {
+    await releaseVoucherRedemption(payment.id);
+  }
 
   // O funil do CRM é derivado de Registration.status — nada a atualizar em Lead.
   if (isPaid && payment.registration.status === "PENDING_PAYMENT") {

@@ -119,6 +119,7 @@ export function paymentMethodLabel(method: string): string {
     PIX: "PIX",
     BOLETO: "Boleto",
     CREDIT_CARD: "Cartão",
+    FREE: "Gratuito",
   };
   return labels[method] ?? method;
 }

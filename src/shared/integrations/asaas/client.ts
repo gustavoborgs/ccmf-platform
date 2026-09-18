@@ -84,6 +84,11 @@ export const asaas = {
     return request<AsaasPayment>(`/payments/${paymentId}`);
   },
 
+  /** Cancela uma cobrança ainda não paga (limpeza de cobrança órfã). */
+  deletePayment(paymentId: string) {
+    return request<{ deleted: boolean }>(`/payments/${paymentId}`, { method: "DELETE" });
+  },
+
   getPixQrCode(paymentId: string) {
     return request<AsaasPixQrCode>(`/payments/${paymentId}/pixQrCode`);
   },
