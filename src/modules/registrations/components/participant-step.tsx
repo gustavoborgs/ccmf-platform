@@ -20,16 +20,20 @@ export function ParticipantStep({
   registrationId,
   initialParticipant,
   initialReferralCode,
+  initialVoucherCode,
   nevoaSessionCode,
   onReferralCodeChange,
+  onVoucherCodeChange,
   onDone,
 }: {
   wizardRef: string | null;
   registrationId: string | null;
   initialParticipant?: WizardParticipantState;
   initialReferralCode?: string;
+  initialVoucherCode?: string;
   nevoaSessionCode?: string | null;
   onReferralCodeChange?: (code: string) => void;
+  onVoucherCodeChange?: (code: string) => void;
   onDone: (data: {
     ref: string;
     registrationId: string;
@@ -46,8 +50,10 @@ export function ParticipantStep({
     city: initialParticipant?.city ?? "",
     state: initialParticipant?.state ?? "",
   });
-  const [showReferral, setShowReferral] = useState(Boolean(initialReferralCode));
+  const hasInitialCodes = Boolean(initialReferralCode || initialVoucherCode);
+  const [showCodes, setShowCodes] = useState(hasInitialCodes);
   const [referralCode, setReferralCode] = useState(initialReferralCode ?? "");
+  const [voucherCode, setVoucherCode] = useState(initialVoucherCode ?? "");
   const [consent, setConsent] = useState(Boolean(initialParticipant));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -56,6 +62,12 @@ export function ParticipantStep({
     const normalized = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
     setReferralCode(normalized);
     onReferralCodeChange?.(normalized);
+  }
+
+  function handleVoucherChange(value: string) {
+    const normalized = value.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+    setVoucherCode(normalized);
+    onVoucherCodeChange?.(normalized);
   }
 
   function submit() {
@@ -81,6 +93,7 @@ export function ParticipantStep({
           participant_state: form.state,
           edited_existing: Boolean(registrationId),
           has_referral_code: Boolean(referralCode),
+          has_voucher_code: Boolean(voucherCode),
         });
         onDone({
           ...result.data,
@@ -149,32 +162,60 @@ export function ParticipantStep({
         </Field>
       </div>
 
-      {!registrationId && (
-        <div className="rounded-2xl border border-primary-100 bg-primary-50/50 p-4">
-          {!showReferral ? (
-            <button
-              type="button"
-              onClick={() => setShowReferral(true)}
-              className="text-sm font-bold text-primary-700 underline-offset-4 hover:underline"
-            >
-              Tem um código de indicação?
-            </button>
-          ) : (
+      <div className="rounded-2xl border border-primary-100 bg-primary-50/50 p-4">
+        {!showCodes ? (
+          <button
+            type="button"
+            onClick={() => setShowCodes(true)}
+            className="text-sm font-bold text-primary-700 underline-offset-4 hover:underline"
+          >
+            Tem cupom de desconto ou código de indicação?
+          </button>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <p className="font-display text-sm font-extrabold text-primary-800">
+                Cupom ou indicação
+              </p>
+              <p className="mt-1 text-xs text-ink-muted">
+                São coisas diferentes: o cupom reduz o valor da taxa; a indicação dá curtidas a
+                quem te convidou.
+              </p>
+            </div>
+
             <Field
-              label="Código de indicação"
-              hint="Opcional. Se alguém te indicou, informe o código aqui."
+              label="Cupom de desconto"
+              hint="Opcional. Reduz o valor da taxa no pagamento. Não é o código de indicação."
             >
               <TextInput
-                value={referralCode}
-                onChange={(event) => handleReferralChange(event.target.value)}
-                placeholder="Ex.: ABC12345"
+                value={voucherCode}
+                onChange={(event) => handleVoucherChange(event.target.value)}
+                placeholder="Ex.: BEMVINDO10"
                 autoComplete="off"
+                autoCapitalize="characters"
                 spellCheck={false}
+                className="font-mono uppercase"
               />
             </Field>
-          )}
-        </div>
-      )}
+
+            {!registrationId && (
+              <Field
+                label="Código de indicação"
+                hint="Opcional. Se alguém te indicou, informe aqui — não dá desconto no valor."
+              >
+                <TextInput
+                  value={referralCode}
+                  onChange={(event) => handleReferralChange(event.target.value)}
+                  placeholder="Ex.: ABC12345"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="font-mono uppercase"
+                />
+              </Field>
+            )}
+          </div>
+        )}
+      </div>
 
       <label className="flex items-start gap-3 rounded-2xl bg-primary-50 p-4">
         <input

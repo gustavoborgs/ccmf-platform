@@ -6,6 +6,7 @@ import { waitForNevoaSessionCode } from "@/shared/analytics/nevoa-session";
 import { cn } from "@/shared/ui/cn";
 import { WIZARD_REF_COOKIE, WIZARD_REF_MAX_AGE_SECONDS } from "../wizard-cookie";
 import { REFERRAL_CODE_COOKIE, REFERRAL_CODE_MAX_AGE_SECONDS } from "@/modules/referrals/referral-cookie";
+import { VOUCHER_CODE_COOKIE, VOUCHER_CODE_MAX_AGE_SECONDS } from "@/modules/vouchers/voucher-cookie";
 import { GuardianStep } from "./guardian-step";
 import { ParticipantStep } from "./participant-step";
 import { PhotosStep } from "./photos-step";
@@ -52,6 +53,14 @@ function forgetReferralCode() {
   document.cookie = `${REFERRAL_CODE_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
 }
 
+function rememberVoucherCode(code: string) {
+  document.cookie = `${VOUCHER_CODE_COOKIE}=${encodeURIComponent(code)}; Max-Age=${VOUCHER_CODE_MAX_AGE_SECONDS}; Path=/; SameSite=Lax`;
+}
+
+function forgetVoucherCode() {
+  document.cookie = `${VOUCHER_CODE_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
+}
+
 function syncReferralToUrl(ref: string | null, referralCode: string | null) {
   const params = new URLSearchParams();
   if (ref) params.set("ref", ref);
@@ -73,6 +82,7 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
   );
   const [summary, setSummary] = useState(initial.summary);
   const [referralCode, setReferralCode] = useState(initial.initialReferralCode ?? "");
+  const [voucherCode, setVoucherCode] = useState(initial.initialVoucherCode ?? "");
   const [nevoaSessionCode, setNevoaSessionCode] = useState<string | null>(null);
 
   const currentIndex = stepIndex(step);
@@ -132,6 +142,15 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
     syncRefToUrl(ref, code || null);
   }
 
+  function handleVoucherCodeChange(code: string) {
+    setVoucherCode(code);
+    if (code) {
+      rememberVoucherCode(code);
+    } else {
+      forgetVoucherCode();
+    }
+  }
+
   function restart() {
     setStep("guardian");
     setRef(null);
@@ -141,7 +160,9 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
     setSummary(null);
     forgetRef();
     forgetReferralCode();
+    forgetVoucherCode();
     setReferralCode("");
+    setVoucherCode("");
     syncRefToUrl(null, null);
   }
 
@@ -222,8 +243,10 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
             registrationId={registrationId}
             initialParticipant={participant}
             initialReferralCode={referralCode || initial.initialReferralCode}
+            initialVoucherCode={voucherCode || initial.initialVoucherCode}
             nevoaSessionCode={nevoaSessionCode}
             onReferralCodeChange={handleReferralCodeChange}
+            onVoucherCodeChange={handleVoucherCodeChange}
             onDone={(data) => {
               advanceRef(data.ref);
               setRegistrationId(data.registrationId);
@@ -257,6 +280,8 @@ export function EnrollmentWizard({ initial }: { initial: WizardInitialState }) {
             wizardRef={ref}
             registrationId={registrationId}
             summary={summary}
+            initialVoucherCode={voucherCode || undefined}
+            onVoucherCodeChange={handleVoucherCodeChange}
             nevoaSessionCode={nevoaSessionCode}
             paymentPending={initial.paymentPending && initial.registrationId === registrationId}
           />

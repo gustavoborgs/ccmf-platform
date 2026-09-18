@@ -17,6 +17,8 @@ export function SummaryStep({
   wizardRef,
   registrationId,
   summary,
+  initialVoucherCode,
+  onVoucherCodeChange,
   nevoaSessionCode,
   paymentPending,
 }: {
@@ -30,6 +32,9 @@ export function SummaryStep({
     feeFormatted: string;
     feeCents: number;
   };
+  /** Cupom coletado no step do participante — validado no checkout. */
+  initialVoucherCode?: string;
+  onVoucherCodeChange?: (code: string) => void;
   nevoaSessionCode?: string | null;
   paymentPending: boolean;
 }) {
@@ -70,10 +75,23 @@ export function SummaryStep({
             <dt className="min-w-0 text-ink-muted">Curso: Como Gerenciar a Carreira Infantil</dt>
             <dd className="shrink-0 text-right font-bold text-primary-700">Brinde grátis</dd>
           </div>
+          {initialVoucherCode && (
+            <div className="flex items-start justify-between gap-4">
+              <dt className="shrink-0 text-ink-muted">Cupom de desconto</dt>
+              <dd className="min-w-0 text-right font-mono font-bold text-primary-800">
+                {initialVoucherCode}
+              </dd>
+            </div>
+          )}
           <div className="flex items-start justify-between gap-4 border-t border-primary-100 pt-2.5">
             <dt className="text-ink-muted">Taxa de inscrição</dt>
             <dd className="font-bold text-accent-700">{summary.feeFormatted}</dd>
           </div>
+          {initialVoucherCode && (
+            <p className="text-xs text-ink-muted">
+              O desconto do cupom é confirmado no pagamento, antes de gerar a cobrança.
+            </p>
+          )}
         </dl>
       </div>
 
@@ -104,6 +122,8 @@ export function SummaryStep({
           protocol={summary.protocol}
           feeFormatted={summary.feeFormatted}
           feeCents={summary.feeCents}
+          initialVoucherCode={initialVoucherCode}
+          onVoucherCodeChange={onVoucherCodeChange}
           nevoaSessionCode={nevoaSessionCode}
           hasPendingPayment={paymentPending}
         />

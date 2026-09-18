@@ -29,4 +29,6 @@ export type WizardInitialState = {
   feeFormatted: string;
   feeCents: number;
   initialReferralCode?: string;
+  /** Cupom coletado cedo no wizard — aplicado só no checkout. */
+  initialVoucherCode?: string;
 };

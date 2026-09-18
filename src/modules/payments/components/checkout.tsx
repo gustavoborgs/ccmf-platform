@@ -50,6 +50,8 @@ export function Checkout({
   protocol,
   feeFormatted,
   feeCents,
+  initialVoucherCode,
+  onVoucherCodeChange,
   nevoaSessionCode,
   hasPendingPayment,
   onPaid,
@@ -59,12 +61,16 @@ export function Checkout({
   protocol: string;
   feeFormatted: string;
   feeCents: number;
+  /** Cupom vindo do step do participante — validado aqui no servidor. */
+  initialVoucherCode?: string;
+  onVoucherCodeChange?: (code: string) => void;
   nevoaSessionCode?: string | null;
   hasPendingPayment: boolean;
   onPaid?: () => void;
 }) {
   const checkoutTopRef = useRef<HTMLDivElement>(null);
   const didMountRef = useRef(false);
+  const autoAppliedRef = useRef(false);
   const [method, setMethod] = useState<AsaasMethod>("PIX");
   const [checkout, setCheckout] = useState<CheckoutData | null>(null);
   const [restoring, setRestoring] = useState(hasPendingPayment);
@@ -73,13 +79,15 @@ export function Checkout({
   const [paid, setPaid] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const [voucherInput, setVoucherInput] = useState("");
+  const [voucherInput, setVoucherInput] = useState(initialVoucherCode ?? "");
   const [voucherPreview, setVoucherPreview] = useState<VoucherPreviewData | null>(null);
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [voucherError, setVoucherError] = useState<string | null>(null);
 
   const onPaidRef = useRef(onPaid);
   onPaidRef.current = onPaid;
+  const onVoucherCodeChangeRef = useRef(onVoucherCodeChange);
+  onVoucherCodeChangeRef.current = onVoucherCodeChange;
 
   const chargeCents = voucherPreview?.amountCents ?? feeCents;
   const chargeFormatted = voucherPreview?.amountFormatted ?? feeFormatted;
@@ -128,6 +136,7 @@ export function Checkout({
             amountFormatted: result.data.amountFormatted,
             isFree: result.data.isFree,
           });
+          onVoucherCodeChangeRef.current?.(result.data.voucherCode);
         }
         if (result.data.paid) markPaid(result.data.method, result.data.amountCents);
       }
@@ -170,30 +179,50 @@ export function Checkout({
     });
   }, [checkout?.paymentId, paid]);
 
-  async function applyVoucher() {
-    setVoucherLoading(true);
-    setVoucherError(null);
-    try {
-      const result = await previewVoucherAction(wizardRef, {
-        registrationId,
-        code: voucherInput,
-      });
-      if (!result.ok) {
-        setVoucherPreview(null);
-        setVoucherError(result.error);
-        return;
+  const applyVoucherCode = useCallback(
+    async (code: string) => {
+      const trimmed = code.trim();
+      if (!trimmed) return;
+
+      setVoucherLoading(true);
+      setVoucherError(null);
+      try {
+        const result = await previewVoucherAction(wizardRef, {
+          registrationId,
+          code: trimmed,
+        });
+        if (!result.ok) {
+          setVoucherPreview(null);
+          setVoucherError(result.error);
+          return;
+        }
+        setVoucherPreview(result.data);
+        setVoucherInput(result.data.code);
+        onVoucherCodeChangeRef.current?.(result.data.code);
+      } finally {
+        setVoucherLoading(false);
       }
-      setVoucherPreview(result.data);
-      setVoucherInput(result.data.code);
-    } finally {
-      setVoucherLoading(false);
-    }
+    },
+    [registrationId, wizardRef],
+  );
+
+  // Auto-valida cupom coletado no step do participante (sem reservar estoque).
+  useEffect(() => {
+    if (hasPendingPayment || autoAppliedRef.current) return;
+    if (!initialVoucherCode?.trim()) return;
+    autoAppliedRef.current = true;
+    void applyVoucherCode(initialVoucherCode);
+  }, [applyVoucherCode, hasPendingPayment, initialVoucherCode]);
+
+  async function applyVoucher() {
+    await applyVoucherCode(voucherInput);
   }
 
   function clearVoucher() {
     setVoucherPreview(null);
     setVoucherInput("");
     setVoucherError(null);
+    onVoucherCodeChangeRef.current?.("");
   }
 
   async function startCheckout(input: {
@@ -277,7 +306,10 @@ export function Checkout({
           {!voucherPreview ? (
             <>
               <p className="font-display text-sm font-extrabold text-primary-800">
-                Tem um cupom de desconto?
+                Cupom de desconto
+              </p>
+              <p className="text-xs text-ink-muted">
+                Reduz o valor da taxa. Não é o código de indicação.
               </p>
               <form
                 className="flex flex-col gap-2 sm:flex-row"
